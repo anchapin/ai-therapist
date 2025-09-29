@@ -100,3 +100,7 @@ dmypy.json
 
 # Vectorstore (if large and not meant to be versioned)
 vectorstore/
+
+# Knowledge directory files (downloaded dynamically)
+knowledge/*.pdf
+knowledge/*.txt

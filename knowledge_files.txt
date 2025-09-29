@@ -1,0 +1,28 @@
+# Knowledge Files for AI Therapist
+# Format: filename|download_url
+# Each line contains the expected filename and the URL to download it from
+
+# Cognitive Behavioral Therapy Resources
+7-column-thought-record.pdf|https://www.getselfhelp.co.uk/worksheets/7column.pdf
+anxiety-thought-record-sheet.pdf|https://www.getselfhelp.co.uk/worksheets/thoughtrecord.pdf
+stopp-technique.pdf|https://www.getselfhelp.co.uk/worksheets/stopp.pdf
+
+# ADHD Resources
+adhd-adult-guide.pdf|https://www.cdc.gov/ncbddd/adhd/images/ADHD_Fact_Sheet.pdf
+autism-level1-support-guide.txt|https://www.nimh.nih.gov/health/topics/autism-spectrum-disorder-asd/index.shtml
+
+# Behavioral Therapy Worksheets
+avoidance-worksheet.pdf|https://www.therapistaid.com/worksheets/exposure-hierarchy.pdf
+behavioural-activation.pdf|https://www.getselfhelp.co.uk/worksheets/behaviouralactivation.pdf
+cravings-diary.pdf|https://www.getselfhelp.co.uk/worksheets/cravingsdiary.pdf
+
+# Mindfulness and Coping
+mindfulness-anxiety.pdf|https://www.getselfhelp.co.uk/worksheets/mindfulness.pdf
+coping-strategies.pdf|https://www.getselfhelp.co.uk/worksheets/copingstrategies.pdf
+weekly-planner.pdf|https://www.getselfhelp.co.uk/worksheets/weeklyplanner.pdf
+
+# Additional Resources
+act-worksheet.pdf|https://www.getselfhelp.co.uk/worksheets/actworksheet.pdf
+
+# Note: If any of these URLs become unavailable, please search for the specific resource
+# title and update with a working URL. The filenames should remain consistent.
