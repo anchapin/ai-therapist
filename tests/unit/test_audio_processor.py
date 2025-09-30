@@ -26,7 +26,7 @@ class TestAudioProcessor:
     @pytest.fixture
     def processor(self, mock_voice_config):
         """Create AudioProcessor instance for testing."""
-        with patch('voice.audio_processor.sd'):
+        with patch('sounddevice.default'):
             return AudioProcessor(mock_voice_config)
 
     def test_initialization(self, processor, mock_voice_config):
@@ -48,7 +48,7 @@ class TestAudioProcessor:
             {'name': 'Test Headset', 'max_input_channels': 1, 'max_output_channels': 1}
         ]
 
-        with patch('voice.audio_processor.sd', mock_sd):
+        with patch('sounddevice.query_devices', mock_sd.query_devices):
             input_devices, output_devices = processor.detect_audio_devices()
 
             assert len(input_devices) == 2  # Test Microphone and Test Headset
