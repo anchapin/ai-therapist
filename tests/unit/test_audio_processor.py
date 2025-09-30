@@ -133,7 +133,7 @@ class TestAudioProcessor:
         # Test when audio capture is available
         processor.features['audio_capture'] = True
         # Mock sounddevice InputStream
-        with patch('voice.audio_processor.sounddevice.InputStream'):
+        with patch('sounddevice.InputStream'):
             success = processor.start_recording()
             assert success
             assert processor.is_recording

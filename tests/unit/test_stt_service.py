@@ -13,6 +13,7 @@ import pytest
 import asyncio
 import sys
 import os
+import importlib
 from unittest.mock import MagicMock, patch, AsyncMock
 import json
 import numpy as np
@@ -77,8 +78,56 @@ openai_mock.Audio.transcribe.return_value = {
 }
 sys.modules['openai'] = openai_mock
 
-from voice.stt_service import STTService, STTResult, STTProvider
-from voice.config import VoiceConfig
+# Mock the voice module imports
+sys.modules['voice'] = MagicMock()
+sys.modules['voice.voice_service'] = MagicMock()
+sys.modules['voice.security'] = MagicMock()
+sys.modules['voice.voice_ui'] = MagicMock()
+
+# Import VoiceConfig first
+config_spec = importlib.util.spec_from_file_location("voice.config", "voice/config.py")
+config_module = importlib.util.module_from_spec(config_spec)
+sys.modules["voice.config"] = config_module
+config_spec.loader.exec_module(config_module)
+VoiceConfig = config_module.VoiceConfig
+
+# Also create a voice module with proper __path__ to support relative imports
+voice_module = MagicMock()
+voice_module.__path__ = [os.path.join(project_root, 'voice')]
+sys.modules['voice'] = voice_module
+
+# Import the STT service module directly with proper package context
+spec = importlib.util.spec_from_file_location("voice.stt_service", "voice/stt_service.py")
+stt_service_module = importlib.util.module_from_spec(spec)
+stt_service_module.__package__ = 'voice'
+sys.modules["voice.stt_service"] = stt_service_module
+
+# Mock audio processor module as well
+audio_processor_spec = importlib.util.spec_from_file_location("voice.audio_processor", "voice/audio_processor.py")
+audio_processor_module = importlib.util.module_from_spec(audio_processor_spec)
+sys.modules["voice.audio_processor"] = audio_processor_module
+audio_processor_spec.loader.exec_module(audio_processor_module)
+
+# Patch the relative import temporarily
+original_import = __builtins__['__import__']
+def patched_import(name, *args, **kwargs):
+    if name == '.config':
+        return config_module
+    elif name == '.audio_processor':
+        return audio_processor_module
+    return original_import(name, *args, **kwargs)
+
+# Temporarily patch import for module loading
+__builtins__['__import__'] = patched_import
+try:
+    spec.loader.exec_module(stt_service_module)
+finally:
+    __builtins__['__import__'] = original_import
+
+# Extract classes from the module
+STTService = stt_service_module.STTService
+STTResult = stt_service_module.STTResult
+STTProvider = stt_service_module.STTProvider
 
 
 class TestSTTService:
