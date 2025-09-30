@@ -219,6 +219,24 @@ class STTService:
                 timestamp=time.time()
             )
 
+        # Handle numpy array input (as passed by tests from mock_audio_data['data'])
+        elif isinstance(audio_data, np.ndarray):
+            # If it has a duration attribute (from mock), use it
+            if hasattr(audio_data, 'duration'):
+                duration = audio_data.duration
+            else:
+                # Estimate duration from array length (assuming 16kHz sample rate)
+                duration = len(audio_data) / 16000.0
+
+            audio_data = AudioData(
+                data=audio_data.astype(np.float32) / 32767.0 if audio_data.dtype != np.float32 else audio_data,
+                sample_rate=16000,
+                channels=1,
+                format="float32",
+                duration=duration,
+                timestamp=time.time()
+            )
+
         # Check cache first
         cache_key = self._generate_cache_key(audio_data)
         cached_result = self._get_from_cache(cache_key)
