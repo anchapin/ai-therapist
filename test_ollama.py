@@ -7,7 +7,22 @@ from langchain_ollama import OllamaEmbeddings, ChatOllama
 import os
 
 def test_ollama_connection():
-    """Test Ollama connection and basic functionality."""
+    """Verifies the connection to Ollama and checks core functionalities.
+
+    This function performs two main tests:
+    1.  **Embeddings**: It tries to create text embeddings using the
+        `nomic-embed-text:latest` model. A success is logged if the
+        embedding is generated without errors.
+    2.  **Chat Model**: It attempts to invoke the `llama3.2:latest` chat
+        model with a simple prompt. A success is logged if a response
+        is received without errors.
+
+    The function prints the status of each test to the console.
+
+    Returns:
+        bool: True if both the embedding and chat model tests pass,
+              False otherwise.
+    """
     print("Testing Ollama connection...")
 
     # Test embeddings
