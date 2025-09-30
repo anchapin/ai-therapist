@@ -65,11 +65,13 @@ class VoiceService:
         # Session management
         self.sessions: Dict[str, VoiceSession] = {}
         self.current_session_id: Optional[str] = None
+        self._sessions_lock = threading.RLock()  # Thread-safe session access
 
         # Service state
         self.is_running = False
         self.voice_thread = None
         self.voice_queue = asyncio.Queue()
+        self._event_loop = None  # Will store the event loop reference
 
         # Callbacks
         self.on_text_received: Optional[Callable[[str, str], None]] = None
@@ -150,6 +152,7 @@ class VoiceService:
             # Create event loop for this thread
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
+            self._event_loop = loop  # Store reference for callbacks
 
             while self.is_running:
                 try:
@@ -202,68 +205,72 @@ class VoiceService:
         if session_id is None:
             session_id = f"session_{int(time.time() * 1000)}"
 
-        if session_id in self.sessions:
-            self.logger.warning(f"Session {session_id} already exists")
-            return session_id
+        with self._sessions_lock:
+            if session_id in self.sessions:
+                self.logger.warning(f"Session {session_id} already exists")
+                return session_id
 
-        try:
-            # Create session
-            session = VoiceSession(
-                session_id=session_id,
-                state=VoiceSessionState.IDLE,
-                start_time=time.time(),
-                last_activity=time.time(),
-                conversation_history=[],
-                current_voice_profile=voice_profile or self.config.default_voice_profile,
-                audio_buffer=[],
-                metadata={}
-            )
+            try:
+                # Create session
+                session = VoiceSession(
+                    session_id=session_id,
+                    state=VoiceSessionState.IDLE,
+                    start_time=time.time(),
+                    last_activity=time.time(),
+                    conversation_history=[],
+                    current_voice_profile=voice_profile or self.config.default_voice_profile,
+                    audio_buffer=[],
+                    metadata={}
+                )
 
-            self.sessions[session_id] = session
-            self.current_session_id = session_id
+                self.sessions[session_id] = session
+                self.current_session_id = session_id
 
-            self.metrics['sessions_created'] += 1
+                self.metrics['sessions_created'] += 1
 
-            self.logger.info(f"Created voice session: {session_id}")
-            return session_id
+                self.logger.info(f"Created voice session: {session_id}")
+                return session_id
 
-        except Exception as e:
-            self.logger.error(f"Error creating session {session_id}: {str(e)}")
-            raise
+            except Exception as e:
+                self.logger.error(f"Error creating session {session_id}: {str(e)}")
+                raise
 
     def get_session(self, session_id: str) -> Optional[VoiceSession]:
         """Get voice session by ID."""
-        return self.sessions.get(session_id)
+        with self._sessions_lock:
+            return self.sessions.get(session_id)
 
     def get_current_session(self) -> Optional[VoiceSession]:
         """Get current voice session."""
-        if self.current_session_id:
-            return self.sessions.get(self.current_session_id)
-        return None
+        with self._sessions_lock:
+            if self.current_session_id:
+                return self.sessions.get(self.current_session_id)
+            return None
 
     def destroy_session(self, session_id: str):
         """Destroy a voice session."""
-        try:
-            if session_id in self.sessions:
-                session = self.sessions[session_id]
+        with self._sessions_lock:
+            try:
+                if session_id in self.sessions:
+                    session = self.sessions[session_id]
 
-                # Stop any ongoing operations
-                if session.state == VoiceSessionState.LISTENING:
-                    self.stop_listening(session_id)
+                    # Stop any ongoing operations
+                    if session.state == VoiceSessionState.LISTENING:
+                        self.stop_listening(session_id)
 
-                if session.state == VoiceSessionState.SPEAKING:
-                    self.stop_speaking(session_id)
+                    if session.state == VoiceSessionState.SPEAKING:
+                        self.stop_speaking(session_id)
 
-                # Remove session
-                del self.sessions[session_id]
+                    # Remove session
+                    del self.sessions[session_id]
 
-                if self.current_session_id == session_id:
-                    self.current_session_id = None
+                    if self.current_session_id == session_id:
+                        self.current_session_id = None
 
-                self.logger.info(f"Destroyed voice session: {session_id}")
+                    self.logger.info(f"Destroyed voice session: {session_id}")
 
-        except Exception as e:
-            self.logger.error(f"Error destroying session {session_id}: {str(e)}")
+            except Exception as e:
+                self.logger.error(f"Error destroying session {session_id}: {str(e)}")
 
     def start_listening(self, session_id: Optional[str] = None) -> bool:
         """Start listening for voice input."""
@@ -330,11 +337,14 @@ class VoiceService:
         try:
             session = self.get_current_session()
             if session and session.state == VoiceSessionState.LISTENING:
-                # Add to async queue for processing
-                asyncio.run_coroutine_threadsafe(
-                    self.voice_queue.put(("process_audio", (session.session_id, audio_data))),
-                    asyncio.get_event_loop()
-                )
+                # Add to async queue for processing using stored event loop
+                if self._event_loop and self._event_loop.is_running():
+                    asyncio.run_coroutine_threadsafe(
+                        self.voice_queue.put(("process_audio", (session.session_id, audio_data))),
+                        self._event_loop
+                    )
+                else:
+                    self.logger.warning("Voice service event loop not available, dropping audio data")
 
         except Exception as e:
             self.logger.error(f"Error in audio callback: {str(e)}")
@@ -554,6 +564,9 @@ class VoiceService:
         """Clean up voice service resources."""
         try:
             self.is_running = False
+
+            # Clear event loop reference
+            self._event_loop = None
 
             # Stop all sessions
             for session_id in list(self.sessions.keys()):

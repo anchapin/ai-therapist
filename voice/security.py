@@ -18,6 +18,7 @@ import json
 import hashlib
 import hmac
 import base64
+import re
 from typing import Optional, Dict, List, Any, Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -63,6 +64,16 @@ class SecurityAuditLog:
 
 class VoiceSecurity:
     """Security manager for voice features."""
+
+    # Allowed consent types for validation
+    ALLOWED_CONSENT_TYPES = {
+        'voice_processing', 'data_storage', 'transcription',
+        'analysis', 'all_consent', 'emergency_protocol'
+    }
+
+    # Validation patterns
+    USER_ID_PATTERN = re.compile(r'^[a-zA-Z0-9_-]{1,50}$')
+    IP_PATTERN = re.compile(r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$')
 
     def __init__(self, config: VoiceConfig):
         """Initialize voice security."""
@@ -327,11 +338,64 @@ class VoiceSecurity:
             self.logger.error(f"Error decrypting audio: {str(e)}")
             raise
 
+    def _validate_user_id(self, user_id: str) -> bool:
+        """Validate user ID format."""
+        if not isinstance(user_id, str):
+            return False
+        return bool(self.USER_ID_PATTERN.match(user_id))
+
+    def _validate_ip_address(self, ip_address: str) -> bool:
+        """Validate IP address format."""
+        if not isinstance(ip_address, str) or not ip_address:
+            return True  # Empty IP is allowed for local contexts
+        return bool(self.IP_PATTERN.match(ip_address))
+
+    def _validate_user_agent(self, user_agent: str) -> bool:
+        """Validate and sanitize user agent string."""
+        if not isinstance(user_agent, str):
+            return False
+
+        # Length limit
+        if len(user_agent) > 500:
+            return False
+
+        # Remove potentially dangerous characters
+        sanitized = re.sub(r'[<>"\';&]', '', user_agent)
+        return len(sanitized) == len(user_agent)  # No dangerous chars found
+
+    def _validate_consent_type(self, consent_type: str) -> bool:
+        """Validate consent type against allowed values."""
+        if not isinstance(consent_type, str):
+            return False
+        return consent_type in self.ALLOWED_CONSENT_TYPES
+
     def grant_consent(self, user_id: str, consent_type: str, granted: bool,
                      ip_address: str = "", user_agent: str = "",
                      consent_text: str = "", metadata: Dict[str, Any] = None) -> bool:
         """Grant or revoke consent for voice processing."""
         try:
+            # Input validation
+            if not self._validate_user_id(user_id):
+                self.logger.error(f"Invalid user_id format: {user_id}")
+                return False
+
+            if not self._validate_consent_type(consent_type):
+                self.logger.error(f"Invalid consent_type: {consent_type}")
+                return False
+
+            if not self._validate_ip_address(ip_address):
+                self.logger.error(f"Invalid IP address format: {ip_address}")
+                return False
+
+            if not self._validate_user_agent(user_agent):
+                self.logger.error(f"Invalid user agent format: {user_agent[:100]}...")
+                return False
+
+            # Validate consent_text length
+            if isinstance(consent_text, str) and len(consent_text) > 10000:
+                self.logger.error("Consent text too long")
+                return False
+
             # Create consent record
             consent = ConsentRecord(
                 user_id=user_id,

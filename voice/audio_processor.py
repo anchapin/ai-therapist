@@ -21,6 +21,7 @@ import logging
 from typing import Optional, Dict, List, Any, Tuple, Callable
 from dataclasses import dataclass
 from enum import Enum
+from collections import deque
 import json
 import base64
 import os
@@ -127,8 +128,15 @@ class SimplifiedAudioProcessor:
         self.is_recording = False
         self.is_playing = False
         
-        # Audio buffers
-        self.audio_buffer = []
+        # Audio buffers (with memory-safe bounded deque)
+        max_buffer_size = getattr(config.audio, "max_buffer_size", 300)  # ~30 seconds at 10ms chunks
+        self.max_buffer_size = max_buffer_size
+        self.audio_buffer = deque(maxlen=max_buffer_size)
+
+        # Memory monitoring and cleanup
+        self._buffer_bytes_estimate = 0
+        max_memory_mb = getattr(config.audio, "max_memory_mb", 100)
+        self._max_memory_bytes = max_memory_mb * 1024 * 1024  # Convert MB to bytes
         self.recording_start_time = None
         self.recording_duration = 0.0
         
@@ -231,7 +239,7 @@ class SimplifiedAudioProcessor:
                 self.state = AudioProcessorState.RECORDING
                 self.is_recording = True
                 self.recording_start_time = time.time()
-                self.audio_buffer = []
+                self.audio_buffer.clear()
                 
                 # Start recording thread
                 self._recording_thread = threading.Thread(target=self._record_audio)
@@ -250,18 +258,26 @@ class SimplifiedAudioProcessor:
         """Record audio in background thread."""
         if not SOUNDDEVICE_AVAILABLE:
             return
-        
+
         try:
             import sounddevice as sd
-            
+
             def audio_callback(indata, frames, time, status):
                 if status:
                     self.logger.warning(f"Audio callback status: {status}")
-                
+
                 with self._lock:
                     if self.is_recording:
+                        # Check memory usage before adding to buffer
+                        chunk_size_bytes = indata.nbytes
+                        if self._buffer_bytes_estimate + chunk_size_bytes > self._max_memory_bytes:
+                            # Memory limit reached, skip this chunk and log warning
+                            self.logger.warning("Audio buffer memory limit reached, dropping audio chunk")
+                            return
+
                         self.audio_buffer.append(indata.copy())
-            
+                        self._buffer_bytes_estimate += chunk_size_bytes
+
             # Start audio stream
             with sd.InputStream(
                 samplerate=self.sample_rate,
@@ -269,58 +285,110 @@ class SimplifiedAudioProcessor:
                 callback=audio_callback,
                 blocksize=self.chunk_size
             ):
+                # Add memory monitoring to the recording loop
+                loop_counter = 0
                 while self.is_recording:
                     time.sleep(0.1)
-                    
+                    loop_counter += 1
+
+                    # Log memory usage every 10 seconds
+                    if loop_counter % 100 == 0:
+                        self.logger.debug(f"Audio buffer size: {len(self.audio_buffer)}, Memory estimate: {self._buffer_bytes_estimate} bytes")
+
+                    # Safety check: if buffer is somehow growing beyond limits, force cleanup
+                    if len(self.audio_buffer) >= self.max_buffer_size * 0.9:
+                        self.logger.warning("Audio buffer approaching size limit, forcing cleanup")
+                        # This should not happen with deque maxlen, but add safety check
+                        excess = len(self.audio_buffer) - int(self.max_buffer_size * 0.8)
+                        for _ in range(excess):
+                            if self.audio_buffer:
+                                removed_chunk = self.audio_buffer.popleft()
+                                self._buffer_bytes_estimate -= getattr(removed_chunk, 'nbytes', 0)
+
         except Exception as e:
             self.logger.error(f"Error in recording thread: {e}")
             self.state = AudioProcessorState.ERROR
+        finally:
+            # Ensure memory tracking is reset
+            with self._lock:
+                self._buffer_bytes_estimate = 0
     
     def stop_recording(self) -> Optional[AudioData]:
         """Stop audio recording and return recorded data."""
         if not self.is_recording:
             return None
-        
+
         try:
             with self._lock:
                 self.is_recording = False
                 self.recording_duration = time.time() - self.recording_start_time
-                
-                # Wait for recording thread to finish
+
+                # Wait for recording thread to finish with longer timeout
                 if self._recording_thread:
-                    self._recording_thread.join(timeout=1.0)
-                
+                    self._recording_thread.join(timeout=2.0)
+                    if self._recording_thread.is_alive():
+                        self.logger.warning("Recording thread did not finish cleanly")
+
                 # Process recorded audio
+                result = None
                 if self.audio_buffer:
-                    # Concatenate all audio chunks
-                    audio_data = np.concatenate(self.audio_buffer, axis=0)
-                    
-                    # Convert to mono if needed
-                    if audio_data.shape[1] > 1:
-                        audio_data = np.mean(audio_data, axis=1)
-                    
-                    # Create AudioData object
-                    result = AudioData(
-                        data=audio_data,
-                        sample_rate=self.sample_rate,
-                        duration=self.recording_duration,
-                        channels=self.channels,
-                        format=self.format
-                    )
-                    
-                    # Process audio (noise reduction, etc.)
-                    result = self._process_audio(result)
-                    
-                    self.state = AudioProcessorState.READY
-                    self.logger.info(f"Recording stopped, duration: {self.recording_duration:.2f}s")
-                    return result
-                
+                    try:
+                        # Safely convert deque to list and concatenate
+                        audio_chunks = list(self.audio_buffer)
+
+                        # Validate audio chunks before concatenation
+                        valid_chunks = []
+                        total_size = 0
+                        for chunk in audio_chunks:
+                            if chunk is not None and chunk.size > 0:
+                                # Prevent excessive memory usage
+                                if total_size + chunk.size > 100_000_000:  # 100MB limit
+                                    self.logger.warning("Audio data too large, truncating")
+                                    break
+                                valid_chunks.append(chunk)
+                                total_size += chunk.size
+
+                        if valid_chunks:
+                            audio_data = np.concatenate(valid_chunks, axis=0)
+
+                            # Convert to mono if needed
+                            if len(audio_data.shape) > 1 and audio_data.shape[1] > 1:
+                                audio_data = np.mean(audio_data, axis=1)
+
+                            # Create AudioData object
+                            result = AudioData(
+                                data=audio_data,
+                                sample_rate=self.sample_rate,
+                                duration=self.recording_duration,
+                                channels=1 if len(audio_data.shape) == 1 else audio_data.shape[1],
+                                format=self.format
+                            )
+
+                            # Process audio (noise reduction, etc.)
+                            result = self._process_audio(result)
+
+                            self.logger.info(f"Recording stopped, duration: {self.recording_duration:.2f}s, size: {total_size} bytes")
+                        else:
+                            self.logger.warning("No valid audio chunks found")
+
+                    except Exception as e:
+                        self.logger.error(f"Error processing audio buffer: {e}")
+                        result = None
+
+                # Clear buffer and reset memory tracking
+                self.audio_buffer.clear()
+                self._buffer_bytes_estimate = 0
+
                 self.state = AudioProcessorState.READY
-                return None
-                
+                return result
+
         except Exception as e:
             self.logger.error(f"Error stopping recording: {e}")
             self.state = AudioProcessorState.ERROR
+            # Ensure cleanup even on error
+            with self._lock:
+                self.audio_buffer.clear()
+                self._buffer_bytes_estimate = 0
             return None
     
     def _process_audio(self, audio_data: AudioData) -> AudioData:
@@ -597,29 +665,85 @@ class SimplifiedAudioProcessor:
             'input_devices': len(self.input_devices) if hasattr(self, 'input_devices') else 0,
             'output_devices': len(self.output_devices) if hasattr(self, 'output_devices') else 0,
             'sample_rate': self.sample_rate,
+            'channels': self.channels,
+            'buffer_size': len(self.audio_buffer),
+            'max_buffer_size': self.max_buffer_size,
+            'buffer_usage_percent': (len(self.audio_buffer) / self.max_buffer_size) * 100 if self.max_buffer_size > 0 else 0,
+            'memory_usage_bytes': self._buffer_bytes_estimate,
+            'memory_limit_bytes': self._max_memory_bytes
+        }
+
+    def get_memory_usage(self) -> Dict[str, Any]:
+        """Get detailed memory usage information."""
+        return {
+            'buffer_size': len(self.audio_buffer),
+            'max_buffer_size': self.max_buffer_size,
+            'buffer_usage_percent': (len(self.audio_buffer) / self.max_buffer_size) * 100 if self.max_buffer_size > 0 else 0,
+            'memory_usage_bytes': self._buffer_bytes_estimate,
+            'memory_limit_bytes': self._max_memory_bytes,
+            'memory_usage_percent': (self._buffer_bytes_estimate / self._max_memory_bytes) * 100 if self._max_memory_bytes > 0 else 0,
+            'chunk_size': self.chunk_size,
+            'sample_rate': self.sample_rate,
             'channels': self.channels
         }
+
+    def force_cleanup_buffers(self):
+        """Force cleanup of audio buffers to free memory."""
+        try:
+            with self._lock:
+                cleared_count = len(self.audio_buffer)
+                self.audio_buffer.clear()
+                self._buffer_bytes_estimate = 0
+                self.logger.info(f"Force cleanup: cleared {cleared_count} audio chunks")
+                return cleared_count
+        except Exception as e:
+            self.logger.error(f"Error during force cleanup: {e}")
+            return 0
     
     def cleanup(self):
         """Clean up resources."""
         try:
-            # Stop recording
+            # Stop recording with proper timeout
             if self.is_recording:
+                self.is_recording = False  # Set flag first
+                # Wait a bit for the recording loop to stop naturally
+                time.sleep(0.2)
+                # Then try to stop properly
                 self.stop_recording()
-            
+
             # Stop playback
             if self.is_playing:
                 self.stop_playback()
-            
-            # Wait for threads to finish
-            if self._recording_thread:
-                self._recording_thread.join(timeout=1.0)
-            
+
+            # Wait for threads to finish with longer timeout
+            if self._recording_thread and self._recording_thread.is_alive():
+                self._recording_thread.join(timeout=2.0)
+                if self._recording_thread.is_alive():
+                    self.logger.warning("Recording thread did not terminate cleanly")
+
+            # Clear all buffers and reset memory tracking
+            with self._lock:
+                self.audio_buffer.clear()
+                self._buffer_bytes_estimate = 0
+                self.recording_start_time = None
+                self.recording_duration = 0.0
+
+            # Reset state
             self.state = AudioProcessorState.IDLE
-            self.logger.info("Audio processor cleaned up")
-            
+            self.logger.info("Audio processor cleaned up successfully")
+
         except Exception as e:
             self.logger.error(f"Error during cleanup: {e}")
+            # Force cleanup even if errors occur
+            try:
+                with self._lock:
+                    self.audio_buffer.clear()
+                    self._buffer_bytes_estimate = 0
+                    self.is_recording = False
+                    self.is_playing = False
+                    self.state = AudioProcessorState.IDLE
+            except Exception as cleanup_error:
+                self.logger.error(f"Error during forced cleanup: {cleanup_error}")
 
 # Backward compatibility
 AudioProcessor = SimplifiedAudioProcessor

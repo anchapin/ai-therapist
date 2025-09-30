@@ -50,6 +50,8 @@ class AudioConfig:
     silence_threshold: float = 0.3
     silence_duration_ms: int = 1000
     buffer_size: int = 4096
+    max_buffer_size: int = 300  # Maximum number of audio chunks to store (~30 seconds at 10ms chunks)
+    max_memory_mb: int = 100   # Maximum memory usage for audio buffer in MB
 
 @dataclass
 class SecurityConfig:
@@ -226,6 +228,13 @@ class VoiceConfig:
         self.security.data_localization = os.getenv("VOICE_DATA_LOCALIZATION", "true").lower() == "true"
         self.security.consent_recording = os.getenv("VOICE_CONSENT_RECORDING", "true").lower() == "true"
         self.security.emergency_protocols_enabled = os.getenv("VOICE_EMERGENCY_PROTOCOLS_ENABLED", "true").lower() == "true"
+
+        # Audio configuration
+        self.audio.sample_rate = int(os.getenv("VOICE_AUDIO_SAMPLE_RATE", str(self.audio.sample_rate)))
+        self.audio.channels = int(os.getenv("VOICE_AUDIO_CHANNELS", str(self.audio.channels)))
+        self.audio.chunk_size = int(os.getenv("VOICE_AUDIO_CHUNK_SIZE", str(self.audio.chunk_size)))
+        self.audio.max_buffer_size = int(os.getenv("VOICE_AUDIO_MAX_BUFFER_SIZE", str(self.audio.max_buffer_size)))
+        self.audio.max_memory_mb = int(os.getenv("VOICE_AUDIO_MAX_MEMORY_MB", str(self.audio.max_memory_mb)))
 
         # Performance configuration
         self.performance.cache_enabled = os.getenv("VOICE_CACHE_ENABLED", "true").lower() == "true"
