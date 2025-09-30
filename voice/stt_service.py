@@ -215,8 +215,7 @@ class STTService:
                 sample_rate=16000,
                 channels=1,
                 format="float32",
-                duration=len(audio_data) / (16000 * 2),  # Approximate duration
-                timestamp=time.time()
+                duration=len(audio_data) / (16000 * 2)  # Approximate duration
             )
 
         # Handle numpy array input (as passed by tests from mock_audio_data['data'])
@@ -233,8 +232,7 @@ class STTService:
                 sample_rate=16000,
                 channels=1,
                 format="float32",
-                duration=duration,
-                timestamp=time.time()
+                duration=duration
             )
 
         # Check cache first
@@ -581,8 +579,7 @@ class STTService:
                         sample_rate=audio_data.sample_rate,
                         channels=audio_data.channels,
                         format=audio_data.format,
-                        duration=buffer_duration,
-                        timestamp=audio_data.timestamp
+                        duration=buffer_duration
                     )
 
                     # Transcribe
@@ -621,8 +618,7 @@ class STTService:
                 sample_rate=16000,
                 channels=1,
                 format="float32",
-                duration=1.0,
-                timestamp=time.time()
+                duration=1.0
             )
 
             # Test transcription

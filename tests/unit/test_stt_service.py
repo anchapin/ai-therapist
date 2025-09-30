@@ -72,11 +72,17 @@ class TestSTTService:
     async def test_audio_transcription(self, stt_service, mock_audio_data):
         """Test audio transcription."""
         # Mock successful transcription
-        mock_result = {
-            'text': 'I need help with anxiety',
-            'confidence': 0.95,
-            'provider': 'openai'
-        }
+        # Mock result as STTResult object
+        from voice.stt_service import STTResult
+        mock_result = STTResult(
+            text='I need help with anxiety',
+            confidence=0.95,
+            language='en',
+            duration=2.0,
+            provider='openai',
+            alternatives=[],
+            processing_time=1.0
+        )
 
         with patch.object(stt_service, '_transcribe_with_openai', return_value=mock_result):
             result = await stt_service.transcribe_audio(mock_audio_data['data'])
