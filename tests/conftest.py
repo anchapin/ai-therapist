@@ -126,7 +126,7 @@ def mock_security_config():
 @pytest.fixture(autouse=True)
 def mock_external_services():
     """Mock external services for testing."""
-    with patch('voice.audio_processor.soundfile') as mock_soundfile, \
+    with patch('voice.audio_processor.sf') as mock_soundfile, \
          patch('voice.audio_processor.webrtcvad') as mock_webrtcvad, \
          patch('voice.stt_service.openai') as mock_openai_stt, \
          patch('voice.tts_service.openai') as mock_openai_tts, \
