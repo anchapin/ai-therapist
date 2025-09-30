@@ -35,9 +35,8 @@ class TestSTTService:
     @pytest.fixture
     def stt_service(self, config):
         """Create STTService instance for testing."""
-        with patch('voice.stt_service.openai'), \
-             patch('voice.stt_service.SpeechClient'), \
-             patch('voice.stt_service.whisper'):
+        with patch('openai.Audio'), \
+             patch('whisper.load_model'):
             return STTService(config)
 
     def test_initialization(self, stt_service, config):

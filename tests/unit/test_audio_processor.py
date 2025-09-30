@@ -26,7 +26,7 @@ class TestAudioProcessor:
     @pytest.fixture
     def processor(self, mock_voice_config):
         """Create AudioProcessor instance for testing."""
-        with patch('voice.audio_processor.pyaudio'):
+        with patch('voice.audio_processor.sd'):
             return AudioProcessor(mock_voice_config)
 
     def test_initialization(self, processor, mock_voice_config):
@@ -40,16 +40,15 @@ class TestAudioProcessor:
 
     def test_audio_device_detection(self, processor):
         """Test audio device detection."""
-        # Mock PyAudio to return test devices
-        mock_pyaudio = MagicMock()
-        mock_pyaudio.get_device_count.return_value = 3
-        mock_pyaudio.get_device_info_by_index.side_effect = [
-            {'name': 'Test Microphone', 'maxInputChannels': 2, 'maxOutputChannels': 0},
-            {'name': 'Test Speakers', 'maxInputChannels': 0, 'maxOutputChannels': 2},
-            {'name': 'Test Headset', 'maxInputChannels': 1, 'maxOutputChannels': 1}
+        # Mock sounddevice to return test devices
+        mock_sd = MagicMock()
+        mock_sd.query_devices.return_value = [
+            {'name': 'Test Microphone', 'max_input_channels': 2, 'max_output_channels': 0},
+            {'name': 'Test Speakers', 'max_input_channels': 0, 'max_output_channels': 2},
+            {'name': 'Test Headset', 'max_input_channels': 1, 'max_output_channels': 1}
         ]
 
-        with patch('voice.audio_processor.pyaudio.PyAudio', return_value=mock_pyaudio):
+        with patch('voice.audio_processor.sd', mock_sd):
             input_devices, output_devices = processor.detect_audio_devices()
 
             assert len(input_devices) == 2  # Test Microphone and Test Headset
