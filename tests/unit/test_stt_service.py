@@ -22,6 +22,18 @@ from voice.config import VoiceConfig
 class TestSTTService:
     """Test Speech-to-Text service functionality."""
 
+    def _create_mock_result(self, text='Test transcription', confidence=0.95, provider='openai', language='en'):
+        """Helper to create mock STTResult objects."""
+        return STTResult(
+            text=text,
+            confidence=confidence,
+            language=language,
+            duration=2.0,
+            provider=provider,
+            alternatives=[],
+            processing_time=1.0
+        )
+
     @pytest.fixture
     def config(self):
         """Create test configuration."""
