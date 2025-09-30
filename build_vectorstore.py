@@ -10,7 +10,26 @@ from langchain_community.vectorstores import FAISS
 load_dotenv()
 
 def build_vectorstore():
-    """Build vector store from PDF documents in knowledge directory."""
+    """Builds a FAISS vector store from PDF documents.
+
+    This function scans a specified directory for PDF files, loads their
+    content, splits the text into manageable chunks, and then uses OpenAI
+    embeddings to create a vector representation of the text. The resulting
+    vector store is saved to a specified directory.
+
+    The paths for the knowledge base and the vector store are configured
+    via environment variables `KNOWLEDGE_PATH` and `VECTORSTORE_PATH`.
+
+    The process includes:
+    1.  Reading `KNOWLEDGE_PATH` and `VECTORSTORE_PATH` from environment
+        variables.
+    2.  Scanning the knowledge directory for PDF files.
+    3.  Loading and processing each PDF, extracting text and metadata.
+    4.  Splitting the documents into chunks using RecursiveCharacterTextSplitter.
+    5.  Generating embeddings for the chunks using OpenAIEmbeddings.
+    6.  Creating and saving a FAISS vector store to the specified path.
+    7.  Running a quick test query to verify the vector store's integrity.
+    """
     
     # Get paths from environment variables
     knowledge_path = os.getenv("KNOWLEDGE_PATH", "./knowledge")

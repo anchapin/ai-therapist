@@ -10,7 +10,18 @@ from typing import List, Tuple
 import sys
 
 def load_knowledge_files_config() -> List[Tuple[str, str]]:
-    """Load knowledge file configuration from knowledge_files.txt"""
+    """Loads knowledge file configuration from 'knowledge_files.txt'.
+
+    This function reads a configuration file named 'knowledge_files.txt'
+    located in the same directory as the script. Each line in the file
+    is expected to be in the format 'filename|url'. Lines starting with '#'
+    and empty lines are ignored.
+
+    Returns:
+        List[Tuple[str, str]]: A list of tuples, where each tuple contains
+        the filename and its corresponding URL. Returns an empty list if
+        the config file is not found or is empty.
+    """
     config_path = Path(__file__).parent / "knowledge_files.txt"
     files_to_download = []
 
@@ -35,7 +46,17 @@ def load_knowledge_files_config() -> List[Tuple[str, str]]:
     return files_to_download
 
 def download_file(filename: str, url: str, knowledge_dir: Path) -> bool:
-    """Download a single file from URL"""
+    """Downloads a single file from a URL and saves it to a specified directory.
+
+    Args:
+        filename (str): The name to save the downloaded file as.
+        url (str): The URL to download the file from.
+        knowledge_dir (Path): The directory where the file will be saved.
+
+    Returns:
+        bool: True if the file was downloaded and saved successfully,
+              False otherwise.
+    """
     file_path = knowledge_dir / filename
 
     try:
@@ -58,7 +79,17 @@ def download_file(filename: str, url: str, knowledge_dir: Path) -> bool:
         return False
 
 def check_missing_files(files_config: List[Tuple[str, str]], knowledge_dir: Path) -> List[Tuple[str, str]]:
-    """Check which files are missing from knowledge directory"""
+    """Checks for files that are specified in the config but are missing from the directory.
+
+    Args:
+        files_config (List[Tuple[str, str]]): A list of tuples, where each
+            tuple contains a filename and its URL.
+        knowledge_dir (Path): The directory to check for the presence of files.
+
+    Returns:
+        List[Tuple[str, str]]: A list of tuples for the files that are
+        missing from the knowledge directory.
+    """
     missing_files = []
 
     for filename, url in files_config:
@@ -69,7 +100,15 @@ def check_missing_files(files_config: List[Tuple[str, str]], knowledge_dir: Path
     return missing_files
 
 def main():
-    """Main function to download knowledge files"""
+    """Main function to download knowledge files.
+
+    This function orchestrates the downloading of knowledge files. It sets up
+    the necessary directories, loads the file configuration, checks for
+    missing files, and then downloads them.
+
+    Returns:
+        int: An exit code. 0 for success, 1 for failure.
+    """
     print("AI Therapist Knowledge File Downloader")
     print("=" * 40)
 
