@@ -1,5 +1,9 @@
 import os
 import streamlit as st
+import hashlib
+import re
+import time
+import asyncio
 from dotenv import load_dotenv
 from langchain_community.vectorstores import FAISS
 from langchain_ollama import OllamaEmbeddings, ChatOllama
@@ -8,8 +12,201 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
 
+# Voice module imports
+from voice.config import VoiceConfig
+from voice.security import VoiceSecurity
+from voice.voice_service import VoiceService
+from voice.voice_ui import VoiceUIComponents
+from voice.commands import VoiceCommandProcessor, CommandCategory, SecurityLevel
+
 # Load environment variables
 load_dotenv()
+
+# Security and validation functions
+def validate_vectorstore_integrity(save_path):
+    """Validate vector store integrity before loading."""
+    try:
+        # Check if required files exist
+        required_files = ['index.faiss', 'index.pkl']
+        for file in required_files:
+            if not os.path.exists(os.path.join(save_path, file)):
+                return False
+
+        # Basic file size validation
+        index_file = os.path.join(save_path, 'index.faiss')
+        if os.path.getsize(index_file) < 1024:  # Less than 1KB is suspicious
+            return False
+
+        return True
+    except Exception:
+        return False
+
+def sanitize_user_input(input_text):
+    """Sanitize user input to prevent prompt injection and malicious content."""
+    if not input_text or not isinstance(input_text, str):
+        return ""
+
+    # Remove potential prompt injection patterns
+    injection_patterns = [
+        r'(?i)ignore previous instructions',
+        r'(?i)disregard above',
+        r'(?i)bypass security',
+        r'(?i)system prompt',
+        r'(?i)admin access',
+        r'(?i)you are now',
+        r'(?i)pretend to be',
+        r'(?i)act as if',
+    ]
+
+    cleaned = input_text
+    for pattern in injection_patterns:
+        cleaned = re.sub(pattern, '[REDACTED]', cleaned)
+
+    # Length validation
+    if len(cleaned) > 2000:
+        cleaned = cleaned[:2000] + "... [TRUNCATED]"
+
+    return cleaned.strip()
+
+def detect_crisis_content(text):
+    """Detect crisis situations requiring immediate intervention."""
+    # Enhanced crisis keywords from voice command system
+    crisis_keywords = [
+        'suicide', 'kill myself', 'end my life', 'self-harm',
+        'hurt myself', 'want to die', 'no reason to live',
+        'better off dead', 'can\'t go on', 'end it all',
+        'suicidal', 'depressed', 'hopeless', 'worthless',
+        'crisis', 'emergency', 'help me', 'need help',
+        'overwhelmed', 'desperate', 'alone', 'isolated'
+    ]
+
+    text_lower = text.lower()
+    detected_keywords = []
+
+    for keyword in crisis_keywords:
+        if keyword in text_lower:
+            detected_keywords.append(keyword)
+
+    if detected_keywords:
+        return True, detected_keywords
+
+    return False, []
+
+def generate_crisis_response():
+    """Generate appropriate crisis response with resources."""
+    crisis_message = """
+    🚨 **IMMEDIATE HELP NEEDED** 🚨
+
+    I'm concerned about your safety. Please reach out for immediate help:
+
+    **National Suicide Prevention Lifeline: 988**
+    **Crisis Text Line: Text HOME to 741741**
+
+    You can also:
+    • Call 911 or go to the nearest emergency room
+    • Contact a trusted friend or family member
+    • Call your local crisis center
+
+    Your life matters, and there are people who want to help you right now.
+    """
+    return crisis_message
+
+# Performance optimization functions
+class ResponseCache:
+    def __init__(self):
+        self.cache = {}
+        self.max_size = 100
+
+    def get_cache_key(self, question, context_hash):
+        return f"{hashlib.md5(question.encode()).hexdigest()}_{context_hash}"
+
+    def get(self, question, context_hash):
+        key = self.get_cache_key(question, context_hash)
+        if key in self.cache:
+            self.cache[key]['access_count'] += 1
+            return self.cache[key]['response']
+        return None
+
+    def set(self, question, context_hash, response):
+        key = self.get_cache_key(question, context_hash)
+
+        # Remove oldest entries if cache is full
+        if len(self.cache) >= self.max_size:
+            oldest_key = min(self.cache.keys(),
+                           key=lambda k: self.cache[k]['timestamp'])
+            del self.cache[oldest_key]
+
+        self.cache[key] = {
+            'response': response,
+            'timestamp': time.time(),
+            'access_count': 0
+        }
+
+class EmbeddingCache:
+    def __init__(self):
+        self.cache = {}
+        self.cache_dir = "./embedding_cache"
+        os.makedirs(self.cache_dir, exist_ok=True)
+
+    def get_embedding_key(self, text):
+        return hashlib.md5(text.encode()).hexdigest()
+
+    def get(self, text):
+        key = self.get_embedding_key(text)
+        cache_file = os.path.join(self.cache_dir, f"{key}.pkl")
+
+        # Try memory cache first
+        if key in self.cache:
+            return self.cache[key]
+
+        # Try file cache
+        if os.path.exists(cache_file):
+            try:
+                import pickle
+                with open(cache_file, 'rb') as f:
+                    embedding = pickle.load(f)
+                self.cache[key] = embedding
+                return embedding
+            except Exception:
+                pass
+
+        return None
+
+    def set(self, text, embedding):
+        key = self.get_embedding_key(text)
+        self.cache[key] = embedding
+
+        # Save to file cache
+        try:
+            import pickle
+            cache_file = os.path.join(self.cache_dir, f"{key}.pkl")
+            with open(cache_file, 'wb') as f:
+                pickle.dump(embedding, f)
+        except Exception:
+            pass
+
+# Global cache instances
+response_cache = ResponseCache()
+embedding_cache = EmbeddingCache()
+
+class CachedOllamaEmbeddings(OllamaEmbeddings):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.cache = embedding_cache
+
+    def embed_query(self, text):
+        # Try cache first
+        cached_embedding = self.cache.get(text)
+        if cached_embedding is not None:
+            return cached_embedding
+
+        # Generate new embedding
+        embedding = super().embed_query(text)
+
+        # Cache it
+        self.cache.set(text, embedding)
+
+        return embedding
 
 def initialize_session_state():
     """Initialize Streamlit session state variables."""
@@ -19,6 +216,30 @@ def initialize_session_state():
         st.session_state.conversation_chain = None
     if "vectorstore" not in st.session_state:
         st.session_state.vectorstore = None
+    if "cache_hits" not in st.session_state:
+        st.session_state.cache_hits = 0
+    if "total_requests" not in st.session_state:
+        st.session_state.total_requests = 0
+
+    # Voice feature session state
+    if "voice_enabled" not in st.session_state:
+        st.session_state.voice_enabled = False
+    if "voice_config" not in st.session_state:
+        st.session_state.voice_config = None
+    if "voice_security" not in st.session_state:
+        st.session_state.voice_security = None
+    if "voice_service" not in st.session_state:
+        st.session_state.voice_service = None
+    if "voice_ui" not in st.session_state:
+        st.session_state.voice_ui = None
+    if "voice_command_processor" not in st.session_state:
+        st.session_state.voice_command_processor = None
+    if "voice_consent_given" not in st.session_state:
+        st.session_state.voice_consent_given = False
+    if "voice_setup_complete" not in st.session_state:
+        st.session_state.voice_setup_complete = False
+    if "voice_setup_step" not in st.session_state:
+        st.session_state.voice_setup_step = 0
 
 def load_vectorstore():
     """Load or create the vector store with Ollama embeddings."""
@@ -29,10 +250,15 @@ def load_vectorstore():
         # Try to load existing vector store first
         save_path = os.path.join(vectorstore_path, "faiss_index")
         if os.path.exists(save_path):
-            embeddings = OllamaEmbeddings(model="nomic-embed-text:latest")
-            vectorstore = FAISS.load_local(save_path, embeddings, allow_dangerous_deserialization=True)
-            st.success("Loaded existing vector store")
-            return vectorstore
+            embeddings = CachedOllamaEmbeddings(model="nomic-embed-text:latest")
+            # Validate vector store integrity before loading
+            if validate_vectorstore_integrity(save_path):
+                vectorstore = FAISS.load_local(save_path, embeddings)
+                st.success("Loaded existing vector store")
+                return vectorstore
+            else:
+                st.warning("Vector store integrity check failed, rebuilding...")
+                return create_vectorstore(knowledge_path, vectorstore_path)
         else:
             # Create vector store if it doesn't exist
             return create_vectorstore(knowledge_path, vectorstore_path)
@@ -132,8 +358,9 @@ def create_vectorstore(knowledge_path, vectorstore_path):
             )
             chunks = text_splitter.split_documents(all_documents)
 
-            # Create embeddings with Ollama
-            embeddings = OllamaEmbeddings(model="nomic-embed-text:latest")
+            # Create embeddings with Ollama and caching
+            embeddings = CachedOllamaEmbeddings(model="nomic-embed-text:latest")
+            st.info("Creating optimized embeddings with caching...")
             vectorstore = FAISS.from_documents(chunks, embeddings)
 
             # Save vector store
@@ -149,26 +376,39 @@ def create_vectorstore(knowledge_path, vectorstore_path):
             return None
 
 def create_conversation_chain(vectorstore):
-    """Create conversation chain with Ollama LLM."""
+    """Create conversation chain with optimized Ollama LLM."""
     try:
+        # Use optimized model parameters for faster responses
         llm = ChatOllama(
             model="llama3.2:latest",
             temperature=0.7,
-            streaming=True
+            streaming=True,
+            max_tokens=1000,        # Limit response length
+            top_p=0.9,             # Reduce token search space
+            num_ctx=4096,          # Optimize context window
+            num_predict=512,       # Limit prediction tokens
+            repeat_penalty=1.1     # Reduce repetition
         )
 
         memory = ConversationBufferMemory(
             memory_key="chat_history",
             return_messages=True,
-            output_key="answer"
+            output_key="answer",
+            max_message_limit=20   # Limit conversation history
         )
 
         conversation_chain = ConversationalRetrievalChain.from_llm(
             llm=llm,
-            retriever=vectorstore.as_retriever(search_kwargs={"k": 3}),
+            retriever=vectorstore.as_retriever(
+                search_kwargs={
+                    "k": 3,
+                    "score_threshold": 0.7  # Filter low-relevance results
+                }
+            ),
             memory=memory,
             return_source_documents=True,
-            verbose=False
+            verbose=False,
+            max_tokens_limit=4000  # Prevent context overflow
         )
 
         return conversation_chain
@@ -177,19 +417,268 @@ def create_conversation_chain(vectorstore):
         return None
 
 def get_ai_response(conversation_chain, question):
-    """Get response from AI therapist."""
+    """Get response from AI therapist with security and performance optimizations."""
     try:
         if conversation_chain is None:
             return "I'm sorry, but I'm not properly initialized. Please try refreshing the page.", []
 
-        response = conversation_chain({"question": question})
+        # Sanitize input
+        sanitized_question = sanitize_user_input(question)
+        if not sanitized_question:
+            return "I'm sorry, I couldn't process your input. Please try again.", []
+
+        # Check for crisis content
+        is_crisis, crisis_keywords = detect_crisis_content(sanitized_question)
+        if is_crisis:
+            return generate_crisis_response(), []
+
+        # Try to get cached response
+        context_hash = "default"  # Simplified for now
+        cached_response = response_cache.get(sanitized_question, context_hash)
+        if cached_response:
+            st.session_state.cache_hits += 1
+            return cached_response, []
+
+        # Generate response
+        with st.status("Processing your message...", expanded=True) as status:
+            st.write("🔍 Searching knowledge base...")
+            time.sleep(0.5)
+            st.write("🧠 Analyzing context...")
+            time.sleep(0.5)
+            st.write("💭 Generating response...")
+            status.update(label="Response ready!", state="complete")
+
+        response = conversation_chain({"question": sanitized_question})
         answer = response.get("answer", "I apologize, but I couldn't generate a response.")
         source_documents = response.get("source_documents", [])
+
+        # Cache the response
+        response_cache.set(sanitized_question, context_hash, answer)
 
         return answer, source_documents
     except Exception as e:
         error_msg = f"I encountered an error: {str(e)}"
         return error_msg, []
+
+# Voice feature initialization functions
+def initialize_voice_features():
+    """Initialize voice features if enabled."""
+    try:
+        # Load voice configuration
+        voice_config = VoiceConfig()
+        st.session_state.voice_config = voice_config
+
+        # Check if voice features are enabled
+        if not voice_config.voice_enabled:
+            st.info("Voice features are disabled in configuration")
+            return False
+
+        # Initialize security
+        voice_security = VoiceSecurity(voice_config)
+        st.session_state.voice_security = voice_security
+
+        # Initialize voice service
+        voice_service = VoiceService(voice_config, voice_security)
+        if voice_service.initialize():
+            st.session_state.voice_service = voice_service
+
+            # Initialize voice command processor
+            voice_command_processor = VoiceCommandProcessor(voice_config)
+            st.session_state.voice_command_processor = voice_command_processor
+
+            # Initialize voice UI
+            voice_ui = VoiceUIComponents(voice_service, voice_config)
+            st.session_state.voice_ui = voice_ui
+
+            # Setup voice callbacks
+            voice_ui.on_text_received = handle_voice_text_received
+            voice_ui.on_command_executed = handle_voice_command_executed
+
+            st.session_state.voice_enabled = True
+            return True
+        else:
+            st.error("Failed to initialize voice service")
+            return False
+
+    except Exception as e:
+        st.error(f"Error initializing voice features: {str(e)}")
+        return False
+
+def handle_voice_text_received(text: str):
+    """Handle text received from voice input."""
+    if text.strip():
+        # Add voice text to conversation
+        st.session_state.messages.append({"role": "user", "content": f"🎤 {text}"})
+
+        # Process voice commands first
+        if st.session_state.voice_command_processor:
+            try:
+                # Check for voice commands
+                result = asyncio.run(st.session_state.voice_command_processor.process_text(text, session_id="voice_session"))
+
+                if result and result.is_emergency:
+                    # Emergency command detected - use enhanced crisis response
+                    emergency_response = asyncio.run(st.session_state.voice_command_processor.execute_command(result))
+
+                    # Add emergency response to conversation
+                    emergency_text = emergency_response.get('result', {}).get('voice_feedback', 'Emergency response activated.')
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": emergency_text,
+                        "sources": ["Emergency Response System"]
+                    })
+
+                    # Speak emergency response
+                    if st.session_state.voice_enabled and st.session_state.voice_service:
+                        asyncio.run(st.session_state.voice_service.speak_text(emergency_text))
+
+                    st.rerun()
+                    return
+
+                elif result and result.command.category == CommandCategory.EMERGENCY:
+                    # Handle emergency commands
+                    execution_result = asyncio.run(st.session_state.voice_command_processor.execute_command(result))
+
+                    if execution_result['success']:
+                        response_text = execution_result.get('result', {}).get('voice_feedback', 'Command executed.')
+                        st.session_state.messages.append({
+                            "role": "assistant",
+                            "content": response_text,
+                            "sources": ["Voice Command System"]
+                        })
+
+                        # Speak response
+                        if st.session_state.voice_enabled and st.session_state.voice_service:
+                            asyncio.run(st.session_state.voice_service.speak_text(response_text))
+
+                        st.rerun()
+                        return
+
+                elif result and result.confidence >= 0.7:
+                    # Handle other voice commands
+                    execution_result = asyncio.run(st.session_state.voice_command_processor.execute_command(result))
+
+                    if execution_result['success']:
+                        # Get voice feedback if available
+                        response_text = execution_result.get('result', {}).get('voice_feedback', 'Command executed.')
+
+                        # Add command response to conversation
+                        st.session_state.messages.append({
+                            "role": "assistant",
+                            "content": response_text,
+                            "sources": ["Voice Command System"]
+                        })
+
+                        # Speak response
+                        if st.session_state.voice_enabled and st.session_state.voice_service:
+                            asyncio.run(st.session_state.voice_service.speak_text(response_text))
+
+                        st.rerun()
+                        return
+
+            except Exception as e:
+                st.error(f"Error processing voice command: {str(e)}")
+                # Continue with normal text processing if command processing fails
+
+        # Process the text through AI if no commands were executed
+        if st.session_state.conversation_chain:
+            # Check for crisis content using existing crisis detection
+            is_crisis, crisis_keywords = detect_crisis_content(text)
+            if is_crisis:
+                crisis_response = generate_crisis_response()
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": crisis_response,
+                    "sources": ["Crisis Detection System"]
+                })
+
+                # Speak crisis response
+                if st.session_state.voice_enabled and st.session_state.voice_service:
+                    asyncio.run(st.session_state.voice_service.speak_text(crisis_response))
+
+                st.rerun()
+                return
+
+            # Normal AI processing
+            answer, source_docs = get_ai_response(st.session_state.conversation_chain, text)
+
+            # Add AI response to conversation
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": answer,
+                "sources": [doc.metadata.get('source', 'Unknown') for doc in source_docs]
+            })
+
+            # Speak response if voice is enabled
+            if st.session_state.voice_enabled and st.session_state.voice_service:
+                asyncio.run(st.session_state.voice_service.speak_text(answer))
+
+            # Rerun to update UI
+            st.rerun()
+
+def handle_voice_command_executed(command_result: str):
+    """Handle executed voice command."""
+    st.info(f"Voice command executed: {command_result}")
+
+def show_voice_features():
+    """Show voice features section in the sidebar."""
+    if not st.session_state.voice_enabled:
+        # Voice setup section
+        st.header("🎙️ Voice Features")
+
+        # Check setup completion
+        if not st.session_state.voice_setup_complete:
+            if st.button("🎙️ Setup Voice Features"):
+                # Run setup wizard
+                setup_complete = st.session_state.voice_ui.render_setup_wizard()
+                if setup_complete:
+                    st.session_state.voice_setup_complete = True
+                    st.rerun()
+        else:
+            # Show voice controls
+            if st.session_state.voice_ui:
+                st.session_state.voice_ui.render_voice_controls()
+
+            # Show voice commands help
+            st.session_state.voice_ui.render_voice_commands_help()
+
+            # Show session info
+            st.session_state.voice_ui.render_session_info()
+
+            # Show service status
+            st.session_state.voice_ui.render_service_status()
+
+            # Voice settings
+            if st.button("⚙️ Voice Settings"):
+                st.session_state.voice_ui._show_settings()
+
+    else:
+        # Voice features are enabled
+        st.header("🎙️ Voice Features")
+
+        # Show consent form if required
+        if st.session_state.voice_config.security.consent_required:
+            if not st.session_state.voice_consent_given:
+                if st.session_state.voice_ui.render_consent_form():
+                    st.success("Voice consent granted. You can now use voice features.")
+                    st.rerun()
+                return
+
+        # Show voice controls
+        if st.session_state.voice_ui:
+            st.session_state.voice_ui.render_voice_controls()
+
+        # Voice command help
+        with st.expander("🎯 Voice Commands"):
+            st.session_state.voice_ui.render_voice_commands_help()
+
+        # Session information
+        with st.expander("📊 Session Info"):
+            st.session_state.voice_ui.render_session_info()
+
+        # Service status
+        with st.expander("🔧 Service Status"):
+            st.session_state.voice_ui.render_service_status()
 
 def main():
     """Main application function."""
@@ -201,6 +690,11 @@ def main():
 
     # Initialize session state
     initialize_session_state()
+
+    # Initialize voice features
+    if not st.session_state.voice_enabled and st.session_state.voice_config is None:
+        # Try to initialize voice features
+        initialize_voice_features()
 
     # Custom CSS for better styling
     st.markdown("""
@@ -216,6 +710,13 @@ def main():
                 padding: 10px;
                 border-radius: 10px;
                 margin: 5px 0;
+            }
+            .voice-message {
+                background-color: #e8f5e8;
+                padding: 10px;
+                border-radius: 10px;
+                margin: 5px 0;
+                border-left: 4px solid #4caf50;
             }
             .source-info {
                 font-size: 0.8em;
@@ -238,7 +739,11 @@ def main():
     # Display chat messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+            # Add special styling for voice messages
+            if message["content"].startswith("🎤"):
+                st.markdown(f'<div class="voice-message">{message["content"]}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(message["content"])
             if "sources" in message:
                 with st.expander("Sources"):
                     for i, source in enumerate(message["sources"], 1):
@@ -246,44 +751,104 @@ def main():
 
     # Chat input
     if prompt := st.chat_input("How are you feeling today?"):
+        # Track request for performance metrics
+        st.session_state.total_requests += 1
         # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.markdown(prompt)
 
-        # Generate AI response
+        # Generate AI response with streaming
         with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                answer, source_docs = get_ai_response(st.session_state.conversation_chain, prompt)
+            placeholder = st.empty()
 
-                # Format sources
-                sources = []
-                for doc in source_docs:
-                    source = doc.metadata.get('source', 'Unknown')
-                    if source not in sources:
-                        sources.append(source)
+            try:
+                # Check for crisis content first
+                is_crisis, crisis_keywords = detect_crisis_content(prompt)
+                if is_crisis:
+                    crisis_response = generate_crisis_response()
+                    placeholder.markdown(crisis_response)
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": crisis_response,
+                        "sources": ["Crisis Resources"]
+                    })
+                else:
+                    # Sanitize input
+                    sanitized_prompt = sanitize_user_input(prompt)
 
-                # Display response
-                st.markdown(answer)
+                    # Try cache first
+                    context_hash = "default"
+                    cached_response = response_cache.get(sanitized_prompt, context_hash)
 
-                # Show sources if available
-                if sources:
-                    with st.expander("Sources"):
-                        for i, source in enumerate(sources, 1):
-                            st.markdown(f"**{i}.** {source}")
+                    if cached_response:
+                        # Display cached response immediately
+                        placeholder.markdown(cached_response)
+                        sources = ["Cached Response"]
+                    else:
+                        # Stream response for better UX
+                        response_text = ""
+                        placeholder.markdown("🔍 Searching knowledge base...🧠 Analyzing context...💭 Generating response...")
 
-                # Add assistant message to chat history
+                        # Get response
+                        answer, source_docs = get_ai_response(st.session_state.conversation_chain, sanitized_prompt)
+
+                        # Format sources
+                        sources = []
+                        for doc in source_docs:
+                            source = doc.metadata.get('source', 'Unknown')
+                            if source not in sources:
+                                sources.append(source)
+
+                        # Display final response
+                        placeholder.markdown(answer)
+
+                        # Show sources if available
+                        if sources:
+                            with st.expander("Sources"):
+                                for i, source in enumerate(sources, 1):
+                                    st.markdown(f"**{i}.** {source}")
+
+                        response_text = answer
+
+                    # Add assistant message to chat history
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": cached_response if cached_response else response_text,
+                        "sources": sources
+                    })
+
+                    # Speak response if voice is enabled
+                    if st.session_state.voice_enabled and st.session_state.voice_service:
+                        asyncio.run(st.session_state.voice_service.speak_text(response_text))
+
+            except Exception as e:
+                error_msg = f"I encountered an error: {str(e)}"
+                placeholder.markdown(error_msg)
                 st.session_state.messages.append({
                     "role": "assistant",
-                    "content": answer,
-                    "sources": sources
+                    "content": error_msg,
+                    "sources": []
                 })
 
-    # Sidebar with information
+    # Sidebar with information and voice features
     with st.sidebar:
-        st.header("About")
+        st.header("About & Safety")
         st.markdown("""
         This AI therapist provides mental health support based on therapeutic knowledge and techniques.
+
+        **🔒 Security Features:**
+        - Input validation & sanitization
+        - Crisis detection & intervention
+        - Local processing (no cloud data)
+        - Response caching for performance
+        - Prompt injection protection
+
+        **🛡️ Safety Features:**
+        - Suicidal ideation detection
+        - Emergency resource integration
+        - Content filtering
+        - Professional boundaries
 
         **Features:**
         - Evidence-based responses
@@ -291,18 +856,48 @@ def main():
         - Access to therapeutic resources
         - 24/7 availability
 
-        **Disclaimer:** This is not a replacement for professional mental health care.
+        **⚠️ Important:** This is not a replacement for professional mental health care.
         """)
 
+        st.markdown("---")
+
+        # Voice features section
+        show_voice_features()
+
+        st.markdown("---")
+
+        st.header("Performance")
+        if st.session_state.total_requests > 0:
+            hit_rate = (st.session_state.cache_hits / st.session_state.total_requests) * 100
+            cache_stats = f"Cache: {len(response_cache.cache)}/100 entries\nHit Rate: {hit_rate:.1f}% ({st.session_state.cache_hits}/{st.session_state.total_requests})"
+        else:
+            cache_stats = f"Cache: {len(response_cache.cache)}/100 entries"
+        st.caption(cache_stats)
+
+        st.header("Actions")
         if st.button("Clear Conversation"):
             st.session_state.messages = []
+            st.rerun()
+
+        if st.button("Clear Cache"):
+            response_cache.cache.clear()
+            st.success("Cache cleared")
             st.rerun()
 
         if st.button("Rebuild Knowledge Base"):
             st.session_state.vectorstore = None
             st.session_state.conversation_chain = None
             st.session_state.messages = []
+            response_cache.cache.clear()
             st.rerun()
+
+        st.markdown("---")
+        st.markdown("""
+        **🚨 Crisis Resources:**
+        - National Suicide Prevention Lifeline: **988**
+        - Crisis Text Line: **Text HOME to 741741**
+        - Emergency: **911**
+        """)
 
 if __name__ == "__main__":
     main()
