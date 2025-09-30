@@ -130,11 +130,7 @@ class TestSTTService:
         ]
 
         for crisis_text in crisis_texts:
-            mock_result = {
-                'text': crisis_text,
-                'confidence': 0.95,
-                'provider': 'openai'
-            }
+            mock_result = self._create_mock_result(text=crisis_text, confidence=0.95, provider='openai')
 
             with patch.object(stt_service, '_transcribe_with_openai', return_value=mock_result):
                 result = await stt_service.transcribe_audio(mock_audio_data['data'])
