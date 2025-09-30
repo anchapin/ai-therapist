@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 import sys
 import os
+import numpy as np
 
 # Add project root to Python path
 project_root = Path(__file__).parent.parent
@@ -125,13 +126,16 @@ def mock_security_config():
 @pytest.fixture(autouse=True)
 def mock_external_services():
     """Mock external services for testing."""
-    with patch('voice.audio_processor.pyaudio') as mock_pyaudio, \
+    with patch('voice.audio_processor.soundfile') as mock_soundfile, \
+         patch('voice.audio_processor.webrtcvad') as mock_webrtcvad, \
          patch('voice.stt_service.openai') as mock_openai_stt, \
          patch('voice.tts_service.openai') as mock_openai_tts, \
          patch('voice.security.cryptography') as mock_crypto:
 
         # Configure mocks
-        mock_pyaudio.PyAudio.return_value = MagicMock()
+        mock_soundfile.sf.read.return_value = (np.array([0, 1, 2]), 16000)
+        mock_soundfile.sf.write.return_value = None
+        mock_webrtcvad.Vad.return_value = MagicMock()
         mock_openai_stt.Audio.transcribe.return_value = {
             'text': 'mock transcription',
             'confidence': 0.95
