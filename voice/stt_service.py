@@ -85,18 +85,18 @@ class STTService:
         self.config = config
         self.logger = logging.getLogger(__name__)
 
-        # Properties expected by tests
-        self.confidence_threshold = config.stt_confidence_threshold
-        self.primary_provider = config.stt_provider
-        self.providers = self.get_available_providers()
-        self.therapy_keywords_enabled = config.enable_therapy_keywords
-        self.crisis_detection_enabled = config.enable_crisis_detection
-        self.custom_vocabulary = []
-
-        # Service instances
+        # Service instances - initialize these first
         self.google_speech_client = None
         self.whisper_model = None
         self.openai_client = None
+
+        # Properties expected by tests
+        self.confidence_threshold = 0.7  # Default confidence threshold
+        self.primary_provider = config.get_preferred_stt_service()
+        self.providers = self.get_available_providers()
+        self.therapy_keywords_enabled = True  # Default enabled
+        self.crisis_detection_enabled = True  # Default enabled
+        self.custom_vocabulary = []
 
         # Performance and caching
         self.request_count = 0
