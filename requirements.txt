@@ -55,5 +55,10 @@ num2words>=0.5.12
 cryptography>=41.0.0
 bcrypt>=4.1.0
 
+# Testing Dependencies
+pytest>=8.4.0
+pytest-cov>=7.0.0
+pytest-asyncio>=1.2.0
+
 # TTS-Specific Dependencies
 sounddevice>=0.4.6
