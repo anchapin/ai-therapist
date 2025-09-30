@@ -43,6 +43,14 @@ try:
 except ImportError:
     whisper = None
 
+from enum import Enum
+
+class STTProvider(Enum):
+    """Available Speech-to-Text service providers."""
+    OPENAI = "openai"
+    GOOGLE = "google"
+    WHISPER = "whisper"
+
 @dataclass
 class STTResult:
     """Speech-to-Text result with metadata."""
