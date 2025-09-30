@@ -12,6 +12,10 @@ source ai-therapist-env/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Copy and configure environment variables
+cp template.env .env
+# Edit .env with your configuration
 ```
 
 ### Application Commands
@@ -121,6 +125,19 @@ OLLAMA_EMBEDDING_MODEL=nomic-embed-text:latest  # Embedding model
 - Source transparency for professional accountability
 - Confidential local processing (no cloud data transmission)
 
+### Architecture Evolution
+
+**Legacy Vector Store (`build_vectorstore.py`)**
+- Original script using OpenAI embeddings (now deprecated)
+- References `langchain_openai` and OpenAI API key
+- App now uses Ollama embeddings instead for local processing
+
+**Modern Implementation**
+- `app.py` contains current vector store creation logic
+- Uses `OllamaEmbeddings` for local embedding generation
+- Automatic knowledge file downloading when missing
+- Support for both PDF and TXT files
+
 ## Development Notes
 
 **Environment Dependencies**
@@ -141,3 +158,11 @@ OLLAMA_EMBEDDING_MODEL=nomic-embed-text:latest  # Embedding model
 - No formal test suite - test through application interaction
 - `test_ollama.py` verifies core Ollama connectivity
 - Manual testing via conversation flows with therapy content
+
+**Development Workflow**
+1. Set up virtual environment and install dependencies
+2. Configure `.env` file from `template.env`
+3. Run `python test_ollama.py` to verify Ollama setup
+4. Run `streamlit run app.py` to start the application
+5. Test conversation flows with therapy content
+6. Monitor knowledge file downloads and vector store creation
