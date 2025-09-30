@@ -128,20 +128,19 @@ def mock_external_services():
     """Mock external services for testing."""
     with patch('voice.audio_processor.sf') as mock_soundfile, \
          patch('voice.audio_processor.webrtcvad') as mock_webrtcvad, \
-         patch('voice.stt_service.openai') as mock_openai_stt, \
-         patch('voice.tts_service.openai') as mock_openai_tts, \
-         patch('voice.security.cryptography') as mock_crypto:
+         patch('openai.Audio') as mock_openai_audio, \
+         patch('cryptography.fernet.Fernet') as mock_fernet:
 
         # Configure mocks
-        mock_soundfile.sf.read.return_value = (np.array([0, 1, 2]), 16000)
-        mock_soundfile.sf.write.return_value = None
+        mock_soundfile.read.return_value = (np.array([0, 1, 2]), 16000)
+        mock_soundfile.write.return_value = None
         mock_webrtcvad.Vad.return_value = MagicMock()
-        mock_openai_stt.Audio.transcribe.return_value = {
+        mock_openai_audio.transcribe.return_value = {
             'text': 'mock transcription',
             'confidence': 0.95
         }
-        mock_openai_tts.Audio.speak.return_value = MagicMock()
-        mock_crypto.Fernet.generate_key.return_value = b'mock_key'
+        mock_openai_audio.speak.return_value = MagicMock()
+        mock_fernet.generate_key.return_value = b'mock_key'
 
         yield
 
