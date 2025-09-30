@@ -104,3 +104,24 @@ vectorstore/
 # Knowledge directory files (downloaded dynamically)
 knowledge/*.pdf
 knowledge/*.txt
+
+# Log files
+*.log
+
+# Cache directories
+embedding_cache/
+test_env/
+
+# Security validation artifacts
+security_validation_report.json
+demo_security_validation.py
+final_security_validation.py
+run_security_tests.py
+
+# Voice data caches
+voice_data/cache/
+voice_data/temp/
+
+# Temporary test files
+*_temp.*
+test_*_temp.py
