@@ -61,8 +61,8 @@ jobs:
 
     - name: Pull Ollama models
       run: |
-        ollama pull llama3.2:latest
-        ollama pull nomic-embed-text:latest
+        curl -X POST http://localhost:11434/api/pull -d '{"name": "llama3.2:latest"}'
+        curl -X POST http://localhost:11434/api/pull -d '{"name": "nomic-embed-text:latest"}'
 
     - name: Run Unit Tests
       run: |
