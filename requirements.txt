@@ -29,7 +29,6 @@ piper-tts>=1.2.0
 
 # Voice Analysis & Security
 webrtcvad>=2.0.10
-audioop-lts>=0.2.0
 
 # Async Support
 aiofiles>=23.2.1
