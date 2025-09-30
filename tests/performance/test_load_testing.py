@@ -45,10 +45,10 @@ class TestLoadTesting:
     @pytest.fixture
     def voice_service(self, config, security):
         """Create VoiceService instance for testing."""
-        with patch('voice.voice_service.AudioProcessor'), \
-             patch('voice.voice_service.STTService'), \
-             patch('voice.voice_service.TTSService'), \
-             patch('voice.voice_service.VoiceCommandProcessor'):
+        with patch('voice.audio_processor.SimplifiedAudioProcessor'), \
+             patch('voice.stt_service.STTService'), \
+             patch('voice.tts_service.TTSService'), \
+             patch('voice.commands.VoiceCommandProcessor'):
             service = VoiceService(config, security)
             service.initialize()
             return service
