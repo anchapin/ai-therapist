@@ -74,6 +74,7 @@ class STTResult:
     therapy_keywords_detected: List[str] = field(default_factory=list)
     crisis_keywords_detected: List[str] = field(default_factory=list)
     is_crisis: bool = False
+    is_command: bool = False  # Add missing is_command attribute
     sentiment: Optional[Dict[str, Any]] = None
     segments: Optional[List[Dict[str, Any]]] = None
 

@@ -57,6 +57,7 @@ class VoiceSession:
             self.metadata['voice_settings'] = {
                 'voice_speed': 1.2,  # Update to match test expectation
                 'volume': 1.0,
+                'voice_pitch': 1.0,  # Add missing voice_pitch field
                 'pitch': 1.0
             }
 
@@ -797,6 +798,7 @@ class VoiceService:
             response = {
                 'user_input': user_input,
                 'assistant_response': f"I heard: {user_input}",
+                'ai_response': f"I heard: {user_input}",  # Add missing ai_response field
                 'timestamp': time.time()
             }
 
