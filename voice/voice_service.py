@@ -804,9 +804,12 @@ class VoiceService:
                 self.logger.warning(f"Crisis detected in text: {stt_result.text}")
                 if hasattr(self.command_processor, 'process_text'):
                     try:
-                        command_result = self.command_processor.process_text(stt_result.text)
+                        import inspect
+                        if inspect.iscoroutinefunction(self.command_processor.process_text):
+                            command_result = await self.command_processor.process_text(stt_result.text)
+                        else:
+                            command_result = self.command_processor.process_text(stt_result.text)
                         if hasattr(self.command_processor, 'execute_command'):
-                            import inspect
                             if inspect.iscoroutinefunction(self.command_processor.execute_command):
                                 await self.command_processor.execute_command(command_result)
                             else:
@@ -819,9 +822,12 @@ class VoiceService:
                 self.logger.info(f"Voice command detected: {stt_result.text}")
                 if hasattr(self.command_processor, 'process_text'):
                     try:
-                        command_result = self.command_processor.process_text(stt_result.text)
+                        import inspect
+                        if inspect.iscoroutinefunction(self.command_processor.process_text):
+                            command_result = await self.command_processor.process_text(stt_result.text)
+                        else:
+                            command_result = self.command_processor.process_text(stt_result.text)
                         if hasattr(self.command_processor, 'execute_command'):
-                            import inspect
                             if inspect.iscoroutinefunction(self.command_processor.execute_command):
                                 await self.command_processor.execute_command(command_result)
                             else:

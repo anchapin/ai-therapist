@@ -178,7 +178,7 @@ class TestVoiceServiceIntegration:
         mock_command_result = MagicMock()
         mock_command_result.is_emergency = True
         mock_command_result.command.name = 'emergency_help'
-        voice_service.command_processor.process_text.return_value = mock_command_result
+        voice_service.command_processor.process_text = AsyncMock(return_value=mock_command_result)
 
         # Process crisis input
         result = await voice_service.process_voice_input(session_id, mock_audio_data['data'])
@@ -206,7 +206,7 @@ class TestVoiceServiceIntegration:
         mock_command_result = MagicMock()
         mock_command_result.is_command = True
         mock_command_result.command.name = 'start_meditation'
-        voice_service.command_processor.process_text.return_value = mock_command_result
+        voice_service.command_processor.process_text = AsyncMock(return_value=mock_command_result)
         voice_service.command_processor.execute_command.return_value = {'success': True}
 
         # Process voice command
