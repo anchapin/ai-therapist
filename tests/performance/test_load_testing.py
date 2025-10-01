@@ -13,7 +13,7 @@ import pytest
 import asyncio
 import time
 import statistics
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, AsyncMock
 import concurrent.futures
 import threading
 from datetime import datetime
@@ -54,8 +54,23 @@ class TestLoadTesting:
         mock_processor.cleanup.return_value = True
 
         mock_stt = MagicMock()
+        mock_stt_result = MagicMock()
+        mock_stt_result.text = "Test input"
+        mock_stt_result.confidence = 0.95
+        mock_stt_result.is_crisis = False  # Prevent crisis detection
+        mock_stt_result.is_command = False  # Prevent command detection
+        mock_stt_result.crisis_keywords_detected = []  # No crisis keywords
+        mock_stt.transcribe_audio = MagicMock(return_value=mock_stt_result)
+
         mock_tts = MagicMock()
+        mock_tts_result = MagicMock()
+        mock_tts_result.audio_data = b"mock_audio_data"
+        mock_tts_result.success = True
+        mock_tts.synthesize_speech = MagicMock(return_value=mock_tts_result)
+
         mock_commands = MagicMock()
+        # Mock async method properly with AsyncMock
+        mock_commands.process_text = AsyncMock(return_value=None)
 
         # Patch the classes at module level
         with patch('voice.audio_processor.SimplifiedAudioProcessor', return_value=mock_processor), \
@@ -65,7 +80,33 @@ class TestLoadTesting:
 
             service = VoiceService(config, security)
             service.initialize()
+
+            # Override the service instances with our mocks
+            service.audio_processor = mock_processor
+            service.stt_service = mock_stt
+            service.tts_service = mock_tts
+            service.command_processor = mock_commands
+
+            # Mock crisis detection to avoid false positives
+            service._detect_crisis = MagicMock(return_value=False)
+
             return service
+
+    def _create_mock_stt_result(self, text="Test input", confidence=0.95):
+        """Create a consistent mock STT result for performance tests."""
+        mock_stt_result = MagicMock()
+        mock_stt_result.text = text
+        mock_stt_result.confidence = confidence
+        mock_stt_result.is_crisis = False  # Prevent crisis detection
+        mock_stt_result.is_command = False  # Prevent command detection
+        mock_stt_result.crisis_keywords_detected = []  # No crisis keywords
+        return mock_stt_result
+
+    def _mock_stt_service(self, voice_service, text="Test input"):
+        """Mock STT service consistently across tests."""
+        voice_service.stt_service = MagicMock()
+        mock_stt_result = self._create_mock_stt_result(text)
+        voice_service.stt_service.transcribe_audio = MagicMock(return_value=mock_stt_result)
 
     @pytest.fixture
     def mock_audio_data(self):
@@ -84,12 +125,8 @@ class TestLoadTesting:
         """Test single user response time benchmark."""
         session_id = voice_service.create_session()
 
-        # Mock processing
-        voice_service.stt_service = MagicMock()
-        mock_stt_result = MagicMock()
-        mock_stt_result.text = "Test input"
-        mock_stt_result.confidence = 0.95
-        voice_service.stt_service.transcribe_audio.return_value = mock_stt_result
+        # Mock processing consistently
+        self._mock_stt_service(voice_service)
 
         start_time = time.time()
 
@@ -113,12 +150,8 @@ class TestLoadTesting:
             session_id = voice_service.create_session()
             sessions.append(session_id)
 
-        # Mock processing for all sessions
-        voice_service.stt_service = MagicMock()
-        mock_stt_result = MagicMock()
-        mock_stt_result.text = "Concurrent test input"
-        mock_stt_result.confidence = 0.95
-        voice_service.stt_service.transcribe_audio.return_value = mock_stt_result
+        # Mock processing for all sessions consistently
+        self._mock_stt_service(voice_service, "Concurrent test input")
 
         def process_session(session_id):
             start_time = time.time()
@@ -148,12 +181,8 @@ class TestLoadTesting:
         num_requests = 100
         response_times = []
 
-        # Mock processing
-        voice_service.stt_service = MagicMock()
-        mock_stt_result = MagicMock()
-        mock_stt_result.text = "High volume test"
-        mock_stt_result.confidence = 0.95
-        voice_service.stt_service.transcribe_audio.return_value = mock_stt_result
+        # Mock processing consistently
+        self._mock_stt_service(voice_service, "High volume test")
 
         # Process high volume of requests
         for i in range(num_requests):
@@ -180,12 +209,8 @@ class TestLoadTesting:
         response_times = []
         errors = []
 
-        # Mock processing
-        voice_service.stt_service = MagicMock()
-        mock_stt_result = MagicMock()
-        mock_stt_result.text = "Stress test input"
-        mock_stt_result.confidence = 0.95
-        voice_service.stt_service.transcribe_audio.return_value = mock_stt_result
+        # Mock processing consistently
+        self._mock_stt_service(voice_service, "Stress test input")
 
         # Stress test loop
         start_time = time.time()
@@ -224,11 +249,7 @@ class TestLoadTesting:
         session_id = voice_service.create_session()
         num_operations = 50
 
-        voice_service.stt_service = MagicMock()
-        mock_stt_result = MagicMock()
-        mock_stt_result.text = "Memory test input"
-        mock_stt_result.confidence = 0.95
-        voice_service.stt_service.transcribe_audio.return_value = mock_stt_result
+        self._mock_stt_service(voice_service, "Memory test input")
 
         # Perform memory-intensive operations
         for i in range(num_operations):
@@ -245,11 +266,7 @@ class TestLoadTesting:
         session_counts = [1, 5, 10, 25, 50]
         performance_metrics = []
 
-        voice_service.stt_service = MagicMock()
-        mock_stt_result = MagicMock()
-        mock_stt_result.text = "Scalability test"
-        mock_stt_result.confidence = 0.95
-        voice_service.stt_service.transcribe_audio.return_value = mock_stt_result
+        self._mock_stt_service(voice_service, "Scalability test")
 
         for num_sessions in session_counts:
             sessions = []
@@ -300,11 +317,7 @@ class TestLoadTesting:
         for i in range(20):
             session_id = voice_service.create_session()
 
-            voice_service.stt_service = MagicMock()
-            mock_stt_result = MagicMock()
-            mock_stt_result.text = f"Cleanup test {i}"
-            mock_stt_result.confidence = 0.95
-            voice_service.stt_service.transcribe_audio.return_value = mock_stt_result
+            self._mock_stt_service(voice_service, f"Cleanup test {i}")
 
             asyncio.run(voice_service.process_voice_input(session_id, mock_audio_data))
             voice_service.end_session(session_id)
@@ -317,11 +330,7 @@ class TestLoadTesting:
         num_concurrent_tests = 20
         results = []
 
-        voice_service.stt_service = MagicMock()
-        mock_stt_result = MagicMock()
-        mock_stt_result.text = "Availability test"
-        mock_stt_result.confidence = 0.95
-        voice_service.stt_service.transcribe_audio.return_value = mock_stt_result
+        self._mock_stt_service(voice_service, "Availability test")
 
         def test_service_availability():
             try:
@@ -347,11 +356,7 @@ class TestLoadTesting:
         sample_interval = 5  # Sample every 5 seconds
         response_time_samples = []
 
-        voice_service.stt_service = MagicMock()
-        mock_stt_result = MagicMock()
-        mock_stt_result.text = "Degradation test"
-        mock_stt_result.confidence = 0.95
-        voice_service.stt_service.transcribe_audio.return_value = mock_stt_result
+        self._mock_stt_service(voice_service, "Degradation test")
 
         # Collect performance samples over time
         start_time = time.time()
