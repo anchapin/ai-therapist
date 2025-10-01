@@ -42,13 +42,21 @@ class TestVoiceServiceIntegration:
     @pytest.fixture
     def voice_service(self, config, security):
         """Create VoiceService instance for testing."""
-        with patch('voice.voice_service.SimplifiedAudioProcessor'), \
-             patch('voice.voice_service.STTService'), \
-             patch('voice.voice_service.TTSService'), \
-             patch('voice.voice_service.VoiceCommandProcessor'), \
+        with patch('voice.voice_service.SimplifiedAudioProcessor') as mock_audio_processor, \
+             patch('voice.voice_service.STTService') as mock_stt_service, \
+             patch('voice.voice_service.TTSService') as mock_tts_service, \
+             patch('voice.voice_service.VoiceCommandProcessor') as mock_command_processor, \
              patch.object(security, '_check_consent_status', return_value=True), \
              patch.object(security, '_verify_security_requirements', return_value=True):
+
             service = VoiceService(config, security)
+
+            # Ensure mocked components return proper mock objects, not MagicMock
+            service.audio_processor = mock_audio_processor.return_value
+            service.stt_service = mock_stt_service.return_value
+            service.tts_service = mock_tts_service.return_value
+            service.command_processor = mock_command_processor.return_value
+
             return service
 
     def test_service_initialization(self, voice_service, config, security):
@@ -112,17 +120,22 @@ class TestVoiceServiceIntegration:
         """Test voice input processing pipeline."""
         session_id = voice_service.create_session()
 
-        # Mock audio processing
-        voice_service.audio_processor = MagicMock()
-        voice_service.audio_processor.get_audio_chunk.return_value = mock_audio_data['data']
-        voice_service.audio_processor.detect_voice_activity.return_value = True
-
-        # Mock STT processing
-        mock_stt_result = MagicMock()
+        # Create proper STT result mock with expected attributes
+        from voice.stt_service import STTResult
+        mock_stt_result = MagicMock(spec=STTResult)
         mock_stt_result.text = "I need help with anxiety"
         mock_stt_result.confidence = 0.95
         mock_stt_result.is_crisis = False
-        voice_service.stt_service = MagicMock()
+        mock_stt_result.is_command = False
+        mock_stt_result.alternatives = []
+        mock_stt_result.provider = 'openai'
+        mock_stt_result.processing_time = 1.0
+
+        # Mock audio processing
+        voice_service.audio_processor.get_audio_chunk.return_value = mock_audio_data['data']
+        voice_service.audio_processor.detect_voice_activity.return_value = True
+
+        # Mock STT service to return proper result, not MagicMock
         voice_service.stt_service.transcribe_audio.return_value = mock_stt_result
 
         # Process voice input
@@ -131,22 +144,27 @@ class TestVoiceServiceIntegration:
         assert result is not None
         assert result.text == "I need help with anxiety"
         assert result.confidence == 0.95
+        assert result.is_crisis == False
 
     @pytest.mark.asyncio
     async def test_voice_output_generation(self, voice_service):
         """Test voice output generation."""
         session_id = voice_service.create_session()
 
-        # Mock TTS processing
-        mock_tts_result = MagicMock()
+        # Create proper TTS result mock with expected attributes
+        from voice.tts_service import TTSResult
+        mock_tts_result = MagicMock(spec=TTSResult)
         mock_tts_result.audio_data = b'synthesized_audio'
         mock_tts_result.duration = 2.5
         mock_tts_result.provider = 'openai'
-        voice_service.tts_service = MagicMock()
+        mock_tts_result.voice = 'alloy'
+        mock_tts_result.format = 'wav'
+        mock_tts_result.sample_rate = 22050
+
+        # Mock TTS service to return proper result, not MagicMock
         voice_service.tts_service.synthesize_speech.return_value = mock_tts_result
 
         # Mock audio playback
-        voice_service.audio_processor = MagicMock()
         voice_service.audio_processor.play_audio.return_value = True
 
         # Generate voice output
@@ -158,34 +176,45 @@ class TestVoiceServiceIntegration:
         assert result is not None
         assert result.audio_data == b'synthesized_audio'
         assert result.duration == 2.5
+        assert result.provider == 'openai'
 
     @pytest.mark.asyncio
     async def test_crisis_response_integration(self, voice_service, mock_audio_data):
         """Test crisis response integration."""
         session_id = voice_service.create_session()
 
-        # Mock crisis detection
-        mock_stt_result = MagicMock()
+        # Create proper STT result mock for crisis detection
+        from voice.stt_service import STTResult
+        mock_stt_result = MagicMock(spec=STTResult)
         mock_stt_result.text = "I want to kill myself"
         mock_stt_result.confidence = 0.95
         mock_stt_result.is_crisis = True
+        mock_stt_result.is_command = False
         mock_stt_result.crisis_keywords_detected = ['kill myself']
-        voice_service.stt_service = MagicMock()
+        mock_stt_result.alternatives = []
+        mock_stt_result.provider = 'openai'
+
+        # Mock STT service to return proper crisis result
         voice_service.stt_service.transcribe_audio.return_value = mock_stt_result
 
-        # Mock crisis response
-        voice_service.command_processor = MagicMock()
+        # Create proper command result mock
         mock_command_result = MagicMock()
         mock_command_result.is_emergency = True
+        mock_command_result.is_command = False
         mock_command_result.command.name = 'emergency_help'
+        mock_command_result.success = True
+
+        # Mock command processor with proper async methods
         voice_service.command_processor.process_text = AsyncMock(return_value=mock_command_result)
+        voice_service.command_processor.execute_command = AsyncMock(return_value={'success': True})
 
         # Process crisis input
         result = await voice_service.process_voice_input(session_id, mock_audio_data['data'])
 
         # Verify crisis response triggered
         assert result.is_crisis == True
-        voice_service.command_processor.process_text.assert_called_once()
+        assert result.text == "I want to kill myself"
+        voice_service.command_processor.process_text.assert_called_once_with("I want to kill myself")
         voice_service.command_processor.execute_command.assert_called_once()
 
     @pytest.mark.asyncio
@@ -193,28 +222,37 @@ class TestVoiceServiceIntegration:
         """Test voice command processing."""
         session_id = voice_service.create_session()
 
-        # Mock command processing
-        mock_stt_result = MagicMock()
+        # Create proper STT result mock for command processing
+        from voice.stt_service import STTResult
+        mock_stt_result = MagicMock(spec=STTResult)
         mock_stt_result.text = "start meditation"
         mock_stt_result.confidence = 0.90
         mock_stt_result.is_command = True
-        voice_service.stt_service = MagicMock()
+        mock_stt_result.is_crisis = False
+        mock_stt_result.alternatives = []
+        mock_stt_result.provider = 'openai'
+
+        # Mock STT service to return proper command result
         voice_service.stt_service.transcribe_audio.return_value = mock_stt_result
 
-        # Mock command execution
-        voice_service.command_processor = MagicMock()
+        # Create proper command result mock
         mock_command_result = MagicMock()
         mock_command_result.is_command = True
+        mock_command_result.is_emergency = False
         mock_command_result.command.name = 'start_meditation'
+        mock_command_result.success = True
+
+        # Mock command processor with proper async methods
         voice_service.command_processor.process_text = AsyncMock(return_value=mock_command_result)
-        voice_service.command_processor.execute_command.return_value = {'success': True}
+        voice_service.command_processor.execute_command = AsyncMock(return_value={'success': True})
 
         # Process voice command
         result = await voice_service.process_voice_input(session_id, mock_audio_data['data'])
 
         # Verify command processing
         assert result.is_command == True
-        voice_service.command_processor.process_text.assert_called_once()
+        assert result.text == "start meditation"
+        voice_service.command_processor.process_text.assert_called_once_with("start meditation")
         voice_service.command_processor.execute_command.assert_called_once()
 
     @pytest.mark.asyncio
@@ -222,23 +260,34 @@ class TestVoiceServiceIntegration:
         """Test conversation flow integration."""
         session_id = voice_service.create_session()
 
-        # Mock voice input processing
-        voice_input = b'user_voice_input'
-        mock_stt_result = MagicMock()
+        # Create proper STT result mock
+        from voice.stt_service import STTResult
+        mock_stt_result = MagicMock(spec=STTResult)
         mock_stt_result.text = "I'm feeling stressed"
         mock_stt_result.confidence = 0.95
-        voice_service.stt_service = MagicMock()
+        mock_stt_result.is_crisis = False
+        mock_stt_result.is_command = False
+        mock_stt_result.alternatives = []
+        mock_stt_result.provider = 'openai'
+
+        # Mock voice input processing
+        voice_input = b'user_voice_input'
         voice_service.stt_service.transcribe_audio.return_value = mock_stt_result
 
-        # Mock AI response generation
+        # Mock AI response generation with proper return type
         ai_response = "I understand you're feeling stressed. Let's work on some breathing exercises."
         voice_service.generate_ai_response = MagicMock(return_value=ai_response)
 
-        # Mock TTS output
-        mock_tts_result = MagicMock()
+        # Create proper TTS result mock
+        from voice.tts_service import TTSResult
+        mock_tts_result = MagicMock(spec=TTSResult)
         mock_tts_result.audio_data = b'ai_response_audio'
         mock_tts_result.duration = 3.0
-        voice_service.tts_service = MagicMock()
+        mock_tts_result.provider = 'openai'
+        mock_tts_result.voice = 'alloy'
+        mock_tts_result.format = 'wav'
+
+        # Mock TTS service to return proper result
         voice_service.tts_service.synthesize_speech.return_value = mock_tts_result
 
         # Process conversation turn
@@ -248,21 +297,29 @@ class TestVoiceServiceIntegration:
         assert 'user_input' in result
         assert 'ai_response' in result
         assert 'voice_output' in result
+        assert result['ai_response'] == ai_response
+        assert result['voice_output'].audio_data == b'ai_response_audio'
 
     @pytest.mark.asyncio
     async def test_multi_provider_fallback(self, voice_service, mock_audio_data):
         """Test multi-provider fallback integration."""
         session_id = voice_service.create_session()
 
-        # Mock primary provider failure
-        voice_service.stt_service = MagicMock()
-        voice_service.stt_service.transcribe_audio.side_effect = Exception("Primary provider failed")
-
-        # Mock fallback provider success
-        voice_service.fallback_stt_service = MagicMock()
-        mock_fallback_result = MagicMock()
+        # Create proper fallback STT result mock
+        from voice.stt_service import STTResult
+        mock_fallback_result = MagicMock(spec=STTResult)
         mock_fallback_result.text = "Fallback transcription"
         mock_fallback_result.confidence = 0.85
+        mock_fallback_result.is_crisis = False
+        mock_fallback_result.is_command = False
+        mock_fallback_result.alternatives = []
+        mock_fallback_result.provider = 'fallback'
+
+        # Mock primary provider failure
+        voice_service.stt_service.transcribe_audio.side_effect = Exception("Primary provider failed")
+
+        # Mock fallback provider success with proper result
+        voice_service.fallback_stt_service = MagicMock()
         voice_service.fallback_stt_service.transcribe_audio.return_value = mock_fallback_result
 
         # Process with fallback
@@ -270,6 +327,8 @@ class TestVoiceServiceIntegration:
 
         assert result is not None
         assert result.text == "Fallback transcription"
+        assert result.confidence == 0.85
+        assert result.provider == 'fallback'
 
     def test_service_statistics(self, voice_service):
         """Test service statistics."""
@@ -294,12 +353,12 @@ class TestVoiceServiceIntegration:
         result = await voice_service.process_voice_input("invalid_session", b'audio')
         assert result is None
 
-        # Test audio processing error
-        voice_service.audio_processor = MagicMock()
+        # Test audio processing error with proper error handling
         voice_service.audio_processor.get_audio_chunk.side_effect = Exception("Audio error")
 
         result = await voice_service.process_voice_input(session_id, b'audio')
-        assert result is None or result.error is not None
+        # Result could be None or could have error attribute depending on implementation
+        assert result is None or (hasattr(result, 'error') and result.error is not None)
 
     def test_conversation_history(self, voice_service):
         """Test conversation history management."""

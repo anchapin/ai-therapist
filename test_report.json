@@ -2,14 +2,14 @@
   "metadata": {
     "test_suite": "AI Therapist Voice Features",
     "version": "1.0.0",
-    "execution_date": "2025-10-01T14:03:12.133916",
+    "execution_date": "2025-10-01T16:00:13.294867",
     "project_root": "/home/anchapin/projects/ai-therapist"
   },
   "summary": {
     "total_test_categories": 4,
-    "passed_categories": 1,
-    "failed_categories": 3,
-    "success_rate": 0.25,
+    "passed_categories": 2,
+    "failed_categories": 2,
+    "success_rate": 0.5,
     "overall_status": "FAIL"
   },
   "detailed_results": {
@@ -17,25 +17,25 @@
       "exit_code": 0,
       "description": "Unit Tests (Component-level testing)",
       "target_coverage": 0.9,
-      "timestamp": "2025-10-01T14:03:05.287498"
+      "timestamp": "2025-10-01T15:58:37.000687"
     },
     "integration": {
       "exit_code": 1,
       "description": "Integration Tests (Service integration testing)",
       "target_coverage": 0.85,
-      "timestamp": "2025-10-01T14:03:08.668603"
+      "timestamp": "2025-10-01T15:58:38.553960"
     },
     "security": {
       "exit_code": 1,
       "description": "Security Tests (HIPAA compliance and security)",
       "target_coverage": 0.95,
-      "timestamp": "2025-10-01T14:03:10.494260"
+      "timestamp": "2025-10-01T15:58:40.457822"
     },
     "performance": {
-      "exit_code": 2,
+      "exit_code": 0,
       "description": "Performance Tests (Load and scalability)",
       "target_coverage": 0.8,
-      "timestamp": "2025-10-01T14:03:12.130677"
+      "timestamp": "2025-10-01T16:00:13.285755"
     }
   },
   "coverage_analysis": {
@@ -56,14 +56,20 @@
     },
     "performance_testing": {
       "requirement": "Load and scalability testing",
-      "status": "PENDING"
+      "status": "COMPLETED"
     },
     "automation": {
       "requirement": "\u2265 80% test automation",
       "status": "COMPLETED"
     }
   },
-  "performance_analysis": {},
+  "performance_analysis": {
+    "load_testing": "PASSED",
+    "response_time_benchmarks": "PASSED",
+    "concurrent_sessions": "PASSED",
+    "scalability": "PASSED",
+    "stress_testing": "PASSED"
+  },
   "recommendations": [
     {
       "priority": "HIGH",
@@ -76,12 +82,6 @@
       "category": "SECURITY",
       "issue": "security tests failed",
       "recommendation": "Review and fix security test failures"
-    },
-    {
-      "priority": "HIGH",
-      "category": "PERFORMANCE",
-      "issue": "performance tests failed",
-      "recommendation": "Review and fix performance test failures"
     }
   ]
 }
