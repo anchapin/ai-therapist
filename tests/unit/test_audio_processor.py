@@ -13,6 +13,7 @@ import pytest
 import numpy as np
 import asyncio
 import sys
+import random
 from unittest.mock import MagicMock, patch
 import tempfile
 import os
@@ -90,8 +91,10 @@ class TestAudioProcessor:
     @pytest.fixture
     def mock_audio_data(self):
         """Create mock audio data for testing."""
+        # Generate mock audio data using Python's random module to avoid numpy.random issues
+        audio_data = np.array([random.gauss(0, 0.1) for _ in range(16000)], dtype=np.float32)
         return {
-            'data': np.random.randn(16000).astype(np.float32),  # 1 second of audio at 16kHz
+            'data': audio_data,
             'sample_rate': 16000,
             'duration': 1.0,
             'channels': 1
@@ -146,7 +149,7 @@ class TestAudioProcessor:
         processor.recording_start_time = 0.0
 
         # Add some test audio to buffer
-        test_audio = np.random.randn(1024).astype(np.float32)
+        test_audio = np.array([random.gauss(0, 0.1) for _ in range(1024)], dtype=np.float32)
         processor.audio_buffer.append(test_audio.reshape(-1, 1))
 
         result = processor.stop_recording()
@@ -172,7 +175,7 @@ class TestAudioProcessor:
     def test_background_noise_reduction(self, processor):
         """Test background noise reduction."""
         # Create simple test audio
-        test_audio = np.random.randn(16000).astype(np.float32)
+        test_audio = np.array([random.gauss(0, 0.1) for _ in range(16000)], dtype=np.float32)
 
         # Process noise reduction - should return unchanged audio when noisereduce is not available
         try:
@@ -192,12 +195,12 @@ class TestAudioProcessor:
         assert isinstance(is_speech_silence, bool)
 
         # Test with some non-zero audio for the numpy array version
-        test_audio = np.random.randn(1000).astype(np.float32) * 0.1
+        test_audio = np.array([random.gauss(0, 0.01) for _ in range(1000)], dtype=np.float32)
         is_speech = processor.detect_voice_activity(test_audio)
         assert isinstance(is_speech, bool)
 
         # Test with AudioData version (returns list) - but handle gracefully if VAD not available
-        mock_audio_data = np.random.randn(16000).astype(np.float32)
+        mock_audio_data = np.array([random.gauss(0, 0.1) for _ in range(16000)], dtype=np.float32)
         audio_data = AudioData(
             data=mock_audio_data,
             sample_rate=16000,
@@ -258,7 +261,7 @@ class TestAudioProcessor:
     def test_audio_buffer_management(self, processor):
         """Test audio buffer management."""
         # Add test data to buffer (expects numpy array)
-        test_data = np.random.randn(1024).astype(np.float32)
+        test_data = np.array([random.gauss(0, 0.1) for _ in range(1024)], dtype=np.float32)
         processor.add_to_buffer(test_data)
 
         # Retrieve buffer contents
@@ -346,7 +349,7 @@ class TestAudioProcessor:
     def test_audio_callback_function(self, processor):
         """Test audio callback function."""
         # Mock callback data
-        indata = np.random.randn(1024, 1).astype(np.float32)
+        indata = np.array([[random.gauss(0, 0.1)] for _ in range(1024)], dtype=np.float32)
         frames = 1024
         time_info = {'input_buffer_adc_time': 0.0}
         status = None
@@ -366,7 +369,7 @@ class TestAudioProcessor:
         processor.state = AudioProcessorState.RECORDING
 
         # Add some data to buffer
-        test_data = np.random.randn(1024).astype(np.float32)
+        test_data = np.array([random.gauss(0, 0.1) for _ in range(1024)], dtype=np.float32)
         processor.add_to_buffer(test_data)
 
         # Test cleanup

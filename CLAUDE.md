@@ -15,15 +15,15 @@ pip install -r requirements.txt
 
 # Copy and configure environment variables
 cp template.env .env
-# Edit .env with your configuration
+# Edit .env with your configuration (see Voice Configuration section)
 ```
 
 ### Application Commands
 ```bash
-# Run the main AI therapist application
+# Run the main AI therapist application with voice features
 streamlit run app.py
 
-# Test Ollama connection
+# Test Ollama connection and models
 python test_ollama.py
 
 # Manually download knowledge files
@@ -31,138 +31,231 @@ python download_knowledge.py
 
 # Build vector store from PDFs (legacy - app.py does this automatically)
 python build_vectorstore.py
+
+# Test voice features setup
+python test_voice_setup.py
+
+# Test voice commands
+python test_enhanced_voice_commands.py
 ```
 
-### Testing
+### Testing Commands
 ```bash
-# Test Ollama integration
-python test_ollama.py
+# Run all tests with comprehensive reporting
+python tests/test_runner.py
 
-# Manual testing: Run app and verify conversation flow with therapy PDFs
+# Run specific test categories
+python -m pytest tests/unit/ -v --tb=short
+python -m pytest tests/integration/ -v --tb=short
+python -m pytest tests/security/ -v --tb=short
+python -m pytest tests/performance/ -v --tb=short
+
+# Run individual test files
+python -m pytest tests/unit/test_audio_processor.py::TestAudioProcessor::test_initialization -v
+python -m pytest tests/integration/test_voice_service.py -v
+
+# Test with coverage
+python -m pytest tests/ --cov=voice --cov-report=term-missing
+
+# Voice-specific testing
+python test_voice_security_comprehensive.py
+python test_integration_voice_crisis.py
 ```
 
 ## Architecture Overview
 
-This is a **Streamlit-based AI therapist application** that uses **Ollama** for local LLM inference and **LangChain** for RAG (Retrieval-Augmented Generation) capabilities.
+This is a **Streamlit-based AI therapist application** with comprehensive **voice interaction capabilities** that uses **Ollama** for local LLM inference and **LangChain** for RAG (Retrieval-Augmented Generation) capabilities.
 
-### Core Components
-
-**Knowledge Downloader (`download_knowledge.py`)**
-- Downloads therapy resources from URLs specified in `knowledge_files.txt`
-- Creates `knowledge/` directory if it doesn't exist
-- Only downloads missing files to avoid unnecessary requests
-- Provides feedback on download success/failure
-
-**Knowledge Files Configuration (`knowledge_files.txt`)**
-- Maps expected filenames to download URLs
-- Format: `filename|download_url`
-- Supports comments and blank lines for organization
-- Easily updatable when URLs change
+### Core Architecture Components
 
 **Main Application (`app.py`)**
-- Streamlit web interface with chat functionality
-- Uses `ConversationalRetrievalChain` for context-aware conversations
-- Automatic vector store creation from PDF and TXT documents
-- Session state management for conversation memory
-- Source citation for retrieved documents
-- Automatic knowledge file downloading when missing
+- Streamlit web interface with dual text/voice chat functionality
+- Integrates voice features with traditional text-based conversation
+- Security features: input sanitization, crisis detection, encryption
+- Performance optimizations: caching, streaming responses, memory management
+- Voice feature initialization and session management
 
-**Vector Store System**
-- Uses FAISS for vector storage with `OllamaEmbeddings` (nomic-embed-text:latest)
-- Automatic creation from PDF and TXT files in `knowledge/` directory
-- Chunking: 1000 characters with 200 overlap
-- Stored in `vectorstore/faiss_index/`
+**Voice Features Module (`voice/`)**
+- **Voice Service (`voice_service.py`)**: Central orchestrator for voice features
+- **Audio Processor (`audio_processor.py`)**: Real-time audio capture and processing
+- **STT Service (`stt_service.py`)**: Multi-provider speech-to-text with fallback
+- **TTS Service (`tts_service.py`)**: Multi-provider text-to-speech synthesis
+- **Voice UI (`voice_ui.py`)**: Streamlit components for voice interaction
+- **Voice Commands (`commands.py`)**: Voice command processing and execution
+- **Security (`security.py`)**: Voice data encryption and privacy protection
+- **Configuration (`config.py`)**: Centralized voice feature configuration
 
-**Knowledge Base**
-- Located in `knowledge/` directory (gitignored)
-- Downloads therapy resources from URLs defined in `knowledge_files.txt`
-- Supports both PDF and TXT files
-- Automatically downloads missing files on first run or when "Rebuild Knowledge Base" is clicked
+**Knowledge System**
+- **Knowledge Downloader (`download_knowledge.py`)**: Downloads therapy resources
+- **Vector Store System**: FAISS with Ollama embeddings (nomic-embed-text:latest)
+- **Knowledge Files Configuration (`knowledge_files.txt`)**: URL mappings
+- **Knowledge Base**: Located in `knowledge/` directory (gitignored)
 
-**LLM Integration**
-- Uses `ChatOllama` with llama3.2:latest model
-- Local inference via Ollama (no external API costs)
-- Temperature: 0.7 for balanced responses
+**Testing Infrastructure (`tests/`)**
+- **Unit Tests**: Component-level testing for all voice modules
+- **Integration Tests**: End-to-end voice service testing
+- **Security Tests**: HIPAA compliance and security validation
+- **Performance Tests**: Load and stress testing
+- **Test Runner**: Comprehensive reporting and CI integration
+
+### Voice Features Architecture
+
+**Voice Service Orchestration**
+- Manages voice session lifecycle and state
+- Coordinates STT, AI processing, and TTS pipeline
+- Handles voice commands and emergency protocols
+- Integrates with main application conversation flow
+
+**Multi-Provider STT System**
+- Primary: OpenAI Whisper API (whisper-1)
+- Fallback: Local Whisper processing (base model)
+- Alternative: Google Cloud Speech-to-Text
+- Features: VAD, noise reduction, confidence scoring
+
+**Multi-Provider TTS System**
+- Primary: OpenAI TTS API (tts-1, alloy voice)
+- Premium: ElevenLabs TTS (multilingual models)
+- Local: Piper TTS (offline processing)
+- Features: Voice profiles, emotion control, streaming
+
+**Voice Commands System**
+- Wake word detection and command parsing
+- Emergency protocol handling (crisis detection)
+- Therapy-specific commands (breathing exercises, reflections)
+- Security levels and authentication
+
+**Security & Privacy**
+- End-to-end encryption for voice data
+- Configurable data retention policies
+- HIPAA compliance features
+- Consent management and anonymization
 
 ### Key Configuration
 
 **Environment Variables (`.env`)**
+Core application settings:
 ```
-KNOWLEDGE_PATH=./knowledge              # Directory containing therapy PDFs
-VECTORSTORE_PATH=./vectorstore         # Directory for FAISS vector storage
-OLLAMA_HOST=http://localhost:11434     # Ollama server URL
-OLLAMA_MODEL=llama3.2:latest          # Primary chat model
-OLLAMA_EMBEDDING_MODEL=nomic-embed-text:latest  # Embedding model
+KNOWLEDGE_PATH=./knowledge
+VECTORSTORE_PATH=./vectorstore
+OLLAMA_HOST=http://localhost:11434
+OLLAMA_MODEL=llama3.2:latest
+OLLAMA_EMBEDDING_MODEL=nomic-embed-text:latest
+```
+
+Voice feature settings:
+```
+VOICE_ENABLED=true
+VOICE_INPUT_ENABLED=true
+VOICE_OUTPUT_ENABLED=true
+VOICE_COMMANDS_ENABLED=true
+
+# Audio Processing
+AUDIO_SAMPLE_RATE=16000
+AUDIO_CHANNELS=1
+NOISE_REDUCTION_ENABLED=true
+VAD_ENABLED=true
+
+# STT Configuration
+OPENAI_WHISPER_MODEL=whisper-1
+WHISPER_MODEL=base
+
+# TTS Configuration
+OPENAI_TTS_MODEL=tts-1
+OPENAI_TTS_VOICE=alloy
+ELEVENLABS_VOICE_ID=your_preferred_voice_id
+
+# Security
+VOICE_ENCRYPTION_ENABLED=true
+VOICE_CONSENT_REQUIRED=true
+VOICE_HIPAA_COMPLIANCE_ENABLED=true
 ```
 
 ### Data Flow
 
-1. **Initial Load**: App checks for existing vector store, creates from PDFs if missing
-2. **User Query**: Input processed through `ConversationalRetrievalChain`
-3. **Retrieval**: Similarity search against vector store returns relevant text chunks
-4. **Generation**: LLM generates response using retrieved context + conversation history
-5. **Response**: Displayed with source citations and added to conversation memory
+**Voice Conversation Flow:**
+1. **Voice Input**: Audio capture → VAD → STT processing → Text transcription
+2. **Command Processing**: Voice command detection → Emergency/crisis checks
+3. **AI Processing**: Conversation context → RAG retrieval → LLM generation
+4. **Voice Output**: Text response → TTS synthesis → Audio playback
+5. **Session Management**: State updates, caching, security logging
+
+**Security Flow:**
+1. **Input Validation**: Sanitization, prompt injection protection
+2. **Crisis Detection**: Keyword analysis → Emergency response
+3. **Data Encryption**: Voice data encryption at rest and in transit
+4. **Privacy Controls**: Data retention, consent management, anonymization
 
 ### Critical Implementation Details
 
-**Error Handling**
-- Comprehensive try/catch blocks around all external service calls
-- Graceful fallbacks when vector store loading fails
-- User-friendly error messages in Streamlit UI
+**Voice Module Dependencies**
+- Streamlit (required for UI components)
+- NumPy, SciPy (audio processing)
+- librosa, soundfile (audio handling)
+- webrtcvad (voice activity detection)
+- OpenAI APIs (STT/TTS services)
+- cryptography (security features)
 
-**Performance Considerations**
-- Vector store persists between sessions to avoid reprocessing PDFs
-- Lazy loading of models and embeddings
-- Progress indicators for long-running operations
+**Testing Infrastructure**
+- Pytest with async support for voice service testing
+- Comprehensive mocking for external dependencies
+- CI/CD pipeline with multi-Python version testing
+- Security compliance testing and performance benchmarking
 
-**Memory Management**
-- `ConversationBufferMemory` maintains chat context
-- Session state preserves user interactions
-- Vector store cached to avoid rebuilds
+**Performance Optimizations**
+- Response caching for common queries
+- Streaming audio processing
+- Parallel voice command processing
+- Vector store persistence and optimization
+- Background task management for voice features
 
-**Therapy-Specific Features**
-- Evidence-based responses grounded in provided materials
-- Source transparency for professional accountability
-- Confidential local processing (no cloud data transmission)
+**Security Architecture**
+- Voice data encryption using Fernet symmetric encryption
+- Input sanitization and prompt injection prevention
+- Crisis keyword detection and emergency response protocols
+- HIPAA compliance features (data retention, audit logging)
+- Voice profile isolation and access controls
 
-### Architecture Evolution
+### Development Workflow
 
-**Legacy Vector Store (`build_vectorstore.py`)**
-- Original script using OpenAI embeddings (now deprecated)
-- References `langchain_openai` and OpenAI API key
-- App now uses Ollama embeddings instead for local processing
+**Voice Feature Development:**
+1. Set up environment with audio dependencies (may require system packages)
+2. Configure `.env` with required API keys and voice settings
+3. Test audio hardware: `python test_voice_setup.py`
+4. Run voice command tests: `python test_enhanced_voice_commands.py`
+5. Start application: `streamlit run app.py`
+6. Test voice interaction flow and emergency protocols
+7. Run security tests: `python test_voice_security_comprehensive.py`
 
-**Modern Implementation**
-- `app.py` contains current vector store creation logic
-- Uses `OllamaEmbeddings` for local embedding generation
-- Automatic knowledge file downloading when missing
-- Support for both PDF and TXT files
+**Testing Workflow:**
+1. Run unit tests for individual components: `python -m pytest tests/unit/`
+2. Run integration tests: `python -m pytest tests/integration/`
+3. Run security compliance tests: `python -m pytest tests/security/`
+4. Run performance tests: `python -m pytest tests/performance/`
+5. Generate comprehensive report: `python tests/test_runner.py`
 
-## Development Notes
+**CI/CD Integration:**
+- Automated testing across Python 3.9, 3.10, 3.11
+- Ollama service integration in CI environment
+- Voice feature testing with mocked dependencies
+- Security compliance validation
+- Performance benchmarking and regression testing
 
-**Environment Dependencies**
-- Ollama must be running locally on port 11434
-- Required models: `llama3.2:latest`, `nomic-embed-text:latest`
-- Vectorstore directory is gitignored to prevent large commits
-- Knowledge directory contents are gitignored and downloaded dynamically
+### Voice Module Error Handling
 
-**Code Style**
-- Follows existing patterns from `AGENT.md`
-- Python 3.x conventions with snake_case
-- Environment variables for configuration via python-dotenv
-- Type hints not present but acceptable to add
-- F-strings for string formatting
-- Comprehensive docstrings for public functions
+**Graceful Degradation:**
+- Optional UI imports when streamlit unavailable
+- Fallback STT providers when primary services fail
+- Local TTS processing when cloud services unavailable
+- Emergency protocols for crisis situations
 
-**Testing Approach**
-- No formal test suite - test through application interaction
-- `test_ollama.py` verifies core Ollama connectivity
-- Manual testing via conversation flows with therapy content
+**Error Recovery:**
+- Audio device detection and fallback handling
+- Network connectivity resilience for cloud services
+- Voice service restart and session recovery
+- Comprehensive logging and error reporting
 
-**Development Workflow**
-1. Set up virtual environment and install dependencies
-2. Configure `.env` file from `template.env`
-3. Run `python test_ollama.py` to verify Ollama setup
-4. Run `streamlit run app.py` to start the application
-5. Test conversation flows with therapy content
-6. Monitor knowledge file downloads and vector store creation
+**Security Incident Response:**
+- Voice data encryption key rotation
+- Emergency protocol activation for crisis detection
+- Audit logging and compliance reporting
+- Data anonymization and privacy protection

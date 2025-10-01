@@ -129,7 +129,7 @@ def mock_external_services():
     mock_openai_audio = MagicMock()
     mock_fernet = MagicMock()
     mock_streamlit = MagicMock()
-    mock_numpy = MagicMock()
+    # Don't mock numpy - we need it for test data generation
 
     # Add mocks to sys.modules
     sys.modules['soundfile'] = mock_soundfile
@@ -140,7 +140,7 @@ def mock_external_services():
     sys.modules['cryptography'] = MagicMock()
     sys.modules['cryptography.fernet'] = MagicMock()
     sys.modules['streamlit'] = mock_streamlit
-    sys.modules['numpy'] = mock_numpy
+    # Don't mock numpy - we need it for test data generation
 
     # Create mock numpy array for testing
     mock_array = MagicMock()
@@ -162,27 +162,6 @@ def mock_external_services():
     mock_streamlit.sidebar = MagicMock()
     mock_streamlit.columns = MagicMock(return_value=[MagicMock(), MagicMock()])
     mock_streamlit.container = MagicMock()
-
-    # Mock numpy comprehensively
-    mock_numpy.array = MagicMock(return_value=mock_array)
-    mock_numpy.sin = MagicMock()
-    mock_numpy.linspace = MagicMock()
-    mock_numpy.sin.return_value = mock_array
-    mock_numpy.linspace.return_value = mock_array
-    mock_numpy.random = MagicMock()
-    mock_numpy.random.randn = MagicMock(return_value=mock_array)
-    mock_numpy.random.random = MagicMock(return_value=mock_array)
-    mock_numpy.mean = MagicMock(return_value=0.5)
-    mock_numpy.max = MagicMock(return_value=1.0)
-    mock_numpy.min = MagicMock(return_value=0.0)
-    mock_numpy.std = MagicMock(return_value=0.1)
-    mock_numpy.abs = MagicMock(return_value=mock_array)
-    mock_numpy.sqrt = MagicMock(return_value=mock_array)
-    mock_numpy.float32 = MagicMock()
-    mock_numpy.int16 = MagicMock()
-    mock_numpy.zeros = MagicMock(return_value=mock_array)
-    mock_numpy.ones = MagicMock(return_value=mock_array)
-    mock_numpy.append = MagicMock(return_value=mock_array)
 
     # Mock sounddevice
     mock_sounddevice.query_devices.return_value = [

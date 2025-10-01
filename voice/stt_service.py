@@ -630,11 +630,21 @@ class STTService:
             self.logger.error(f"Error testing STT service: {str(e)}")
             return False
 
-    def _generate_cache_key(self, audio_data: AudioData) -> str:
+    def _generate_cache_key(self, audio_data) -> str:
         """Generate cache key for audio data."""
-        # Create hash based on audio data and timestamp
-        audio_hash = hashlib.md5(audio_data.data.tobytes()).hexdigest()
-        return f"stt_{audio_hash}_{audio_data.duration:.2f}"
+        # Handle different types of audio data
+        if hasattr(audio_data, 'data'):
+            # AudioData object
+            audio_bytes = audio_data.data.tobytes() if hasattr(audio_data.data, 'tobytes') else audio_data.data.dumps()
+            duration = audio_data.duration
+        else:
+            # Raw numpy array or other data
+            audio_bytes = audio_data.tobytes() if hasattr(audio_data, 'tobytes') else str(audio_data).encode()
+            duration = 1.0  # Default duration
+
+        # Create hash based on audio data and duration
+        audio_hash = hashlib.md5(audio_bytes).hexdigest()
+        return f"stt_{audio_hash}_{duration:.2f}"
 
     def _get_from_cache(self, cache_key: str) -> Optional[STTResult]:
         """Get result from cache."""

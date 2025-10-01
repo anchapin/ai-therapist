@@ -1,0 +1,93 @@
+{
+  "metadata": {
+    "test_suite": "AI Therapist Voice Features",
+    "version": "1.0.0",
+    "execution_date": "2025-10-01T10:07:37.009999",
+    "project_root": "/home/anchapin/projects/ai-therapist"
+  },
+  "summary": {
+    "total_test_categories": 4,
+    "passed_categories": 0,
+    "failed_categories": 4,
+    "success_rate": 0.0,
+    "overall_status": "FAIL"
+  },
+  "detailed_results": {
+    "unit": {
+      "exit_code": -1,
+      "error": "[Errno 32] Broken pipe",
+      "description": "Unit Tests (Component-level testing)",
+      "timestamp": "2025-10-01T10:07:36.549220"
+    },
+    "integration": {
+      "exit_code": 4,
+      "description": "Integration Tests (Service integration testing)",
+      "target_coverage": 0.85,
+      "timestamp": "2025-10-01T10:07:36.561090"
+    },
+    "security": {
+      "exit_code": 3,
+      "description": "Security Tests (HIPAA compliance and security)",
+      "target_coverage": 0.95,
+      "timestamp": "2025-10-01T10:07:36.772777"
+    },
+    "performance": {
+      "exit_code": 3,
+      "description": "Performance Tests (Load and scalability)",
+      "target_coverage": 0.8,
+      "timestamp": "2025-10-01T10:07:37.009746"
+    }
+  },
+  "coverage_analysis": {
+    "error": "Coverage data not available"
+  },
+  "compliance_analysis": {
+    "unit_testing_coverage": {
+      "requirement": "90%+ unit test coverage",
+      "status": "PENDING"
+    },
+    "integration_testing": {
+      "requirement": "Service integration testing",
+      "status": "PENDING"
+    },
+    "security_testing": {
+      "requirement": "HIPAA compliance testing",
+      "status": "PENDING"
+    },
+    "performance_testing": {
+      "requirement": "Load and scalability testing",
+      "status": "PENDING"
+    },
+    "automation": {
+      "requirement": "\u2265 80% test automation",
+      "status": "COMPLETED"
+    }
+  },
+  "performance_analysis": {},
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "category": "UNIT",
+      "issue": "unit tests failed",
+      "recommendation": "Review and fix unit test failures"
+    },
+    {
+      "priority": "HIGH",
+      "category": "INTEGRATION",
+      "issue": "integration tests failed",
+      "recommendation": "Review and fix integration test failures"
+    },
+    {
+      "priority": "HIGH",
+      "category": "SECURITY",
+      "issue": "security tests failed",
+      "recommendation": "Review and fix security test failures"
+    },
+    {
+      "priority": "HIGH",
+      "category": "PERFORMANCE",
+      "issue": "performance tests failed",
+      "recommendation": "Review and fix performance test failures"
+    }
+  ]
+}

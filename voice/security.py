@@ -711,3 +711,8 @@ class VoiceSecurity:
     def __del__(self):
         """Destructor to clean up resources."""
         self.cleanup()
+
+
+# Type aliases for backward compatibility
+AuditLogger = SecurityAuditLog
+ConsentManager = VoiceSecurity
