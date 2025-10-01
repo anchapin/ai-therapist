@@ -489,9 +489,12 @@ class SimplifiedAudioProcessor:
                 metrics.snr_ratio = metrics.speech_level - metrics.noise_level
             
             # Calculate clarity score
-            zero_crossings = np.sum(np.diff(np.sign(audio_data.data)) != 0)
-            zcr = zero_crossings / len(audio_data.data)
-            metrics.clarity_score = max(0, 1 - zcr)
+            if len(audio_data.data) > 0:
+                zero_crossings = np.sum(np.diff(np.sign(audio_data.data)) != 0)
+                zcr = zero_crossings / len(audio_data.data)
+                metrics.clarity_score = max(0, 1 - zcr)
+            else:
+                metrics.clarity_score = 0.0
             
             # Overall quality score
             metrics.overall_quality = (

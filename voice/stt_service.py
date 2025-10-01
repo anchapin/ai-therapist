@@ -695,6 +695,10 @@ class STTService:
     def _calculate_audio_quality_score(self, audio_data: AudioData) -> float:
         """Calculate audio quality score (0.0 to 1.0)."""
         try:
+            # Handle empty audio data
+            if len(audio_data.data) == 0:
+                return 0.0
+
             # Calculate RMS energy
             rms = np.sqrt(np.mean(audio_data.data ** 2))
 

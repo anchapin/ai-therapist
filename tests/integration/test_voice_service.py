@@ -18,6 +18,8 @@ import json
 from voice.voice_service import VoiceService
 from voice.config import VoiceConfig
 from voice.security import VoiceSecurity
+from voice.stt_service import STTResult
+from voice.tts_service import TTSResult
 
 
 class TestVoiceServiceIntegration:
@@ -51,11 +53,34 @@ class TestVoiceServiceIntegration:
 
             service = VoiceService(config, security)
 
-            # Ensure mocked components return proper mock objects, not MagicMock
+            # Configure mocked components with proper methods
             service.audio_processor = mock_audio_processor.return_value
             service.stt_service = mock_stt_service.return_value
             service.tts_service = mock_tts_service.return_value
             service.command_processor = mock_command_processor.return_value
+
+            # Configure audio processor mocks
+            service.audio_processor.initialize.return_value = True
+            service.audio_processor.cleanup.return_value = None
+            service.audio_processor.get_audio_chunk.return_value = b'mock_audio_data'
+            service.audio_processor.detect_voice_activity.return_value = True
+            service.audio_processor.play_audio.return_value = True
+
+            # Configure STT service mocks
+            service.stt_service.initialize.return_value = True
+            service.stt_service.cleanup.return_value = None
+            service.stt_service.is_available.return_value = True
+
+            # Configure TTS service mocks
+            service.tts_service.initialize.return_value = True
+            service.tts_service.cleanup.return_value = None
+            service.tts_service.is_available.return_value = True
+            service.tts_service.synthesize_speech.return_value = None
+
+            # Configure command processor mocks
+            service.command_processor.initialize.return_value = True
+            service.command_processor.process_text = AsyncMock(return_value=None)
+            service.command_processor.execute_command = AsyncMock(return_value={'success': True})
 
             return service
 
@@ -121,7 +146,6 @@ class TestVoiceServiceIntegration:
         session_id = voice_service.create_session()
 
         # Create proper STT result mock with expected attributes
-        from voice.stt_service import STTResult
         mock_stt_result = MagicMock(spec=STTResult)
         mock_stt_result.text = "I need help with anxiety"
         mock_stt_result.confidence = 0.95
@@ -152,7 +176,6 @@ class TestVoiceServiceIntegration:
         session_id = voice_service.create_session()
 
         # Create proper TTS result mock with expected attributes
-        from voice.tts_service import TTSResult
         mock_tts_result = MagicMock(spec=TTSResult)
         mock_tts_result.audio_data = b'synthesized_audio'
         mock_tts_result.duration = 2.5
@@ -184,7 +207,6 @@ class TestVoiceServiceIntegration:
         session_id = voice_service.create_session()
 
         # Create proper STT result mock for crisis detection
-        from voice.stt_service import STTResult
         mock_stt_result = MagicMock(spec=STTResult)
         mock_stt_result.text = "I want to kill myself"
         mock_stt_result.confidence = 0.95
@@ -223,7 +245,6 @@ class TestVoiceServiceIntegration:
         session_id = voice_service.create_session()
 
         # Create proper STT result mock for command processing
-        from voice.stt_service import STTResult
         mock_stt_result = MagicMock(spec=STTResult)
         mock_stt_result.text = "start meditation"
         mock_stt_result.confidence = 0.90
@@ -261,7 +282,6 @@ class TestVoiceServiceIntegration:
         session_id = voice_service.create_session()
 
         # Create proper STT result mock
-        from voice.stt_service import STTResult
         mock_stt_result = MagicMock(spec=STTResult)
         mock_stt_result.text = "I'm feeling stressed"
         mock_stt_result.confidence = 0.95
@@ -279,7 +299,6 @@ class TestVoiceServiceIntegration:
         voice_service.generate_ai_response = MagicMock(return_value=ai_response)
 
         # Create proper TTS result mock
-        from voice.tts_service import TTSResult
         mock_tts_result = MagicMock(spec=TTSResult)
         mock_tts_result.audio_data = b'ai_response_audio'
         mock_tts_result.duration = 3.0
@@ -306,7 +325,6 @@ class TestVoiceServiceIntegration:
         session_id = voice_service.create_session()
 
         # Create proper fallback STT result mock
-        from voice.stt_service import STTResult
         mock_fallback_result = MagicMock(spec=STTResult)
         mock_fallback_result.text = "Fallback transcription"
         mock_fallback_result.confidence = 0.85
