@@ -2,55 +2,49 @@
   "metadata": {
     "test_suite": "AI Therapist Voice Features",
     "version": "1.0.0",
-    "execution_date": "2025-10-01T16:39:49.021644",
+    "execution_date": "2025-10-01T19:05:40.978437",
     "project_root": "/home/anchapin/projects/ai-therapist"
   },
   "summary": {
     "total_test_categories": 4,
-    "passed_categories": 1,
-    "failed_categories": 3,
-    "success_rate": 0.25,
+    "passed_categories": 0,
+    "failed_categories": 4,
+    "success_rate": 0.0,
     "overall_status": "FAIL"
   },
   "detailed_results": {
     "unit": {
-      "exit_code": 0,
+      "exit_code": 2,
       "description": "Unit Tests (Component-level testing)",
       "target_coverage": 0.9,
-      "timestamp": "2025-10-01T16:39:44.002888"
+      "timestamp": "2025-10-01T19:05:38.246236"
     },
     "integration": {
       "exit_code": 2,
       "description": "Integration Tests (Service integration testing)",
       "target_coverage": 0.85,
-      "timestamp": "2025-10-01T16:39:45.763592"
+      "timestamp": "2025-10-01T19:05:40.561332"
     },
     "security": {
-      "exit_code": 2,
+      "exit_code": 3,
       "description": "Security Tests (HIPAA compliance and security)",
       "target_coverage": 0.95,
-      "timestamp": "2025-10-01T16:39:47.306541"
+      "timestamp": "2025-10-01T19:05:40.764050"
     },
     "performance": {
-      "exit_code": 2,
+      "exit_code": 3,
       "description": "Performance Tests (Load and scalability)",
       "target_coverage": 0.8,
-      "timestamp": "2025-10-01T16:39:48.797317"
+      "timestamp": "2025-10-01T19:05:40.978216"
     }
   },
   "coverage_analysis": {
-    "target_coverage": 0.9,
-    "actual_coverage": 0.9870503597122302,
-    "coverage_met": true,
-    "total_statements": 4865,
-    "covered_statements": 4802,
-    "missing_statements": 63,
-    "coverage_gap": 0
+    "error": "Coverage data not available"
   },
   "compliance_analysis": {
     "unit_testing_coverage": {
       "requirement": "90%+ unit test coverage",
-      "status": "COMPLETED"
+      "status": "PENDING"
     },
     "integration_testing": {
       "requirement": "Service integration testing",
@@ -71,6 +65,12 @@
   },
   "performance_analysis": {},
   "recommendations": [
+    {
+      "priority": "HIGH",
+      "category": "UNIT",
+      "issue": "unit tests failed",
+      "recommendation": "Review and fix unit test failures"
+    },
     {
       "priority": "HIGH",
       "category": "INTEGRATION",

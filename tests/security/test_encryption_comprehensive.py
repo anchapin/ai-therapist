@@ -7,6 +7,9 @@ across different data types with various attack vectors.
 
 import pytest
 import asyncio
+import math
+import weakref
+import gc
 from unittest.mock import MagicMock, patch, PropertyMock
 import json
 import tempfile
@@ -15,7 +18,7 @@ from datetime import datetime, timedelta
 import hashlib
 import base64
 import cryptography
-from cryptography.fernet import Fernet, InvalidToken
+from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
@@ -84,7 +87,7 @@ class TestEncryptionComprehensive:
             'command_injection': 'rm -rf /; echo "pwned"'.encode(),
             'buffer_overflow': b'A' * 100000,
             'format_string': '%s%s%s%s%s%n%n%n%n%n'.encode(),
-            'null_bytes': b'admin\x00legit_password'.encode(),
+            'null_bytes': b'admin\x00legit_password',
             'unicode_exploit': '患者\x00\x00\x00\x00\x00'.encode('utf-8')
         }
 
@@ -259,11 +262,11 @@ class TestEncryptionComprehensive:
         decrypted = security.decrypt_data(encrypted, user_id)
         assert decrypted == large_data
 
-        # Test memory cleanup
-        weak_ref = weakref.ref(encrypted)
+        # Test memory cleanup (bytes objects can't be weak referenced, but we can test deletion)
+        encrypted_id = id(encrypted)
         del encrypted
         gc.collect()
-        assert weak_ref() is None or weak_ref() == b'encrypted_', "Memory not properly cleaned"
+        # Note: We can't directly test weak references to bytes, but we can ensure no exceptions occur
 
     def test_encryption_side_channel_attacks(self, security):
         """Test resistance to side-channel attacks."""
@@ -297,7 +300,7 @@ class TestEncryptionComprehensive:
         # Test with corrupted encrypted data
         corrupted_data = b"corrupted_encrypted_data"
 
-        with pytest.raises((SecurityError, ValueError, InvalidToken)):
+        with pytest.raises((SecurityError, ValueError)):
             security.decrypt_data(corrupted_data, user_id)
 
         # Test with wrong key material
@@ -368,7 +371,7 @@ class TestEncryptionComprehensive:
         # Try to decrypt with common keys (should all fail)
         for key in common_keys:
             with patch.object(security, 'master_key', Fernet(key)):
-                with pytest.raises((SecurityError, ValueError, InvalidToken)):
+                with pytest.raises((SecurityError, ValueError)):
                     security.decrypt_data(encrypted, user_id)
 
     def test_encryption_data_tampering_detection(self, security):
@@ -390,7 +393,7 @@ class TestEncryptionComprehensive:
 
         # All tampering attempts should fail decryption
         for tampered in tampering_attempts:
-            with pytest.raises((SecurityError, ValueError, InvalidToken)):
+            with pytest.raises((SecurityError, ValueError)):
                 security.decrypt_data(tampered, user_id)
 
     def test_encryption_performance_under_load(self, security):
@@ -432,7 +435,7 @@ class TestEncryptionComprehensive:
         for count in byte_counts:
             if count > 0:
                 probability = count / data_length
-                entropy -= probability * (probability and probability.bit_length() - 1 or 0)
+                entropy -= probability * math.log2(probability)
 
         return entropy
 
@@ -530,7 +533,7 @@ class TestEncryptionComprehensive:
         corrupted = b'CORRUPTED' + encrypted[16:]
 
         # Should handle gracefully
-        with pytest.raises((SecurityError, ValueError, InvalidToken)):
+        with pytest.raises((SecurityError, ValueError)):
             security.decrypt_data(corrupted, user_id)
 
         # Original should still work

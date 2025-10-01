@@ -497,7 +497,7 @@ class TestVoiceWorkflowsIntegration:
         total_memory_growth = final_memory - initial_memory
 
         # Should not have excessive memory growth
-        assert total_memory_growth < 300, f"Total memory growth {total_memory_growth".2f"}MB seems excessive"
+        assert total_memory_growth < 300, f"Total memory growth {total_memory_growth:.2f}MB seems excessive"
 
         # Verify conversation history is manageable
         conversation_history = therapy_voice_service.get_conversation_history(session_id)

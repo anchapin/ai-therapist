@@ -117,7 +117,7 @@ class VoiceService:
         # Service state
         self.is_running = False
         self.voice_thread = None
-        self.voice_queue = asyncio.Queue()
+        self.voice_queue = None  # Will be initialized with proper event loop
         self._event_loop = None  # Will store the event loop reference
 
         # Callbacks
@@ -223,9 +223,20 @@ class VoiceService:
         finally:
             self.is_running = False
 
+    def _ensure_queue_initialized(self):
+        """Ensure the voice queue is initialized with proper event loop."""
+        if self.voice_queue is None:
+            try:
+                self.voice_queue = asyncio.Queue()
+            except RuntimeError:
+                # No event loop running, create a simple queue for testing
+                import queue
+                self.voice_queue = queue.Queue()
+
     async def _process_voice_queue(self):
         """Process items from the voice queue."""
         try:
+            self._ensure_queue_initialized()
             while not self.voice_queue.empty():
                 item = await asyncio.wait_for(
                     self.voice_queue.get(),
@@ -406,6 +417,7 @@ class VoiceService:
             session = self.get_current_session()
             if session and session.state == VoiceSessionState.LISTENING:
                 # Add to async queue for processing using stored event loop
+                self._ensure_queue_initialized()
                 if self._event_loop and self._event_loop.is_running():
                     asyncio.run_coroutine_threadsafe(
                         self.voice_queue.put(("process_audio", (session.session_id, audio_data))),

@@ -367,7 +367,7 @@ class TestInputBoundaryConditions:
             # Should handle special characters appropriately
             assert isinstance(sanitized, str)
             # Should neutralize HTML entities
-            assert """ not in sanitized
+            assert '"' not in sanitized
             assert "&" not in sanitized
             assert "<" not in sanitized
             assert ">" not in sanitized
@@ -755,4 +755,3 @@ class TestErrorHandlingInInputProcessing:
                 # Should have recorded error
                 assert len(validation_errors) > 0
                 assert field_name in validation_errors[-1]
-"""

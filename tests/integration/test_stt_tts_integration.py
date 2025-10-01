@@ -437,7 +437,7 @@ class TestSTTTTSIntegration:
             total_memory_growth = final_memory - initial_memory
 
             # Should not have excessive memory growth
-            assert total_memory_growth < 150, f"Total memory growth {total_memory_growth".2f"}MB seems excessive"
+            assert total_memory_growth < 150, f"Total memory growth {total_memory_growth:.2f}MB seems excessive"
 
     @pytest.mark.asyncio
     async def test_stt_tts_performance_benchmarks(self, stt_config, tts_config):

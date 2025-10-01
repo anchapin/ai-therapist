@@ -251,7 +251,7 @@ class TestAudioPipelineIntegration:
         total_memory_growth = final_memory - initial_memory
 
         # Should not have excessive memory growth
-        assert total_memory_growth < 150, f"Total memory growth {total_memory_growth".2f"}MB seems excessive"
+        assert total_memory_growth < 150, f"Total memory growth {total_memory_growth:.2f}MB seems excessive"
 
         # Test buffer cleanup
         cleared_chunks = mock_audio_processor.force_cleanup_buffers()
