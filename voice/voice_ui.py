@@ -17,7 +17,14 @@ The UI is designed to be therapeutic, accessible, and intuitive while meeting
 the requirements outlined in the SPEECH_PRD.md document.
 """
 
-import streamlit as st
+# Conditional import for streamlit
+try:
+    import streamlit as st
+    _STREAMLIT_AVAILABLE = True
+except ImportError:
+    st = None
+    _STREAMLIT_AVAILABLE = False
+
 import asyncio
 import time
 import json
@@ -28,12 +35,32 @@ from pathlib import Path
 import logging
 from dataclasses import dataclass
 from enum import Enum
-import numpy as np
+
+# Conditional import for numpy
+try:
+    import numpy as np
+    _NUMPY_AVAILABLE = True
+except ImportError:
+    np = None
+    _NUMPY_AVAILABLE = False
 
 from .config import VoiceConfig, VoiceProfile
 from .voice_service import VoiceService, VoiceSessionState
 from .audio_processor import AudioData
 from .commands import VoiceCommandProcessor
+
+# Check if required dependencies are available
+if not _STREAMLIT_AVAILABLE:
+    raise ImportError(
+        "Streamlit is required for voice UI components. "
+        "Please install it with: pip install streamlit"
+    )
+
+if not _NUMPY_AVAILABLE:
+    raise ImportError(
+        "NumPy is required for voice UI components. "
+        "Please install it with: pip install numpy"
+    )
 
 # UI State Enums
 class RecordingState(Enum):

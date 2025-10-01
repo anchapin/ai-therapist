@@ -27,9 +27,17 @@ from .voice_service import VoiceService
 from .audio_processor import AudioProcessor
 from .stt_service import STTService
 from .tts_service import TTSService
-from .voice_ui import VoiceUIComponents
 from .security import VoiceSecurity
 from .commands import VoiceCommandProcessor
+
+# Optional import for UI components (requires streamlit)
+try:
+    from .voice_ui import VoiceUIComponents
+    _UI_AVAILABLE = True
+except ImportError as e:
+    # Streamlit or other UI dependencies not available
+    VoiceUIComponents = None
+    _UI_AVAILABLE = False
 
 __all__ = [
     'VoiceConfig',
@@ -38,10 +46,13 @@ __all__ = [
     'AudioProcessor',
     'STTService',
     'TTSService',
-    'VoiceUI',
     'VoiceSecurity',
     'VoiceCommandProcessor'
 ]
+
+# Add UI components to exports only if available
+if _UI_AVAILABLE:
+    __all__.append('VoiceUIComponents')
 
 # Module initialization
 def initialize_voice_module():
@@ -110,7 +121,7 @@ def check_voice_requirements():
     # Check audio library
     try:
         import sounddevice as sd
-        requirements['pyaudio'] = True
+        requirements['audio_library'] = True
     except ImportError:
         pass
 

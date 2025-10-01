@@ -86,10 +86,11 @@ class TestVoiceServiceIntegration:
 
         # Verify session structure
         session = voice_service.sessions[session_id]
-        assert 'created_at' in session
-        assert 'last_activity' in session
-        assert 'conversation_history' in session
-        assert 'voice_settings' in session
+        assert hasattr(session, 'metadata')
+        assert 'created_at' in session.metadata
+        assert hasattr(session, 'last_activity')
+        assert hasattr(session, 'conversation_history')
+        assert 'voice_settings' in session.metadata
 
     def test_session_management(self, voice_service):
         """Test session management."""
@@ -100,7 +101,7 @@ class TestVoiceServiceIntegration:
         # Update session activity
         voice_service.update_session_activity(session_id)
         session = voice_service.get_session(session_id)
-        assert session['last_activity'] is not None
+        assert session.last_activity is not None
 
         # End session
         voice_service.end_session(session_id)
@@ -338,9 +339,9 @@ class TestVoiceServiceIntegration:
 
         # Verify settings
         session = voice_service.get_session(session_id)
-        assert session['voice_settings']['voice_speed'] == 1.2
-        assert session['voice_settings']['voice_pitch'] == 1.1
-        assert session['voice_settings']['volume'] == 0.8
+        assert session.metadata['voice_settings']['voice_speed'] == 1.2
+        assert session.metadata['voice_settings']['voice_pitch'] == 1.1
+        assert session.metadata['voice_settings']['volume'] == 0.8
 
     def test_service_health_check(self, voice_service):
         """Test service health check."""

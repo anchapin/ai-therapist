@@ -120,23 +120,82 @@ def mock_security_config():
 @pytest.fixture(autouse=True)
 def mock_external_services():
     """Mock external services for testing."""
-    with patch('voice.audio_processor.sf') as mock_soundfile, \
-         patch('voice.audio_processor.webrtcvad') as mock_webrtcvad, \
-         patch('openai.Audio') as mock_openai_audio, \
-         patch('cryptography.fernet.Fernet') as mock_fernet:
+    import sys
 
-        # Configure mocks
-        mock_soundfile.read.return_value = (np.array([0, 1, 2]), 16000)
-        mock_soundfile.write.return_value = None
-        mock_webrtcvad.Vad.return_value = MagicMock()
-        mock_openai_audio.transcribe.return_value = {
-            'text': 'mock transcription',
-            'confidence': 0.95
-        }
-        mock_openai_audio.speak.return_value = MagicMock()
-        mock_fernet.generate_key.return_value = b'mock_key'
+    # Create mocks for external libraries
+    mock_soundfile = MagicMock()
+    mock_sounddevice = MagicMock()
+    mock_webrtcvad = MagicMock()
+    mock_openai_audio = MagicMock()
+    mock_fernet = MagicMock()
+    mock_streamlit = MagicMock()
+    mock_numpy = MagicMock()
 
-        yield
+    # Add mocks to sys.modules
+    sys.modules['soundfile'] = mock_soundfile
+    sys.modules['sounddevice'] = mock_sounddevice
+    sys.modules['webrtcvad'] = mock_webrtcvad
+    sys.modules['openai'] = MagicMock()
+    sys.modules['openai.Audio'] = mock_openai_audio
+    sys.modules['cryptography'] = MagicMock()
+    sys.modules['cryptography.fernet'] = MagicMock()
+    sys.modules['streamlit'] = mock_streamlit
+    sys.modules['numpy'] = mock_numpy
+
+    # Create mock numpy array for testing
+    mock_array = MagicMock()
+    mock_array.tobytes = MagicMock(return_value=b'mock_audio_data')
+
+    # Configure mocks
+    mock_soundfile.read.return_value = (mock_array, 16000)
+    mock_soundfile.write.return_value = None
+    mock_webrtcvad.Vad.return_value = MagicMock()
+    mock_openai_audio.transcribe.return_value = {
+        'text': 'mock transcription',
+        'confidence': 0.95
+    }
+    mock_openai_audio.speak.return_value = MagicMock()
+    mock_fernet.generate_key.return_value = b'mock_key'
+
+    # Mock streamlit
+    mock_streamlit.session_state = {}
+    mock_streamlit.sidebar = MagicMock()
+    mock_streamlit.columns = MagicMock(return_value=[MagicMock(), MagicMock()])
+    mock_streamlit.container = MagicMock()
+
+    # Mock numpy comprehensively
+    mock_numpy.array = MagicMock(return_value=mock_array)
+    mock_numpy.sin = MagicMock()
+    mock_numpy.linspace = MagicMock()
+    mock_numpy.sin.return_value = mock_array
+    mock_numpy.linspace.return_value = mock_array
+    mock_numpy.random = MagicMock()
+    mock_numpy.random.randn = MagicMock(return_value=mock_array)
+    mock_numpy.random.random = MagicMock(return_value=mock_array)
+    mock_numpy.mean = MagicMock(return_value=0.5)
+    mock_numpy.max = MagicMock(return_value=1.0)
+    mock_numpy.min = MagicMock(return_value=0.0)
+    mock_numpy.std = MagicMock(return_value=0.1)
+    mock_numpy.abs = MagicMock(return_value=mock_array)
+    mock_numpy.sqrt = MagicMock(return_value=mock_array)
+    mock_numpy.float32 = MagicMock()
+    mock_numpy.int16 = MagicMock()
+    mock_numpy.zeros = MagicMock(return_value=mock_array)
+    mock_numpy.ones = MagicMock(return_value=mock_array)
+    mock_numpy.append = MagicMock(return_value=mock_array)
+
+    # Mock sounddevice
+    mock_sounddevice.query_devices.return_value = [
+        {'name': 'Mock Input', 'max_input_channels': 2, 'max_output_channels': 0, 'default_samplerate': 44100},
+        {'name': 'Mock Output', 'max_input_channels': 0, 'max_output_channels': 2, 'default_samplerate': 44100}
+    ]
+
+    yield
+
+    # Cleanup
+    for module in ['soundfile', 'sounddevice', 'webrtcvad', 'openai', 'cryptography', 'streamlit', 'numpy']:
+        if module in sys.modules:
+            del sys.modules[module]
 
 # Performance testing fixtures
 @pytest.fixture
