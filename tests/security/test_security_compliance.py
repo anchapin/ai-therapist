@@ -39,7 +39,17 @@ class TestSecurityCompliance:
     @pytest.fixture
     def security(self, config):
         """Create VoiceSecurity instance for testing."""
-        return VoiceSecurity(config)
+        security_instance = VoiceSecurity(config)
+
+        # Clean up any existing state before test
+        if hasattr(security_instance.audit_logger, 'session_logs_cache'):
+            security_instance.audit_logger.session_logs_cache.clear()
+
+        yield security_instance
+
+        # Clean up after test
+        if hasattr(security_instance.audit_logger, 'session_logs_cache'):
+            security_instance.audit_logger.session_logs_cache.clear()
 
     @pytest.fixture
     def encrypted_audio_data(self):

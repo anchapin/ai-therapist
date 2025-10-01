@@ -48,7 +48,6 @@ def mock_voice_config():
 @pytest.fixture
 def mock_audio_data():
     """Generate mock audio data for testing."""
-    import numpy as np
 
     # Generate 5 seconds of mock audio data
     duration = 5.0
