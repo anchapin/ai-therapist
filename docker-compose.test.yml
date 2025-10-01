@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+  # Ollama service (mimics CI)
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Test environment
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    depends_on:
+      ollama:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - ./test-results:/app/test-results
+    environment:
+      - PYTHONPATH=/app
+      - OLLAMA_HOST=http://ollama:11434
+      - CI=true
+    working_dir: /app
+    command: >
+      bash -c "
+        echo 'Waiting for Ollama to be ready...' &&
+        timeout 60 bash -c 'until curl -s http://ollama:11434/api/tags; do sleep 1; done' &&
+        echo 'Ollama is ready!' &&
+
+        echo 'Pulling Ollama models...' &&
+        curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"llama3.2:latest\"}' &&
+        curl -X POST http://ollama:11434/api/pull -d '{\"name\": \"nomic-embed-text:latest\"}' &&
+
+        echo 'Running test suite...' &&
+        python tests/test_runner.py &&
+
+        echo 'Tests completed. Check test-results directory for output.'
+      "
+
+  # Individual test runners for debugging
+  unit-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    depends_on:
+      ollama:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - ./test-results:/app/test-results
+    environment:
+      - PYTHONPATH=/app
+      - OLLAMA_HOST=http://ollama:11434
+    working_dir: /app
+    command: python -m pytest tests/unit/ -v --tb=short --cov=voice --cov-report=html --cov-report=term-missing
+
+  integration-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    depends_on:
+      ollama:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - ./test-results:/app/test-results
+    environment:
+      - PYTHONPATH=/app
+      - OLLAMA_HOST=http://ollama:11434
+    working_dir: /app
+    command: python -m pytest tests/integration/ -v --tb=short --cov=voice --cov-report=html --cov-report=term-missing --cov-append
+
+  security-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.ci
+    volumes:
+      - .:/app
+      - ./test-results:/app/test-results
+    environment:
+      - PYTHONPATH=/app
+      - OLLAMA_HOST=http://ollama:11434
+    working_dir: /app
+    command: python -m pytest tests/security/ -v --tb=short --cov=voice --cov-report=html --cov-report=term-missing --cov-append
+
+volumes:
+  ollama_data:
+    driver: local
