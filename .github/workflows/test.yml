@@ -1,10 +1,8 @@
 name: Voice Features Test Suite
 
 on:
-  push:
-    branches: [ main, speech_mode ]
   pull_request:
-    branches: [ main, speech_mode ]
+    branches: [ main ]
 
 jobs:
   test:
@@ -125,17 +123,20 @@ jobs:
           htmlcov/
 
     - name: Comment test results
-      if: github.event_name == 'pull_request'
-      uses: actions/github-script@v6
+      if: ${{ github.event_name == 'pull_request' }}
+      uses: actions/github-script@v8
       with:
         script: |
-          const fs = require('fs');
+          // Define the path to the test report
           const path = './test_report.json';
 
+          // Check if the test report exists
           if (fs.existsSync(path)) {
+            // Read and parse the test report
             const report = JSON.parse(fs.readFileSync(path, 'utf8'));
             const summary = report.summary;
 
+            // Build the comment body with test results and coverage
             const comment = `
             ## 🧪 Voice Features Test Results
 
@@ -144,26 +145,53 @@ jobs:
             **Coverage**: ${report.coverage_analysis ? Math.round(report.coverage_analysis.actual_coverage * 100) + '%' : 'N/A'}
 
             ### Test Categories
-            ${Object.entries(report.detailed_results).map(([category, result]) => {
-              const icon = result.exit_code === 0 ? '✅' : '❌';
-              return `${icon} ${category}: ${result.description}`;
-            }).join('\n')}
+            ${
+              report.detailed_results && typeof report.detailed_results === 'object'
+                // Map each test category to a line with an icon and description
+                ? Object.entries(report.detailed_results).map(([category, result]) => {
+                    const icon = result.exit_code === 0 ? '✅' : '❌';
+                    return `${icon} ${category}: ${result.description}`;
+                  }).join('\n')
+                : 'No detailed test results available.'
+            }
 
             ### Compliance Status
-            ${Object.entries(report.compliance_analysis).map(([requirement, status]) => {
-              const icon = status.status === 'COMPLETED' ? '✅' : '❌';
-              return `${icon} ${requirement.replace(/_/g, ' ').toUpperCase()}`;
-            }).join('\n')}
+            ${
+              report.compliance_analysis && typeof report.compliance_analysis === 'object'
+                // Map each compliance requirement to a line with an icon and status
+                ? Object.entries(report.compliance_analysis).map(([requirement, status]) => {
+                    const icon = status.status === 'COMPLETED' ? '✅' : '❌';
+                    return `${icon} ${requirement.replace(/_/g, ' ').toUpperCase()}`;
+                  }).join('\n')
+                : 'Compliance analysis not available.'
+            }
 
             ---
             *Full report available in artifacts*
+            `;
+
+            // Post the comment to the pull request
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+          } else {
+            // If the test report is not found, post a notification comment
+            const notFoundComment = `
+            ## 🧪 Voice Features Test Results
+
+            **Test report not found.**
+            The test suite did not generate a test_report.json artifact.
+            Please check the workflow logs for details.
             `;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: comment
+              body: notFoundComment
             });
           }
 
