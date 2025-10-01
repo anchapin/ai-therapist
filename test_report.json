@@ -2,61 +2,61 @@
   "metadata": {
     "test_suite": "AI Therapist Voice Features",
     "version": "1.0.0",
-    "execution_date": "2025-10-01T13:41:33.896390",
+    "execution_date": "2025-10-01T14:03:12.133916",
     "project_root": "/home/anchapin/projects/ai-therapist"
   },
   "summary": {
     "total_test_categories": 4,
-    "passed_categories": 4,
-    "failed_categories": 0,
-    "success_rate": 1.0,
-    "overall_status": "PASS"
+    "passed_categories": 1,
+    "failed_categories": 3,
+    "success_rate": 0.25,
+    "overall_status": "FAIL"
   },
   "detailed_results": {
     "unit": {
       "exit_code": 0,
       "description": "Unit Tests (Component-level testing)",
       "target_coverage": 0.9,
-      "timestamp": "2025-10-01T13:40:00.670110"
+      "timestamp": "2025-10-01T14:03:05.287498"
     },
     "integration": {
-      "exit_code": 0,
+      "exit_code": 1,
       "description": "Integration Tests (Service integration testing)",
       "target_coverage": 0.85,
-      "timestamp": "2025-10-01T13:40:01.286856"
+      "timestamp": "2025-10-01T14:03:08.668603"
     },
     "security": {
-      "exit_code": 0,
+      "exit_code": 1,
       "description": "Security Tests (HIPAA compliance and security)",
       "target_coverage": 0.95,
-      "timestamp": "2025-10-01T13:40:01.853288"
+      "timestamp": "2025-10-01T14:03:10.494260"
     },
     "performance": {
-      "exit_code": 0,
+      "exit_code": 2,
       "description": "Performance Tests (Load and scalability)",
       "target_coverage": 0.8,
-      "timestamp": "2025-10-01T13:41:33.896333"
+      "timestamp": "2025-10-01T14:03:12.130677"
     }
   },
   "coverage_analysis": {
-    "error": "Coverage analysis not available in this report generator"
+    "error": "Coverage data not available"
   },
   "compliance_analysis": {
     "unit_testing_coverage": {
       "requirement": "90%+ unit test coverage",
-      "status": "COMPLETED"
+      "status": "PENDING"
     },
     "integration_testing": {
       "requirement": "Service integration testing",
-      "status": "COMPLETED"
+      "status": "PENDING"
     },
     "security_testing": {
       "requirement": "HIPAA compliance testing",
-      "status": "COMPLETED"
+      "status": "PENDING"
     },
     "performance_testing": {
       "requirement": "Load and scalability testing",
-      "status": "COMPLETED"
+      "status": "PENDING"
     },
     "automation": {
       "requirement": "\u2265 80% test automation",
@@ -64,5 +64,24 @@
     }
   },
   "performance_analysis": {},
-  "recommendations": []
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "category": "INTEGRATION",
+      "issue": "integration tests failed",
+      "recommendation": "Review and fix integration test failures"
+    },
+    {
+      "priority": "HIGH",
+      "category": "SECURITY",
+      "issue": "security tests failed",
+      "recommendation": "Review and fix security test failures"
+    },
+    {
+      "priority": "HIGH",
+      "category": "PERFORMANCE",
+      "issue": "performance tests failed",
+      "recommendation": "Review and fix performance test failures"
+    }
+  ]
 }
