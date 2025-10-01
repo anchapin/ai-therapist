@@ -17,6 +17,7 @@ from unittest.mock import MagicMock, patch, AsyncMock
 import concurrent.futures
 import threading
 from datetime import datetime
+import numpy as np
 
 from voice.voice_service import VoiceService
 from voice.config import VoiceConfig
@@ -118,7 +119,6 @@ class TestLoadTesting:
     @pytest.fixture
     def mock_audio_data(self):
         """Generate mock audio data for testing."""
-        import numpy as np
         duration = 2.0
         sample_rate = 16000
         samples = int(duration * sample_rate)
@@ -246,11 +246,15 @@ class TestLoadTesting:
 
     def test_memory_usage_under_load(self, voice_service, mock_audio_data):
         """Test memory usage under load conditions."""
-        import psutil
-        import os
-
-        process = psutil.Process(os.getpid())
-        initial_memory = process.memory_info().rss / 1024 / 1024  # MB
+        try:
+            import psutil
+            import os
+            process = psutil.Process(os.getpid())
+            initial_memory = process.memory_info().rss / 1024 / 1024  # MB
+            use_psutil = True
+        except ImportError:
+            # Skip memory tracking if psutil is not available
+            pytest.skip("psutil not available - skipping memory usage test")
 
         # Generate memory load
         session_id = voice_service.create_session()

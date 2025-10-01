@@ -145,7 +145,9 @@ class VoiceSecurity:
                 self.logger.warning(f"Cryptography import error during encryption init: {e}")
                 self.master_key = None
             except AttributeError as e:
-                self.logger.warning(f"Cryptography attribute error during encryption init: {e}")
+                # Handle gracefully when version attribute is not available
+                if "__version__" not in str(e):
+                    self.logger.warning(f"Cryptography attribute error during encryption init: {e}")
                 self.master_key = None
             except Exception as e:
                 self.logger.error(f"Failed to initialize encryption: {e}")

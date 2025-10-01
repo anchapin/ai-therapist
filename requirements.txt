@@ -59,6 +59,7 @@ bcrypt>=4.1.0
 pytest>=8.4.0
 pytest-cov>=7.0.0
 pytest-asyncio>=1.2.0
+psutil>=5.9.0
 
 # TTS-Specific Dependencies
 sounddevice>=0.4.6
