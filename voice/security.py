@@ -86,6 +86,7 @@ class VoiceSecurity:
         self.consent_records: Dict[str, ConsentRecord] = {}
         self.audit_logs: List[SecurityAuditLog] = []
         self.active_sessions: Dict[str, Dict[str, Any]] = {}
+        self.initialized = False  # Add initialization status
 
         # Background tasks
         self.cleanup_thread = None
@@ -133,18 +134,22 @@ class VoiceSecurity:
             if self.security_config.consent_required:
                 if not self._check_consent_status():
                     self.logger.warning("Voice consent not granted")
+                    self.initialized = False
                     return False
 
             # Verify security requirements
             if not self._verify_security_requirements():
                 self.logger.error("Security requirements not met")
+                self.initialized = False
                 return False
 
+            self.initialized = True
             self.logger.info("Voice security ready for use")
             return True
 
         except Exception as e:
             self.logger.error(f"Error initializing voice security: {str(e)}")
+            self.initialized = False
             return False
 
     def _initialize_encryption(self):
