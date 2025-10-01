@@ -45,10 +45,24 @@ class TestLoadTesting:
     @pytest.fixture
     def voice_service(self, config, security):
         """Create VoiceService instance for testing."""
-        with patch('voice.audio_processor.SimplifiedAudioProcessor'), \
-             patch('voice.stt_service.STTService'), \
-             patch('voice.tts_service.TTSService'), \
-             patch('voice.commands.VoiceCommandProcessor'):
+        # Mock the dependencies by creating mock instances directly
+        mock_processor = MagicMock()
+        mock_processor.initialize.return_value = True
+        mock_processor.start_recording.return_value = True
+        mock_processor.stop_recording.return_value = MagicMock()
+        mock_processor.detect_voice_activity.return_value = False
+        mock_processor.cleanup.return_value = True
+
+        mock_stt = MagicMock()
+        mock_tts = MagicMock()
+        mock_commands = MagicMock()
+
+        # Patch the classes at module level
+        with patch('voice.audio_processor.SimplifiedAudioProcessor', return_value=mock_processor), \
+             patch('voice.stt_service.STTService', return_value=mock_stt), \
+             patch('voice.tts_service.TTSService', return_value=mock_tts), \
+             patch('voice.commands.VoiceCommandProcessor', return_value=mock_commands):
+
             service = VoiceService(config, security)
             service.initialize()
             return service

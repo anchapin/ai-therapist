@@ -115,12 +115,13 @@ class TestAudioProcessor:
 
     def test_audio_device_detection(self, processor):
         """Test audio device detection."""
-        # Since sounddevice is not available, this should return empty lists
-        input_devices, output_devices = processor.detect_audio_devices()
+        # Mock sounddevice.query_devices to return empty devices
+        with patch('sounddevice.query_devices', return_value=[]):
+            input_devices, output_devices = processor.detect_audio_devices()
 
         assert isinstance(input_devices, list)
         assert isinstance(output_devices, list)
-        # When sounddevice is not available, both should be empty
+        # When no devices are available, both should be empty
         assert len(input_devices) == 0
         assert len(output_devices) == 0
 

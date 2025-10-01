@@ -61,13 +61,13 @@ class VoiceFeatureTestRunner:
                 'path': 'tests/integration',
                 'description': 'Integration Tests (Service integration testing)',
                 'target_coverage': 0.85,
-                'pytest_args': ['-v', '--tb=medium']
+                'pytest_args': ['-v', '--tb=short']
             },
             'security': {
                 'path': 'tests/security',
                 'description': 'Security Tests (HIPAA compliance and security)',
                 'target_coverage': 0.95,
-                'pytest_args': ['-v', '--tb=long']
+                'pytest_args': ['-v', '--tb=short']
             },
             'performance': {
                 'path': 'tests/performance',

@@ -2,40 +2,40 @@
   "metadata": {
     "test_suite": "AI Therapist Voice Features",
     "version": "1.0.0",
-    "execution_date": "2025-10-01T10:07:37.009999",
+    "execution_date": "2025-10-01T10:25:00.962794",
     "project_root": "/home/anchapin/projects/ai-therapist"
   },
   "summary": {
     "total_test_categories": 4,
-    "passed_categories": 0,
-    "failed_categories": 4,
-    "success_rate": 0.0,
+    "passed_categories": 1,
+    "failed_categories": 3,
+    "success_rate": 0.25,
     "overall_status": "FAIL"
   },
   "detailed_results": {
     "unit": {
-      "exit_code": -1,
-      "error": "[Errno 32] Broken pipe",
+      "exit_code": 0,
       "description": "Unit Tests (Component-level testing)",
-      "timestamp": "2025-10-01T10:07:36.549220"
+      "target_coverage": 0.9,
+      "timestamp": "2025-10-01T10:24:53.786419"
     },
     "integration": {
-      "exit_code": 4,
+      "exit_code": 1,
       "description": "Integration Tests (Service integration testing)",
       "target_coverage": 0.85,
-      "timestamp": "2025-10-01T10:07:36.561090"
+      "timestamp": "2025-10-01T10:24:57.111260"
     },
     "security": {
-      "exit_code": 3,
+      "exit_code": 1,
       "description": "Security Tests (HIPAA compliance and security)",
       "target_coverage": 0.95,
-      "timestamp": "2025-10-01T10:07:36.772777"
+      "timestamp": "2025-10-01T10:24:58.684716"
     },
     "performance": {
-      "exit_code": 3,
+      "exit_code": 1,
       "description": "Performance Tests (Load and scalability)",
       "target_coverage": 0.8,
-      "timestamp": "2025-10-01T10:07:37.009746"
+      "timestamp": "2025-10-01T10:25:00.959859"
     }
   },
   "coverage_analysis": {
@@ -65,12 +65,6 @@
   },
   "performance_analysis": {},
   "recommendations": [
-    {
-      "priority": "HIGH",
-      "category": "UNIT",
-      "issue": "unit tests failed",
-      "recommendation": "Review and fix unit test failures"
-    },
     {
       "priority": "HIGH",
       "category": "INTEGRATION",
