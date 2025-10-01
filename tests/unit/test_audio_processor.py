@@ -14,41 +14,27 @@ import numpy as np
 import asyncio
 import sys
 import random
+import os
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 import tempfile
-import os
 from dataclasses import dataclass
 from typing import Dict, Any
 
-# Import audio processor directly to avoid circular import issues
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+# Import test utilities for safe module loading
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+from tests.test_utils import (
+    setup_voice_module_mocks,
+    get_audio_processor_module,
+    clear_module_cache
+)
 
-# Mock dependencies before importing
-mock_modules = {
-    'sounddevice': MagicMock(),
-    'webrtcvad': MagicMock(),
-    'librosa': MagicMock(),
-    'soundfile': MagicMock(),
-    'noisereduce': MagicMock(),
-    'cryptography': MagicMock(),
-    'streamlit': MagicMock()
-}
+# Set up project root and mocks
+project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+setup_voice_module_mocks(project_root)
 
-for module_name, mock_module in mock_modules.items():
-    sys.modules[module_name] = mock_module
-
-# Mock the voice module imports
-sys.modules['voice'] = MagicMock()
-sys.modules['voice.voice_service'] = MagicMock()
-sys.modules['voice.security'] = MagicMock()
-sys.modules['voice.voice_ui'] = MagicMock()
-
-# Import the audio processor module directly
-import importlib.util
-spec = importlib.util.spec_from_file_location("audio_processor", "voice/audio_processor.py")
-audio_processor_module = importlib.util.module_from_spec(spec)
-sys.modules["audio_processor"] = audio_processor_module
-spec.loader.exec_module(audio_processor_module)
+# Import the audio processor module safely
+audio_processor_module = get_audio_processor_module(project_root)
 
 # Extract classes from the module
 SimplifiedAudioProcessor = audio_processor_module.SimplifiedAudioProcessor

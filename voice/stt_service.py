@@ -499,7 +499,6 @@ class STTService:
         """Convert audio data to format expected by Whisper."""
         try:
             # Whisper expects float32 numpy array with 16kHz sample rate
-            import numpy as np
 
             if audio_data.sample_rate != 16000:
                 # Resample to 16kHz

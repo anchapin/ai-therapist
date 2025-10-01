@@ -2,14 +2,14 @@
   "metadata": {
     "test_suite": "AI Therapist Voice Features",
     "version": "1.0.0",
-    "execution_date": "2025-10-01T16:00:13.294867",
+    "execution_date": "2025-10-01T16:39:49.021644",
     "project_root": "/home/anchapin/projects/ai-therapist"
   },
   "summary": {
     "total_test_categories": 4,
-    "passed_categories": 2,
-    "failed_categories": 2,
-    "success_rate": 0.5,
+    "passed_categories": 1,
+    "failed_categories": 3,
+    "success_rate": 0.25,
     "overall_status": "FAIL"
   },
   "detailed_results": {
@@ -17,34 +17,40 @@
       "exit_code": 0,
       "description": "Unit Tests (Component-level testing)",
       "target_coverage": 0.9,
-      "timestamp": "2025-10-01T15:58:37.000687"
+      "timestamp": "2025-10-01T16:39:44.002888"
     },
     "integration": {
-      "exit_code": 1,
+      "exit_code": 2,
       "description": "Integration Tests (Service integration testing)",
       "target_coverage": 0.85,
-      "timestamp": "2025-10-01T15:58:38.553960"
+      "timestamp": "2025-10-01T16:39:45.763592"
     },
     "security": {
-      "exit_code": 1,
+      "exit_code": 2,
       "description": "Security Tests (HIPAA compliance and security)",
       "target_coverage": 0.95,
-      "timestamp": "2025-10-01T15:58:40.457822"
+      "timestamp": "2025-10-01T16:39:47.306541"
     },
     "performance": {
-      "exit_code": 0,
+      "exit_code": 2,
       "description": "Performance Tests (Load and scalability)",
       "target_coverage": 0.8,
-      "timestamp": "2025-10-01T16:00:13.285755"
+      "timestamp": "2025-10-01T16:39:48.797317"
     }
   },
   "coverage_analysis": {
-    "error": "Coverage data not available"
+    "target_coverage": 0.9,
+    "actual_coverage": 0.9870503597122302,
+    "coverage_met": true,
+    "total_statements": 4865,
+    "covered_statements": 4802,
+    "missing_statements": 63,
+    "coverage_gap": 0
   },
   "compliance_analysis": {
     "unit_testing_coverage": {
       "requirement": "90%+ unit test coverage",
-      "status": "PENDING"
+      "status": "COMPLETED"
     },
     "integration_testing": {
       "requirement": "Service integration testing",
@@ -56,20 +62,14 @@
     },
     "performance_testing": {
       "requirement": "Load and scalability testing",
-      "status": "COMPLETED"
+      "status": "PENDING"
     },
     "automation": {
       "requirement": "\u2265 80% test automation",
       "status": "COMPLETED"
     }
   },
-  "performance_analysis": {
-    "load_testing": "PASSED",
-    "response_time_benchmarks": "PASSED",
-    "concurrent_sessions": "PASSED",
-    "scalability": "PASSED",
-    "stress_testing": "PASSED"
-  },
+  "performance_analysis": {},
   "recommendations": [
     {
       "priority": "HIGH",
@@ -82,6 +82,12 @@
       "category": "SECURITY",
       "issue": "security tests failed",
       "recommendation": "Review and fix security test failures"
+    },
+    {
+      "priority": "HIGH",
+      "category": "PERFORMANCE",
+      "issue": "performance tests failed",
+      "recommendation": "Review and fix performance test failures"
     }
   ]
 }

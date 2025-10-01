@@ -497,10 +497,11 @@ class SimplifiedAudioProcessor:
                 metrics.clarity_score = 0.0
             
             # Overall quality score
+            speech_level_value = abs(metrics.speech_level) if hasattr(metrics.speech_level, 'size') and metrics.speech_level.size > 0 else abs(metrics.speech_level)
             metrics.overall_quality = (
                 min(1, metrics.snr_ratio / 20) * 0.4 +
                 metrics.clarity_score * 0.3 +
-                min(1, abs(metrics.speech_level) / 60) * 0.3
+                min(1, speech_level_value / 60) * 0.3
             )
             
         except Exception as e:

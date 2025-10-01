@@ -147,12 +147,7 @@ class VoiceFeatureTestRunner:
         # Generate coverage report
         if coverage_enabled and cov:
             try:
-                coverage_report = cov.get_data()
-                self.coverage_data = {
-                    'total_statements': coverage_report.num_statements(),
-                    'missing_statements': coverage_report.num_missing_statements(),
-                    'coverage_percentage': coverage_report.coverage()
-                }
+                self.coverage_data = self._generate_coverage_report(cov)
             except Exception as e:
                 print(f"⚠️ Coverage report generation failed: {e}")
                 self.coverage_data = None
@@ -163,6 +158,90 @@ class VoiceFeatureTestRunner:
         self.generate_comprehensive_report()
 
         return self.test_results
+
+    def _generate_coverage_report(self, cov):
+        """
+        Generate coverage report using correct coverage.py API.
+
+        Args:
+            cov: Coverage object with collected data
+
+        Returns:
+            dict: Coverage data with total statements, missing statements, and percentage
+        """
+        try:
+            # Get the coverage data
+            coverage_data = cov.get_data()
+
+            # Get all measured files
+            measured_files = coverage_data.measured_files()
+
+            total_statements = 0
+            total_covered = 0
+            total_missing = 0
+
+            # Analyze each file
+            for file_path in measured_files:
+                try:
+                    # Use the analysis method to get line-by-line coverage
+                    analysis = cov.analysis(file_path)
+
+                    # analysis returns: (filename, executable_lines, excluded_lines, missing_lines)
+                    _, executable_lines, _, missing_lines = analysis
+
+                    file_statements = len(executable_lines)
+                    file_covered = file_statements - len(missing_lines)
+                    file_missing = len(missing_lines)
+
+                    total_statements += file_statements
+                    total_covered += file_covered
+                    total_missing += file_missing
+
+                except Exception as e:
+                    # Skip files that can't be analyzed (e.g., external modules)
+                    print(f"   Skipping coverage analysis for {file_path}: {e}")
+                    continue
+
+            # Calculate coverage percentage
+            coverage_percentage = total_covered / total_statements if total_statements > 0 else 0
+
+            return {
+                'total_statements': total_statements,
+                'covered_statements': total_covered,
+                'missing_statements': total_missing,
+                'coverage_percentage': coverage_percentage
+            }
+
+        except Exception as e:
+            print(f"   Error in coverage report generation: {e}")
+            # Fallback: try to get basic coverage info from coverage.json if it exists
+            return self._get_coverage_from_json()
+
+    def _get_coverage_from_json(self):
+        """
+        Fallback method to get coverage data from coverage.json file.
+
+        Returns:
+            dict: Coverage data or None if file doesn't exist
+        """
+        try:
+            json_report_path = self.project_root / 'coverage.json'
+            if json_report_path.exists():
+                with open(json_report_path, 'r') as f:
+                    coverage_json = json.load(f)
+
+                # Extract totals from coverage.json
+                totals = coverage_json.get('totals', {})
+                return {
+                    'total_statements': totals.get('num_statements', 0),
+                    'covered_statements': totals.get('covered_lines', 0),
+                    'missing_statements': totals.get('missing_lines', 0),
+                    'coverage_percentage': totals.get('percent_covered', 0) / 100.0
+                }
+        except Exception as e:
+            print(f"   Could not read coverage.json: {e}")
+
+        return None
 
     def generate_comprehensive_report(self):
         """Generate comprehensive test report as per SPEECH_PRD.md requirements."""
@@ -223,6 +302,7 @@ class VoiceFeatureTestRunner:
             'actual_coverage': actual_coverage,
             'coverage_met': actual_coverage >= target_coverage,
             'total_statements': self.coverage_data['total_statements'],
+            'covered_statements': self.coverage_data.get('covered_statements', 0),
             'missing_statements': self.coverage_data['missing_statements'],
             'coverage_gap': target_coverage - actual_coverage if actual_coverage < target_coverage else 0
         }

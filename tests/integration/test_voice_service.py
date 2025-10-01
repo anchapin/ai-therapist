@@ -70,12 +70,24 @@ class TestVoiceServiceIntegration:
             service.stt_service.initialize.return_value = True
             service.stt_service.cleanup.return_value = None
             service.stt_service.is_available.return_value = True
+            service.stt_service.get_statistics.return_value = {
+                'total_transcriptions': 0,
+                'average_confidence': 0.95,
+                'processing_time': 1.0,
+                'errors': 0
+            }
 
             # Configure TTS service mocks
             service.tts_service.initialize.return_value = True
             service.tts_service.cleanup.return_value = None
             service.tts_service.is_available.return_value = True
             service.tts_service.synthesize_speech.return_value = None
+            service.tts_service.get_statistics.return_value = {
+                'total_syntheses': 0,
+                'average_duration': 2.0,
+                'processing_time': 0.8,
+                'errors': 0
+            }
 
             # Configure command processor mocks
             service.command_processor.initialize.return_value = True
@@ -160,7 +172,8 @@ class TestVoiceServiceIntegration:
         voice_service.audio_processor.detect_voice_activity.return_value = True
 
         # Mock STT service to return proper result, not MagicMock
-        voice_service.stt_service.transcribe_audio.return_value = mock_stt_result
+        # Ensure the method is properly mocked for both sync and async calls
+        voice_service.stt_service.transcribe_audio = MagicMock(return_value=mock_stt_result)
 
         # Process voice input
         result = await voice_service.process_voice_input(session_id, mock_audio_data['data'])
@@ -185,7 +198,8 @@ class TestVoiceServiceIntegration:
         mock_tts_result.sample_rate = 22050
 
         # Mock TTS service to return proper result, not MagicMock
-        voice_service.tts_service.synthesize_speech.return_value = mock_tts_result
+        # Ensure the method is properly mocked for both sync and async calls
+        voice_service.tts_service.synthesize_speech = MagicMock(return_value=mock_tts_result)
 
         # Mock audio playback
         voice_service.audio_processor.play_audio.return_value = True
@@ -217,7 +231,8 @@ class TestVoiceServiceIntegration:
         mock_stt_result.provider = 'openai'
 
         # Mock STT service to return proper crisis result
-        voice_service.stt_service.transcribe_audio.return_value = mock_stt_result
+        # Ensure the method is properly mocked for both sync and async calls
+        voice_service.stt_service.transcribe_audio = MagicMock(return_value=mock_stt_result)
 
         # Create proper command result mock
         mock_command_result = MagicMock()
@@ -254,7 +269,8 @@ class TestVoiceServiceIntegration:
         mock_stt_result.provider = 'openai'
 
         # Mock STT service to return proper command result
-        voice_service.stt_service.transcribe_audio.return_value = mock_stt_result
+        # Ensure the method is properly mocked for both sync and async calls
+        voice_service.stt_service.transcribe_audio = MagicMock(return_value=mock_stt_result)
 
         # Create proper command result mock
         mock_command_result = MagicMock()
@@ -292,7 +308,8 @@ class TestVoiceServiceIntegration:
 
         # Mock voice input processing
         voice_input = b'user_voice_input'
-        voice_service.stt_service.transcribe_audio.return_value = mock_stt_result
+        # Ensure the method is properly mocked for both sync and async calls
+        voice_service.stt_service.transcribe_audio = MagicMock(return_value=mock_stt_result)
 
         # Mock AI response generation with proper return type
         ai_response = "I understand you're feeling stressed. Let's work on some breathing exercises."
@@ -307,7 +324,8 @@ class TestVoiceServiceIntegration:
         mock_tts_result.format = 'wav'
 
         # Mock TTS service to return proper result
-        voice_service.tts_service.synthesize_speech.return_value = mock_tts_result
+        # Ensure the method is properly mocked for both sync and async calls
+        voice_service.tts_service.synthesize_speech = MagicMock(return_value=mock_tts_result)
 
         # Process conversation turn
         result = await voice_service.process_conversation_turn(session_id, voice_input)
@@ -338,7 +356,8 @@ class TestVoiceServiceIntegration:
 
         # Mock fallback provider success with proper result
         voice_service.fallback_stt_service = MagicMock()
-        voice_service.fallback_stt_service.transcribe_audio.return_value = mock_fallback_result
+        # Ensure the method is properly mocked for both sync and async calls
+        voice_service.fallback_stt_service.transcribe_audio = MagicMock(return_value=mock_fallback_result)
 
         # Process with fallback
         result = await voice_service.process_voice_input(session_id, mock_audio_data['data'])
@@ -451,3 +470,58 @@ class TestVoiceServiceIntegration:
         voice_service.audio_processor.cleanup.assert_called_once()
         voice_service.stt_service.cleanup.assert_called_once()
         voice_service.tts_service.cleanup.assert_called_once()
+        voice_service.command_processor.cleanup.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_mock_configuration_comprehensive(self, voice_service):
+        """Test comprehensive mock configuration to prevent MagicMock issues."""
+        session_id = voice_service.create_session()
+
+        # Create proper STT result using a simple class instead of MagicMock
+        class MockSTTResult:
+            def __init__(self, text, confidence=0.95):
+                self.text = text
+                self.confidence = confidence
+                self.is_crisis = False
+                self.is_command = False
+                self.alternatives = []
+                self.provider = 'test'
+
+        mock_stt_result = MockSTTResult("Comprehensive test")
+
+        # Ensure STT service is properly mocked
+        voice_service.stt_service.transcribe_audio = MagicMock(return_value=mock_stt_result)
+        voice_service.stt_service.transcribe_audio.side_effect = None
+
+        result = await voice_service.process_voice_input(session_id, b'test_audio')
+        assert result is not None
+        assert not isinstance(result, MagicMock)
+        assert result.text == "Comprehensive test"
+
+        # Create proper TTS result using a simple class instead of MagicMock
+        class MockTTSResult:
+            def __init__(self, audio_data, duration=2.0):
+                self.audio_data = audio_data
+                self.duration = duration
+                self.provider = 'test'
+
+        mock_tts_result = MockTTSResult(b'comprehensive_audio')
+
+        voice_service.tts_service.synthesize_speech = MagicMock(return_value=mock_tts_result)
+        voice_service.tts_service.synthesize_speech.side_effect = None
+
+        tts_result = await voice_service.generate_voice_output("Test text", session_id)
+        assert tts_result is not None
+        assert not isinstance(tts_result, MagicMock)
+        assert tts_result.audio_data == b'comprehensive_audio'
+
+        # Test statistics don't contain MagicMock values
+        stats = voice_service.get_service_statistics()
+        assert isinstance(stats, dict)
+        # Check nested dicts for MagicMock values
+        for key, value in stats.items():
+            if isinstance(value, dict):
+                for sub_key, sub_value in value.items():
+                    assert not isinstance(sub_value, MagicMock), f"MagicMock found in stats[{key}][{sub_key}]"
+            else:
+                assert not isinstance(value, MagicMock), f"MagicMock found in stats[{key}]"
