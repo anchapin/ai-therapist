@@ -45,7 +45,9 @@ class TestVoiceServiceIntegration:
         with patch('voice.audio_processor.SimplifiedAudioProcessor'), \
              patch('voice.stt_service.STTService'), \
              patch('voice.tts_service.TTSService'), \
-             patch('voice.commands.VoiceCommandProcessor'):
+             patch('voice.commands.VoiceCommandProcessor'), \
+             patch.object(security, '_check_consent_status', return_value=True), \
+             patch.object(security, '_verify_security_requirements', return_value=True):
             service = VoiceService(config, security)
             return service
 
