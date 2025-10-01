@@ -42,10 +42,10 @@ class TestVoiceServiceIntegration:
     @pytest.fixture
     def voice_service(self, config, security):
         """Create VoiceService instance for testing."""
-        with patch('voice.audio_processor.SimplifiedAudioProcessor'), \
-             patch('voice.stt_service.STTService'), \
-             patch('voice.tts_service.TTSService'), \
-             patch('voice.commands.VoiceCommandProcessor'), \
+        with patch('voice.voice_service.SimplifiedAudioProcessor'), \
+             patch('voice.voice_service.STTService'), \
+             patch('voice.voice_service.TTSService'), \
+             patch('voice.voice_service.VoiceCommandProcessor'), \
              patch.object(security, '_check_consent_status', return_value=True), \
              patch.object(security, '_verify_security_requirements', return_value=True):
             service = VoiceService(config, security)
