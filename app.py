@@ -209,7 +209,13 @@ class CachedOllamaEmbeddings(OllamaEmbeddings):
         return embedding
 
 def initialize_session_state():
-    """Initialize Streamlit session state variables."""
+    """Initializes Streamlit session state variables.
+
+    This function ensures that the `messages`, `conversation_chain`, and
+    `vectorstore` keys exist in the `st.session_state` object. If they
+    do not exist, they are initialized with default values. This prevents
+    errors when these state variables are accessed later in the application.
+    """
     if "messages" not in st.session_state:
         st.session_state.messages = []
     if "conversation_chain" not in st.session_state:
@@ -242,7 +248,17 @@ def initialize_session_state():
         st.session_state.voice_setup_step = 0
 
 def load_vectorstore():
-    """Load or create the vector store with Ollama embeddings."""
+    """Loads an existing FAISS vector store or creates a new one.
+
+    This function first checks for a pre-existing vector store at the path
+    specified by the `VECTORSTORE_PATH` environment variable. If found, it
+    loads it using Ollama embeddings. If not found, it triggers the
+    creation of a new vector store by calling `create_vectorstore`.
+
+    Returns:
+        FAISS: The loaded or newly created FAISS vector store instance.
+               Returns `None` if loading or creation fails.
+    """
     vectorstore_path = os.getenv("VECTORSTORE_PATH", "./vectorstore")
     knowledge_path = os.getenv("KNOWLEDGE_PATH", "./knowledge")
 
@@ -267,7 +283,19 @@ def load_vectorstore():
         return None
 
 def download_knowledge_files():
-    """Download knowledge files from URLs if they don't exist."""
+    """Checks for and downloads missing knowledge files.
+
+    This function uses the `download_knowledge` script's logic to ensure
+    that all necessary knowledge files, as defined in `knowledge_files.txt`,
+    are present in the knowledge directory. It identifies missing files
+    and downloads them, showing progress and status messages in the
+    Streamlit interface.
+
+    Returns:
+        bool: True if the download process completes without errors (even
+              if some files fail to download), False if an exception occurs
+              during the process.
+    """
     try:
         from download_knowledge import load_knowledge_files_config, download_file
         from pathlib import Path
@@ -302,7 +330,24 @@ def download_knowledge_files():
         return False
 
 def create_vectorstore(knowledge_path, vectorstore_path):
-    """Create a new vector store from PDF files."""
+    """Creates and saves a new FAISS vector store from knowledge files.
+
+    This function processes all PDF and TXT files in the specified knowledge
+    directory. It attempts to download missing files if none are found
+    initially. The documents are loaded, split into chunks, and then
+    converted into embeddings using Ollama. The resulting FAISS vector
+    store is saved to the specified path.
+
+    Args:
+        knowledge_path (str): The path to the directory containing
+                              knowledge files (PDFs, TXTs).
+        vectorstore_path (str): The path to the directory where the
+                                FAISS index will be saved.
+
+    Returns:
+        FAISS: The newly created FAISS vector store instance, or `None` if
+               the creation process fails.
+    """
     if not os.path.exists(knowledge_path):
         st.error(f"Knowledge directory '{knowledge_path}' does not exist.")
         return None
@@ -376,7 +421,21 @@ def create_vectorstore(knowledge_path, vectorstore_path):
             return None
 
 def create_conversation_chain(vectorstore):
-    """Create conversation chain with optimized Ollama LLM."""
+    """Creates a conversational retrieval chain with optimized Ollama LLM.
+
+    This function initializes a `ConversationalRetrievalChain` which is
+    responsible for handling the chat logic. It integrates the Ollama LLM,
+    a conversation buffer for memory, and the FAISS vector store as a
+    retriever with performance optimizations.
+
+    Args:
+        vectorstore (FAISS): The FAISS vector store used to retrieve
+                             relevant documents.
+
+    Returns:
+        ConversationalRetrievalChain: The initialized conversation chain,
+                                      or `None` if creation fails.
+    """
     try:
         # Use optimized model parameters for faster responses
         llm = ChatOllama(
@@ -417,7 +476,24 @@ def create_conversation_chain(vectorstore):
         return None
 
 def get_ai_response(conversation_chain, question):
-    """Get response from AI therapist with security and performance optimizations."""
+    """Queries the conversational chain to get an AI-generated response with security and performance optimizations.
+
+    This function sends the user's question to the initialized
+    `ConversationalRetrievalChain` and retrieves the AI's answer along
+    with the source documents that were used to generate the response.
+    Includes input sanitization, crisis detection, and response caching.
+
+    Args:
+        conversation_chain (ConversationalRetrievalChain): The active
+                                 conversation chain.
+        question (str): The user's input question.
+
+    Returns:
+        Tuple[str, List[Document]]: A tuple containing the AI's response
+                                    string and a list of source documents.
+                                    Returns an error message and an empty
+                                    list if an exception occurs.
+    """
     try:
         if conversation_chain is None:
             return "I'm sorry, but I'm not properly initialized. Please try refreshing the page.", []
@@ -681,7 +757,17 @@ def show_voice_features():
             st.session_state.voice_ui.render_service_status()
 
 def main():
-    """Main application function."""
+    """Sets up and runs the AI Therapist Streamlit application.
+
+    This main function orchestrates the entire application flow:
+    1.  Configures the Streamlit page.
+    2.  Initializes the session state.
+    3.  Applies custom CSS for styling.
+    4.  Loads or creates the vector store and conversation chain.
+    5.  Displays the chat history.
+    6.  Handles new user input and displays the AI's response.
+    7.  Renders a sidebar with app information and control buttons.
+    """
     st.set_page_config(
         page_title="AI Therapist",
         page_icon="🧠",
