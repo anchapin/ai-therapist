@@ -111,6 +111,7 @@ knowledge/*.txt
 # Cache directories
 embedding_cache/
 test_env/
+test-env/
 
 # Security validation artifacts
 security_validation_report.json
@@ -125,3 +126,14 @@ voice_data/temp/
 # Temporary test files
 *_temp.*
 test_*_temp.py
+
+# Debug and test files
+debug_*.py
+test_nr_*.py
+test_openai_*.py
+
+# Test API key directory
+test_api_key/
+
+# Additional integration test files
+tests/integration/*_fixed.py
