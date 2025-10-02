@@ -15,17 +15,60 @@ import numpy as np
 from pathlib import Path
 from queue import Queue, Empty
 
-# Add project root to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+# Import modules using absolute imports for better compatibility
+import os
+import sys
 
-from voice.optimized_audio_processor import (
-    OptimizedAudioData,
-    OptimizedAudioProcessorState,
-    AudioProcessingMetrics,
-    OptimizedAudioProcessor,
-    create_optimized_audio_processor,
-    AudioProcessingMode
-)
+# Add the project root to Python path for reliable imports
+project_root = Path(__file__).parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+# Import with improved error handling for __spec__ compatibility
+try:
+    from voice.optimized_audio_processor import (
+        OptimizedAudioData,
+        OptimizedAudioProcessorState,
+        AudioProcessingMetrics,
+        OptimizedAudioProcessor,
+        create_optimized_audio_processor,
+        AudioProcessingMode
+    )
+except AttributeError as e:
+    if "__spec__" in str(e):
+        # Handle __spec__ compatibility issue during test collection
+        import importlib.util
+
+        # Load modules manually to avoid __spec__ issues
+        def safe_import_module(module_name, from_path):
+            # Extract the actual module filename from the module name
+            module_filename = module_name.split(".")[-1]
+            spec = importlib.util.spec_from_file_location(
+                module_name,
+                from_path / f"{module_filename}.py"
+            )
+            if spec and spec.loader:
+                module = importlib.util.module_from_spec(spec)
+                sys.modules[module_name] = module
+                spec.loader.exec_module(module)
+                return module
+            return None
+
+        # Get the voice module path
+        voice_path = project_root / "voice"
+        audio_module = safe_import_module("voice.optimized_audio_processor", voice_path)
+
+        if audio_module:
+            OptimizedAudioData = audio_module.OptimizedAudioData
+            OptimizedAudioProcessorState = audio_module.OptimizedAudioProcessorState
+            AudioProcessingMetrics = audio_module.AudioProcessingMetrics
+            OptimizedAudioProcessor = audio_module.OptimizedAudioProcessor
+            create_optimized_audio_processor = audio_module.create_optimized_audio_processor
+            AudioProcessingMode = audio_module.AudioProcessingMode
+        else:
+            raise ImportError("Could not import voice.optimized_audio_processor")
+    else:
+        raise
 
 class TestOptimizedAudioData(unittest.TestCase):
     """Test OptimizedAudioData class."""

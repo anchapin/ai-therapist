@@ -35,6 +35,11 @@ from enum import Enum
 from .config import VoiceConfig, VoiceProfile
 from .audio_processor import AudioData
 
+# Import openai module for test patching
+try:
+    import openai
+except ImportError:
+    openai = None
 
 class TTSError(Exception):
     """Base TTS service error."""

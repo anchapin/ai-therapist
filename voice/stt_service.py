@@ -45,6 +45,12 @@ except ImportError:
 
 from enum import Enum
 
+# Import openai module for test patching
+try:
+    import openai
+except ImportError:
+    openai = None
+
 class STTProvider(Enum):
     """Available Speech-to-Text service providers."""
     OPENAI = "openai"

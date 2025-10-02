@@ -14,16 +14,58 @@ import threading
 from pathlib import Path
 from typing import Dict, Any
 
-# Add project root to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+# Import modules using absolute imports for better compatibility
+import os
+import sys
 
-from voice.optimized_voice_service import (
-    OptimizedVoiceService,
-    VoiceSession,
-    VoiceCommand,
-    VoiceServiceState,
-    OptimizedAudioData
-)
+# Add the project root to Python path for reliable imports
+project_root = Path(__file__).parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+# Import with improved error handling for __spec__ compatibility
+try:
+    from voice.optimized_voice_service import (
+        OptimizedVoiceService,
+        VoiceSession,
+        VoiceCommand,
+        VoiceServiceState,
+        OptimizedAudioData
+    )
+except AttributeError as e:
+    if "__spec__" in str(e):
+        # Handle __spec__ compatibility issue during test collection
+        import importlib.util
+
+        # Load modules manually to avoid __spec__ issues
+        def safe_import_module(module_name, from_path):
+            # Extract the actual module filename from the module name
+            module_filename = module_name.split(".")[-1]
+            spec = importlib.util.spec_from_file_location(
+                module_name,
+                from_path / f"{module_filename}.py"
+            )
+            if spec and spec.loader:
+                module = importlib.util.module_from_spec(spec)
+                sys.modules[module_name] = module
+                spec.loader.exec_module(module)
+                return module
+            return None
+
+        # Get the voice module path
+        voice_path = project_root / "voice"
+        voice_module = safe_import_module("voice.optimized_voice_service", voice_path)
+
+        if voice_module:
+            OptimizedVoiceService = voice_module.OptimizedVoiceService
+            VoiceSession = voice_module.VoiceSession
+            VoiceCommand = voice_module.VoiceCommand
+            VoiceServiceState = voice_module.VoiceServiceState
+            OptimizedAudioData = voice_module.OptimizedAudioData
+        else:
+            raise ImportError("Could not import voice.optimized_voice_service")
+    else:
+        raise
 
 class TestOptimizedVoiceService(unittest.TestCase):
     """Test OptimizedVoiceService class."""

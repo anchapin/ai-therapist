@@ -10,6 +10,7 @@ import sys
 import os
 import json
 import time
+import argparse
 from datetime import datetime
 from pathlib import Path
 import coverage
@@ -25,10 +26,11 @@ from tests.conftest import *
 class VoiceFeatureTestRunner:
     """Comprehensive test runner for voice features."""
 
-    def __init__(self):
+    def __init__(self, additional_pytest_args=None):
         self.project_root = project_root
         self.test_results = {}
         self.coverage_data = None
+        self.additional_pytest_args = additional_pytest_args or []
 
     def run_all_tests(self):
         """Run all test suites and generate comprehensive report."""
@@ -98,6 +100,10 @@ class VoiceFeatureTestRunner:
                             '--cov-report=json',
                             f'--cov-fail-under={config["target_coverage"]}'
                         ])
+
+                    # Add any additional pytest arguments passed from command line
+                    if self.additional_pytest_args:
+                        pytest_args.extend(self.additional_pytest_args)
 
                     # Run pytest
                     exit_code = pytest.main(pytest_args)
@@ -412,9 +418,59 @@ class VoiceFeatureTestRunner:
                 print(f"   → {rec['recommendation']}")
 
 
+def parse_args():
+    """Parse command line arguments, separating script args from pytest args."""
+    parser = argparse.ArgumentParser(
+        description='Voice Features Test Runner',
+        add_help=False,  # We'll handle help manually to avoid conflicts
+        allow_abbrev=False
+    )
+    
+    # Add script-specific arguments
+    parser.add_argument('--help', '-h', action='store_true',
+                       help='Show this help message and exit')
+    parser.add_argument('--report-only', action='store_true',
+                       help='Generate report only, skip running tests')
+    
+    # Parse known args, leaving unknown args for pytest
+    known_args, unknown_args = parser.parse_known_args()
+    
+    if known_args.help:
+        parser.print_help()
+        print("\nAdditional pytest arguments can be passed through:")
+        print("  --cov=MODULE         Coverage module")
+        print("  --cov-report=TYPE    Coverage report type")
+        print("  --cov-fail-under=N   Fail if coverage below N%")
+        print("  -v, --verbose        Verbose output")
+        print("  --tb=STYLE           Traceback style")
+        print("  And any other pytest arguments...")
+        sys.exit(0)
+    
+    return known_args, unknown_args
+
+
 def main():
     """Main test runner function."""
-    runner = VoiceFeatureTestRunner()
+    try:
+        script_args, pytest_args = parse_args()
+    except SystemExit:
+        # argparse called sys.exit(), let it through
+        raise
+    except Exception as e:
+        print(f"Error parsing arguments: {e}")
+        print("Running with default settings...")
+        script_args = argparse.Namespace(report_only=False)
+        pytest_args = []
+    
+    # Create runner with additional pytest arguments
+    runner = VoiceFeatureTestRunner(additional_pytest_args=pytest_args)
+    
+    if script_args.report_only:
+        print("🧪 Generating report from existing test data...")
+        runner.generate_comprehensive_report()
+        return 0
+    
+    # Run all tests
     results = runner.run_all_tests()
 
     # Return appropriate exit code

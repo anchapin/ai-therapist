@@ -41,7 +41,33 @@ class TestMultiProviderFallbacks:
         config.stt_language = "en"
         config.tts_language = "en"
         config.security = Mock(spec=SecurityConfig)
+        config.security_enabled = True
+        config.encryption_enabled = True
+        config.voice_commands_enabled = True
+        config.voice_input_enabled = True
+        config.voice_output_enabled = True
+        config.default_voice_profile = "calm_therapist"
+        config.stt_confidence_threshold = 0.7
+        config.stt_timeout = 10.0
+        config.stt_max_retries = 2
+        config.stt_fallback_enabled = True
+        config.tts_voice = "alloy"
+        config.tts_speed = 1.0
+        config.tts_pitch = 1.0
+        config.tts_model = "tts-1"
+        config.tts_fallback_enabled = True
+
+        # Add audio configuration for audio processor
+        config.audio = Mock()
+        config.audio.max_buffer_size = 300
+        config.audio.max_memory_mb = 100
+        config.audio.sample_rate = 16000
+        config.audio.channels = 1
+        config.audio.chunk_size = 1024
+        config.audio.format = "wav"
+
         return config
+
 
     @pytest.fixture
     def mock_security(self):
@@ -49,6 +75,11 @@ class TestMultiProviderFallbacks:
         security = Mock(spec=VoiceSecurity)
         security.initialize.return_value = True
         security.process_audio = AsyncMock(return_value=AudioData(np.array([]), 16000, 0.0, 1))
+        security.validate_audio = AsyncMock(return_value=True)
+        security.encrypt_audio = AsyncMock(return_value=b"encrypted_audio")
+        security.decrypt_audio = AsyncMock(return_value=AudioData(np.array([]), 16000, 0.0, 1))
+        # Add health_check method
+        security.health_check = Mock(return_value={"status": "healthy", "issues": []})
         return security
 
     def test_stt_provider_fallback_chain(self, mock_config, mock_security):
@@ -79,7 +110,8 @@ class TestMultiProviderFallbacks:
                     confidence=0.8,
                     language="en",
                     duration=1.0,
-                    provider="whisper"
+                    provider="whisper",
+                    alternatives=[]
                 )
 
         stt_service.transcribe_audio = mock_transcribe_with_failure
@@ -158,7 +190,8 @@ class TestMultiProviderFallbacks:
                 confidence=0.75,
                 language="en",
                 duration=1.0,
-                provider="fallback_stt"
+                provider="fallback_stt",
+                alternatives=[]
             )
 
         service.stt_service.transcribe_audio = mock_stt_with_fallback
@@ -324,7 +357,8 @@ class TestServiceDegradation:
                 confidence=0.8,
                 language="en",
                 duration=1.0,
-                provider=provider
+                provider=provider,
+                alternatives=[]
             )
 
         stt_service.transcribe_audio = AsyncMock(side_effect=mock_load_balanced_transcribe)
@@ -612,7 +646,8 @@ class TestProviderPriorityAndLoadBalancing:
                 confidence=0.8,
                 language="en",
                 duration=1.0,
-                provider=provider
+                provider=provider,
+                alternatives=[]
             )
 
         stt_service.transcribe_audio = AsyncMock(side_effect=mock_priority_transcribe)
@@ -655,7 +690,8 @@ class TestProviderPriorityAndLoadBalancing:
                 confidence=0.8,
                 language="en",
                 duration=1.0,
-                provider=provider
+                provider=provider,
+                alternatives=[]
             )
 
         stt_service.transcribe_audio = AsyncMock(side_effect=mock_conditional_transcribe)
@@ -697,7 +733,8 @@ class TestProviderPriorityAndLoadBalancing:
                 confidence=0.8,
                 language="en",
                 duration=1.0,
-                provider=provider
+                provider=provider,
+                alternatives=[]
             )
 
         stt_service.transcribe_audio = AsyncMock(side_effect=mock_health_based_transcribe)
@@ -739,7 +776,8 @@ class TestFallbackPerformance:
                 confidence=0.7,
                 language="en",
                 duration=1.0,
-                provider="fast_fallback"
+                provider="fast_fallback",
+                alternatives=[]
             )
 
         service.stt_service.transcribe_audio = slow_primary_transcribe
@@ -789,7 +827,8 @@ class TestFallbackPerformance:
                     confidence=0.8,
                     language="en",
                     duration=1.0,
-                    provider="monitored_provider"
+                    provider="monitored_provider",
+                    alternatives=[]
                 )
             else:
                 failure_count += 1

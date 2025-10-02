@@ -38,27 +38,78 @@ from tests.test_utils import (
 # Set up mocks
 setup_voice_module_mocks(project_root)
 
-# Import config module
+# Import config module with improved error handling for __spec__ compatibility
 try:
     from voice.config import (
         VoiceConfig, VoiceProfile, AudioConfig, STTConfig, TTSConfig,
         SecurityConfig, load_config, save_config, validate_config,
         get_default_config, merge_configs, ConfigError
     )
-except ImportError:
-    # If config module fails to import, create minimal mocks
-    VoiceConfig = MagicMock
-    VoiceProfile = MagicMock
-    AudioConfig = MagicMock
-    STTConfig = MagicMock
-    TTSConfig = MagicMock
-    SecurityConfig = MagicMock
-    load_config = MagicMock
-    save_config = MagicMock
-    validate_config = MagicMock
-    get_default_config = MagicMock
-    merge_configs = MagicMock
-    ConfigError = Exception
+except (ImportError, AttributeError) as e:
+    if "voice.config" in str(e) and ("__spec__" in str(e) or "ImportError" in str(e)):
+        # Handle __spec__ compatibility issue during test collection
+        import importlib.util
+
+        # Load modules manually to avoid __spec__ issues
+        def safe_import_module(module_name, from_path):
+            # Extract the actual module filename from the module name
+            module_filename = module_name.split(".")[-1]
+            spec = importlib.util.spec_from_file_location(
+                module_name,
+                from_path / f"{module_filename}.py"
+            )
+            if spec and spec.loader:
+                module = importlib.util.module_from_spec(spec)
+                sys.modules[module_name] = module
+                spec.loader.exec_module(module)
+                return module
+            return None
+
+        # Get the voice module path
+        voice_path = Path(project_root) / "voice"
+        config_module = safe_import_module("voice.config", voice_path)
+
+        if config_module:
+            VoiceConfig = config_module.VoiceConfig
+            VoiceProfile = config_module.VoiceProfile
+            AudioConfig = config_module.AudioConfig
+            STTConfig = config_module.STTConfig
+            TTSConfig = config_module.TTSConfig
+            SecurityConfig = config_module.SecurityConfig
+            load_config = config_module.load_config
+            save_config = config_module.save_config
+            validate_config = config_module.validate_config
+            get_default_config = config_module.get_default_config
+            merge_configs = config_module.merge_configs
+            ConfigError = config_module.ConfigError
+        else:
+            # Fallback to mocks if manual import fails
+            VoiceConfig = MagicMock
+            VoiceProfile = MagicMock
+            AudioConfig = MagicMock
+            STTConfig = MagicMock
+            TTSConfig = MagicMock
+            SecurityConfig = MagicMock
+            load_config = MagicMock
+            save_config = MagicMock
+            validate_config = MagicMock
+            get_default_config = MagicMock
+            merge_configs = MagicMock
+            ConfigError = Exception
+    else:
+        # Fallback to mocks for other import errors
+        VoiceConfig = MagicMock
+        VoiceProfile = MagicMock
+        AudioConfig = MagicMock
+        STTConfig = MagicMock
+        TTSConfig = MagicMock
+        SecurityConfig = MagicMock
+        load_config = MagicMock
+        save_config = MagicMock
+        validate_config = MagicMock
+        get_default_config = MagicMock
+        merge_configs = MagicMock
+        ConfigError = Exception
 
 
 class TestVoiceConfig:

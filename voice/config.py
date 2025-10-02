@@ -58,6 +58,11 @@ class SecurityConfig:
     """Security and privacy configuration."""
     encryption_enabled: bool = True
     data_retention_hours: int = 24
+    data_retention_days: int = 30
+    session_timeout_minutes: int = 30
+    encryption_key_rotation_days: int = 90
+    audit_logging_enabled: bool = True
+    max_login_attempts: int = 3
     consent_required: bool = True
     transcript_storage: bool = False
     anonymization_enabled: bool = True
@@ -88,6 +93,14 @@ class VoiceConfig:
     voice_input_enabled: bool = True
     voice_output_enabled: bool = True
     voice_commands_enabled: bool = True
+    security_enabled: bool = True
+
+    # Session and timeout configuration
+    session_timeout_minutes: int = 30
+    session_timeout: float = 1800.0  # 30 minutes in seconds
+    recording_timeout: float = 10.0
+    max_concurrent_sessions: int = 100
+    audio_processing_timeout: float = 10.0
 
     # Audio configuration
     audio: AudioConfig = field(default_factory=AudioConfig)
@@ -97,6 +110,9 @@ class VoiceConfig:
 
     # Performance configuration
     performance: PerformanceConfig = field(default_factory=PerformanceConfig)
+
+    # Voice profiles dictionary - initialized in __post_init__
+    voice_profiles: Dict[str, VoiceProfile] = field(default_factory=dict)
 
     # Service configurations
     elevenlabs_api_key: Optional[str] = None
@@ -157,6 +173,77 @@ class VoiceConfig:
         self._load_from_env()
         self._load_voice_profiles()
 
+    # Backwards compatibility properties for direct access to security attributes
+    @property
+    def encryption_key_rotation_days(self) -> int:
+        """Direct access to security encryption_key_rotation_days."""
+        return self.security.encryption_key_rotation_days
+
+    @encryption_key_rotation_days.setter
+    def encryption_key_rotation_days(self, value: int):
+        """Set security encryption_key_rotation_days."""
+        self.security.encryption_key_rotation_days = value
+
+    @property
+    def data_retention_days(self) -> int:
+        """Direct access to security data_retention_days."""
+        return self.security.data_retention_days
+
+    @data_retention_days.setter
+    def data_retention_days(self, value: int):
+        """Set security data_retention_days."""
+        self.security.data_retention_days = value
+
+    @property
+    def audit_logging_enabled(self) -> bool:
+        """Direct access to security audit_logging_enabled."""
+        return self.security.audit_logging_enabled
+
+    @audit_logging_enabled.setter
+    def audit_logging_enabled(self, value: bool):
+        """Set security audit_logging_enabled."""
+        self.security.audit_logging_enabled = value
+
+    @property
+    def max_login_attempts(self) -> int:
+        """Direct access to security max_login_attempts."""
+        return self.security.max_login_attempts
+
+    @max_login_attempts.setter
+    def max_login_attempts(self, value: int):
+        """Set security max_login_attempts."""
+        self.security.max_login_attempts = value
+
+    @property
+    def encryption_enabled(self) -> bool:
+        """Direct access to security encryption_enabled."""
+        return self.security.encryption_enabled
+
+    @encryption_enabled.setter
+    def encryption_enabled(self, value: bool):
+        """Set security encryption_enabled."""
+        self.security.encryption_enabled = value
+
+    @property
+    def consent_required(self) -> bool:
+        """Direct access to security consent_required."""
+        return self.security.consent_required
+
+    @consent_required.setter
+    def consent_required(self, value: bool):
+        """Set security consent_required."""
+        self.security.consent_required = value
+
+    @property
+    def hipaa_compliance_enabled(self) -> bool:
+        """Direct access to security hipaa_compliance_enabled."""
+        return self.security.hipaa_compliance_enabled
+
+    @hipaa_compliance_enabled.setter
+    def hipaa_compliance_enabled(self, value: bool):
+        """Set security hipaa_compliance_enabled."""
+        self.security.hipaa_compliance_enabled = value
+
     def _load_from_env(self):
         """Load configuration from environment variables."""
         # Feature toggles
@@ -164,6 +251,7 @@ class VoiceConfig:
         self.voice_input_enabled = os.getenv("VOICE_INPUT_ENABLED", "true").lower() == "true"
         self.voice_output_enabled = os.getenv("VOICE_OUTPUT_ENABLED", "true").lower() == "true"
         self.voice_commands_enabled = os.getenv("VOICE_COMMANDS_ENABLED", "true").lower() == "true"
+        self.security_enabled = os.getenv("VOICE_SECURITY_ENABLED", "true").lower() == "true"
 
         # ElevenLabs configuration
         self.elevenlabs_api_key = os.getenv("ELEVENLABS_API_KEY")
@@ -219,6 +307,11 @@ class VoiceConfig:
         # Security configuration
         self.security.encryption_enabled = os.getenv("VOICE_ENCRYPTION_ENABLED", "true").lower() == "true"
         self.security.data_retention_hours = int(os.getenv("VOICE_DATA_RETENTION_HOURS", "24"))
+        self.security.data_retention_days = int(os.getenv("VOICE_DATA_RETENTION_DAYS", "30"))
+        self.security.session_timeout_minutes = int(os.getenv("VOICE_SESSION_TIMEOUT_MINUTES", "30"))
+        self.security.encryption_key_rotation_days = int(os.getenv("VOICE_ENCRYPTION_KEY_ROTATION_DAYS", "90"))
+        self.security.audit_logging_enabled = os.getenv("VOICE_AUDIT_LOGGING_ENABLED", "true").lower() == "true"
+        self.security.max_login_attempts = int(os.getenv("VOICE_MAX_LOGIN_ATTEMPTS", "3"))
         self.security.consent_required = os.getenv("VOICE_CONSENT_REQUIRED", "true").lower() == "true"
         self.security.transcript_storage = os.getenv("VOICE_TRANSCRIPT_STORAGE", "false").lower() == "true"
         self.security.anonymization_enabled = os.getenv("VOICE_ANONYMIZATION_ENABLED", "true").lower() == "true"
@@ -235,6 +328,13 @@ class VoiceConfig:
         self.audio.chunk_size = int(os.getenv("VOICE_AUDIO_CHUNK_SIZE", str(self.audio.chunk_size)))
         self.audio.max_buffer_size = int(os.getenv("VOICE_AUDIO_MAX_BUFFER_SIZE", str(self.audio.max_buffer_size)))
         self.audio.max_memory_mb = int(os.getenv("VOICE_AUDIO_MAX_MEMORY_MB", str(self.audio.max_memory_mb)))
+
+        # Session and timeout configuration
+        self.session_timeout_minutes = int(os.getenv("VOICE_SESSION_TIMEOUT_MINUTES", "30"))
+        self.session_timeout = float(os.getenv("VOICE_SESSION_TIMEOUT", "1800.0"))
+        self.recording_timeout = float(os.getenv("VOICE_RECORDING_TIMEOUT", "10.0"))
+        self.max_concurrent_sessions = int(os.getenv("VOICE_MAX_CONCURRENT_SESSIONS", "100"))
+        self.audio_processing_timeout = float(os.getenv("VOICE_AUDIO_PROCESSING_TIMEOUT", "10.0"))
 
         # Performance configuration
         self.performance.cache_enabled = os.getenv("VOICE_CACHE_ENABLED", "true").lower() == "true"

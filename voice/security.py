@@ -21,6 +21,15 @@ from pathlib import Path
 import os
 import base64
 
+# Add __spec__ for Python 3.12 compatibility and test framework support
+__spec__ = None
+
+# Diagnostic logging for __spec__ AttributeError debugging
+import sys
+print(f"[DEBUG] voice.security module loading in Python {sys.version}")
+print(f"[DEBUG] __spec__ initialized as: {__spec__}")
+print(f"[DEBUG] Module __name__: {__name__}")
+
 try:
     from cryptography.fernet import Fernet
     from cryptography.hazmat.primitives import hashes

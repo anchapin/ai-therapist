@@ -29,27 +29,27 @@ from pathlib import Path
 
 try:
     import soundfile as sf
-    SOUNDDEVICE_AVAILABLE = True
 except ImportError:
-    SOUNDDEVICE_AVAILABLE = False
+    sf = None
+SOUNDDEVICE_AVAILABLE = sf is not None
 
 try:
     import noisereduce as nr
-    NOISEREDUCE_AVAILABLE = True
 except ImportError:
-    NOISEREDUCE_AVAILABLE = False
+    nr = None
+NOISEREDUCE_AVAILABLE = nr is not None
 
 try:
     import webrtcvad
-    VAD_AVAILABLE = True
 except ImportError:
-    VAD_AVAILABLE = False
+    webrtcvad = None
+VAD_AVAILABLE = webrtcvad is not None
 
 try:
     import librosa
-    LIBROSA_AVAILABLE = True
 except ImportError:
-    LIBROSA_AVAILABLE = False
+    librosa = None
+LIBROSA_AVAILABLE = librosa is not None
 
 # Audio data structures
 @dataclass
@@ -774,7 +774,6 @@ class SimplifiedAudioProcessor:
             return audio_data
 
         try:
-            import noisereduce as nr
             return nr.reduce_noise(y=audio_data, sr=self.sample_rate)
         except Exception as e:
             self.logger.error(f"Error reducing noise: {e}")
@@ -807,7 +806,6 @@ class SimplifiedAudioProcessor:
             return metrics
 
         try:
-            import librosa
             # Calculate basic metrics
             rms = np.sqrt(np.mean(audio_data**2))
             metrics.speech_level = float(rms)
@@ -855,8 +853,8 @@ class SimplifiedAudioProcessor:
             self.audio_buffer.clear()
             self._buffer_bytes_estimate = 0
 
-    def detect_voice_activity(self, audio_data: np.ndarray) -> bool:
-        """Detect voice activity in audio data."""
+    def detect_voice_activity_simple(self, audio_data: np.ndarray) -> bool:
+        """Detect voice activity in raw audio data."""
         if not VAD_AVAILABLE:
             # Simple threshold-based detection
             energy = np.sum(audio_data**2) / len(audio_data)
@@ -869,7 +867,6 @@ class SimplifiedAudioProcessor:
 
             # Convert to 16kHz if needed
             if self.sample_rate != 16000:
-                import librosa
                 audio_data = librosa.resample(audio_data.astype(np.float32), orig_sr=self.sample_rate, target_sr=16000)
                 audio_data = (audio_data * 32767).astype(np.int16)
 

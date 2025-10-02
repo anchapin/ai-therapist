@@ -12,8 +12,7 @@ from dataclasses import dataclass
 from enum import Enum
 import time
 
-# Add __spec__ attribute for Python 3.12 compatibility
-__spec__ = None
+
 
 class AudioProcessingMode(Enum):
     """Audio processing modes."""
@@ -101,8 +100,7 @@ class OptimizedAudioProcessor:
         self.total_samples_processed = 0
         self.total_processing_time = 0.0
 
-        # Add __spec__ attribute for Python 3.12 compatibility
-        self.__spec__ = None
+        
 
     def process_audio(self, audio_data: np.ndarray) -> OptimizedAudioData:
         """Process audio data with optimizations."""

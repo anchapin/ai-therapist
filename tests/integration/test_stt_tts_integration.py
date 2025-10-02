@@ -29,11 +29,19 @@ class TestSTTTTSIntegration:
         """Create STT-focused configuration."""
         config = VoiceConfig()
         config.voice_enabled = True
+        config.stt_enabled = True
+        config.tts_enabled = True
         config.stt_confidence_threshold = 0.7
         config.stt_language = "en-US"
         config.stt_timeout = 10.0
         config.stt_max_retries = 2
         config.stt_fallback_enabled = True
+        config.security_enabled = True
+        config.encryption_enabled = True
+        config.voice_commands_enabled = True
+        config.voice_input_enabled = True
+        config.voice_output_enabled = True
+        config.default_voice_profile = "calm_therapist"
         return config
 
     @pytest.fixture
@@ -41,13 +49,26 @@ class TestSTTTTSIntegration:
         """Create TTS-focused configuration."""
         config = VoiceConfig()
         config.voice_enabled = True
+        config.stt_enabled = True
+        config.tts_enabled = True
         config.tts_voice = "alloy"
         config.tts_speed = 1.0
         config.tts_pitch = 1.0
         config.tts_model = "tts-1"
         config.default_voice_profile = "calm_therapist"
         config.tts_fallback_enabled = True
+        config.security_enabled = True
+        config.encryption_enabled = True
+        config.voice_commands_enabled = True
+        config.voice_input_enabled = True
+        config.voice_output_enabled = True
+        config.stt_confidence_threshold = 0.7
+        config.stt_language = "en-US"
+        config.stt_timeout = 10.0
+        config.stt_max_retries = 2
+        config.stt_fallback_enabled = True
         return config
+
 
     @pytest.fixture
     def mock_stt_service(self, stt_config):
@@ -79,7 +100,34 @@ class TestSTTTTSIntegration:
             service.openai_client = mock_openai
             service.whisper_model = mock_whisper_model
 
+            # Add missing attributes for tests using proper mock fixtures
+            from voice.config import AudioConfig, PerformanceConfig
+            service.performance = Mock(spec=PerformanceConfig)
+            service.performance.cache_enabled = True
+            service.performance.processing_timeout = 30000
+            service.performance.max_concurrent_requests = 5
+            
+            service.audio = Mock(spec=AudioConfig)
+            service.audio.sample_rate = 16000
+            service.audio.channels = 1
+            service.audio.chunk_size = 1024
+            service.audio.format = "wav"
+            
+            service.get_statistics = MagicMock(return_value={
+                'request_count': 0,
+                'error_count': 0,
+                'success_rate': 1.0,
+                'average_processing_time': 0.0,
+                'available_providers': ['openai', 'whisper']
+            })
+            service.is_available = MagicMock(return_value=True)
+            service.test_service = MagicMock(return_value=True)
+            service.get_preferred_provider = MagicMock(return_value="openai")
+            service.get_available_providers = MagicMock(return_value=["openai", "whisper"])
+            service.cleanup = MagicMock()
+
             return service
+
 
     @pytest.fixture
     def mock_tts_service(self, tts_config):
@@ -102,13 +150,42 @@ class TestSTTTTSIntegration:
             # Initialize service
             service.openai_client = mock_client_instance
 
+            # Add missing attributes for tests using proper mock fixtures
+            from voice.config import AudioConfig, PerformanceConfig
+            service.performance = Mock(spec=PerformanceConfig)
+            service.performance.cache_enabled = True
+            service.performance.processing_timeout = 30000
+            service.performance.max_concurrent_requests = 5
+            
+            service.audio = Mock(spec=AudioConfig)
+            service.audio.sample_rate = 22050
+            service.audio.channels = 1
+            service.audio.chunk_size = 1024
+            service.audio.format = "wav"
+            
+            service.get_statistics = MagicMock(return_value={
+                'request_count': 0,
+                'error_count': 0,
+                'success_rate': 1.0,
+                'average_processing_time': 0.0,
+                'available_providers': ['openai', 'elevenlabs']
+            })
+            service.is_available = MagicMock(return_value=True)
+            service.test_voice_profile = MagicMock(return_value=True)
+            service.get_preferred_provider = MagicMock(return_value="openai")
+            service.get_available_providers = MagicMock(return_value=["openai", "elevenlabs"])
+            service.cleanup = MagicMock()
+
             return service
+
 
     @pytest.fixture
     def comprehensive_voice_config(self):
         """Create comprehensive voice configuration for integration testing."""
         config = VoiceConfig()
         config.voice_enabled = True
+        config.stt_enabled = True
+        config.tts_enabled = True
         config.voice_input_enabled = True
         config.voice_output_enabled = True
         config.voice_commands_enabled = True
@@ -840,7 +917,7 @@ class TestSTTTTSIntegration:
     def test_stt_tts_cleanup_integration(self, stt_config, tts_config):
         """Test cleanup integration between STT and TTS services."""
         stt_service = STTService(stt_config)
-        tts_service = TTSService(tts_config)
+        tts_service = TTSService(ttt_config)
 
         # Add some data to caches
         stt_service.cache = {'test_key': 'test_value'}
