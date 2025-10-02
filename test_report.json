@@ -2,7 +2,7 @@
   "metadata": {
     "test_suite": "AI Therapist Voice Features",
     "version": "1.0.0",
-    "execution_date": "2025-10-01T20:40:23.662625",
+    "execution_date": "2025-10-02T07:12:01.329368",
     "project_root": "/home/anchapin/projects/ai-therapist"
   },
   "summary": {
@@ -14,36 +14,36 @@
   },
   "detailed_results": {
     "unit": {
-      "exit_code": 2,
+      "exit_code": 4,
       "description": "Unit Tests (Component-level testing)",
       "target_coverage": 0.9,
-      "timestamp": "2025-10-01T20:40:16.876588"
+      "timestamp": "2025-10-02T07:12:00.784408"
     },
     "integration": {
-      "exit_code": 2,
+      "exit_code": 4,
       "description": "Integration Tests (Service integration testing)",
       "target_coverage": 0.85,
-      "timestamp": "2025-10-01T20:40:19.150511"
+      "timestamp": "2025-10-02T07:12:00.838195"
     },
     "security": {
-      "exit_code": 2,
+      "exit_code": 4,
       "description": "Security Tests (HIPAA compliance and security)",
       "target_coverage": 0.95,
-      "timestamp": "2025-10-01T20:40:21.807090"
+      "timestamp": "2025-10-02T07:12:00.925424"
     },
     "performance": {
-      "exit_code": 2,
+      "exit_code": 4,
       "description": "Performance Tests (Load and scalability)",
       "target_coverage": 0.8,
-      "timestamp": "2025-10-01T20:40:23.440705"
+      "timestamp": "2025-10-02T07:12:01.008995"
     }
   },
   "coverage_analysis": {
     "target_coverage": 0.9,
-    "actual_coverage": 0.9849320882852292,
+    "actual_coverage": 0.9853547854785478,
     "coverage_met": true,
-    "total_statements": 4712,
-    "covered_statements": 4641,
+    "total_statements": 4848,
+    "covered_statements": 4777,
     "missing_statements": 71,
     "coverage_gap": 0
   },

@@ -36,6 +36,16 @@ def test_access_control_basic():
 def test_encryption_basic():
     """Basic encryption test."""
     try:
+        # Temporarily restore the real cryptography modules
+        import sys
+
+        # Remove mocked modules
+        if 'cryptography' in sys.modules:
+            del sys.modules['cryptography']
+        if 'cryptography.fernet' in sys.modules:
+            del sys.modules['cryptography.fernet']
+
+        # Import the real modules
         from cryptography.fernet import Fernet
         key = Fernet.generate_key()
         f = Fernet(key)
@@ -49,6 +59,9 @@ def test_encryption_basic():
         print("✅ Basic encryption test passed")
     except ImportError:
         print("⚠️ Cryptography not available, skipping encryption test")
+    except Exception as e:
+        print(f"⚠️ Encryption test failed: {e}")
+        raise
 
 def test_audit_logging():
     """Basic audit logging test."""

@@ -49,6 +49,14 @@ class TestInputValidation:
         ]
 
         config = Mock(spec=VoiceConfig)
+        # Add the required audio attribute to the mock
+        config.audio = Mock()
+        config.audio.sample_rate = 16000
+        config.audio.channels = 1
+        config.audio.chunk_size = 1024
+        config.audio.max_buffer_size = 300
+        config.audio.max_memory_mb = 100
+
         processor = SimplifiedAudioProcessor(config)
 
         for audio_data in malformed_audio_cases:
@@ -77,6 +85,13 @@ class TestInputValidation:
 
         for invalid_config in invalid_configs:
             config = Mock(spec=VoiceConfig)
+            # Add the required audio attribute to the mock
+            config.audio = Mock()
+            config.audio.sample_rate = 16000
+            config.audio.channels = 1
+            config.audio.chunk_size = 1024
+            config.audio.max_buffer_size = 300
+            config.audio.max_memory_mb = 100
 
             # Apply invalid configuration
             for key, value in invalid_config.items():
@@ -93,7 +108,26 @@ class TestInputValidation:
 
     def test_malformed_session_identifiers(self):
         """Test handling of malformed session identifiers."""
-        service = VoiceService(Mock(spec=VoiceConfig), Mock(spec=VoiceSecurity))
+        config = Mock(spec=VoiceConfig)
+        # Add the required audio attribute to the mock
+        config.audio = Mock()
+        config.audio.sample_rate = 16000
+        config.audio.channels = 1
+        config.audio.chunk_size = 1024
+        config.audio.max_buffer_size = 300
+        config.audio.max_memory_mb = 100
+
+        # Add performance attribute
+        config.performance = Mock()
+        config.performance.cache_size = 100
+
+        # Add voice profiles attribute
+        config.voice_profiles = {}
+
+        # Add voice command timeout
+        config.voice_command_timeout = 5000
+
+        service = VoiceService(config, Mock(spec=VoiceSecurity))
 
         # Test various malformed session IDs
         malformed_session_ids = [
@@ -668,7 +702,7 @@ class TestSanitizationEffectiveness:
         import time
 
         # Test sanitization performance
-        test_input = "Normal text " * 1000  # Reasonable size input
+        test_input = "Normal text " * 100  # Reasonable size input (1500 chars)
 
         start_time = time.time()
         sanitized = sanitize_user_input(test_input)

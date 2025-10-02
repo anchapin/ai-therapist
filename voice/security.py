@@ -157,6 +157,9 @@ class VoiceSecurity:
         # Access control
         self.access_manager = AccessManager(self)
 
+        # In-memory backup storage for testing
+        self._test_backups = {}
+
         # Emergency protocols
         self.emergency_manager = EmergencyProtocolManager(self)
 
@@ -255,98 +258,9 @@ class VoiceSecurity:
         if not self.encryption_enabled:
             return data
 
-        # Handle mock encryption when cryptography is not available
+        # Raise error if encryption is required but key is not available
         if not self.master_key:
-            # Create mock encrypted data that's different from original
-            if isinstance(data, bytes) and data == b"sensitive_voice_data":
-                encrypted_data = b"mock_encrypted_sensitive_voice_data"
-                # Track this encrypted data for user validation
-                data_hash = hashlib.sha256(encrypted_data).hexdigest()
-                self.encrypted_data_tracking[data_hash] = user_id
-                self._log_security_event(
-                    event_type="data_encryption",
-                    user_id=user_id,
-                    action="encrypt_data",
-                    resource="voice_data",
-                    result="success_mock",
-                    details={'data_size': len(data), 'mock': True}
-                )
-                return encrypted_data
-            elif isinstance(data, bytes) and data == b"sensitive_data":
-                encrypted_data = b"mock_encrypted_sensitive_data"
-                # Track this encrypted data for user validation
-                data_hash = hashlib.sha256(encrypted_data).hexdigest()
-                self.encrypted_data_tracking[data_hash] = user_id
-                self._log_security_event(
-                    event_type="data_encryption",
-                    user_id=user_id,
-                    action="encrypt_data",
-                    resource="voice_data",
-                    result="success_mock",
-                    details={'data_size': len(data), 'mock': True}
-                )
-                return encrypted_data
-            else:
-                # For mock mode, still ensure data is "encrypted" (different from original)
-                if isinstance(data, bytes):
-                    # Create mock encrypted data that's different from original
-                    mock_prefix = b"mock_encrypted_"
-                    if data == b"":
-                        encrypted_data = mock_prefix + b"empty_data"
-                    else:
-                        # Create simpler but still high-entropy reversible encryption
-
-                        # Generate a user-specific random seed
-                        user_seed = hashlib.sha256(f"{user_id}_{len(data)}".encode()).digest()
-
-                        # Create high-entropy reversible encryption
-                        if len(data) == 0:
-                            # Empty data: just add random padding
-                            encrypted_data = mock_prefix + secrets.token_bytes(64)
-                        elif len(data) == 1:
-                            # Single byte: XOR with deterministic random sources
-                            single_byte = data[0]
-                            # Generate deterministic random bytes based on user_id
-                            random_sources = [
-                                user_seed[0], user_seed[1], user_seed[2], user_seed[3],
-                                hashlib.sha256(user_seed).digest()[0]
-                            ]
-                            # XOR the single byte with all random sources
-                            xored_byte = single_byte
-                            for rand_byte in random_sources:
-                                xored_byte ^= rand_byte
-                            # Format: prefix + xored_byte + extra_entropy (no need to store random_sources since they're deterministic)
-                            encrypted_data = mock_prefix + bytes([xored_byte]) + secrets.token_bytes(50)
-                        else:
-                            # Multiple bytes: use a simple but reversible XOR scheme
-                            # Create a simple XOR key based on user_id and data length
-                            xor_key = user_seed[:min(len(data), 32)]
-                            # Extend the key if needed
-                            while len(xor_key) < len(data):
-                                xor_key += xor_key
-                            xor_key = xor_key[:len(data)]
-
-                            # XOR each byte with corresponding key byte
-                            xored_data = bytes([data[i] ^ xor_key[i] for i in range(len(data))])
-
-                            # Format: prefix + length + xored_data + key + entropy
-                            length_bytes = len(data).to_bytes(4, 'big')
-                            encrypted_data = mock_prefix + length_bytes + xored_data + xor_key + secrets.token_bytes(64)
-
-
-                    # Track this encrypted data for user validation
-                    tracking_hash = hashlib.sha256(encrypted_data).hexdigest()
-                    self.encrypted_data_tracking[tracking_hash] = user_id
-                    self._log_security_event(
-                        event_type="data_encryption",
-                        user_id=user_id,
-                        action="encrypt_data",
-                        resource="voice_data",
-                        result="success_mock",
-                        details={'data_size': len(data), 'mock': True}
-                    )
-                    return encrypted_data
-                return data
+            raise SecurityError("Encryption key not available - cryptographic failure")
 
         try:
             # Generate user-specific encryption key with session-based stability
@@ -807,6 +721,10 @@ class VoiceSecurity:
     def backup_secure_data(self, data: Dict[str, Any]) -> str:
         """Backup secure data with encryption."""
         backup_id = f"backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{hashlib.sha256(str(data).encode()).hexdigest()[:8]}"
+
+        # Store data in memory for testing
+        self._test_backups[backup_id] = data.copy()
+
         self._log_security_event(
             event_type="data_backup",
             user_id=data.get('user_id', 'system'),
@@ -820,13 +738,10 @@ class VoiceSecurity:
     def restore_secure_data(self, backup_id: str) -> Dict[str, Any]:
         """Restore secure data from backup."""
         # Handle test backup restoration
-        if 'backup_' in backup_id:
-            return {
-                'user_id': 'test_user_123',
-                'voice_data': b'encrypted_audio',
-                'metadata': {'session_id': 'test_session_456'}
-            }
+        if backup_id in self._test_backups:
+            return self._test_backups[backup_id].copy()
 
+        # Fallback for other cases
         return {}
 
     def get_penetration_testing_scope(self) -> Dict[str, Any]:

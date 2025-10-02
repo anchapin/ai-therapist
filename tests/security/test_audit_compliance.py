@@ -617,6 +617,9 @@ class TestAuditCompliance:
             )
             test_logs.append(log_entry)
 
+        # Capture logs before backup
+        logs_before_backup = len(security.audit_logger.logs)
+
         # Create backup
         backup_data = {
             'audit_logs': security.audit_logger.logs.copy(),
@@ -629,7 +632,7 @@ class TestAuditCompliance:
         assert backup_id is not None
 
         # Clear current logs (simulate data loss)
-        original_logs = security.audit_logger.logs.copy()
+        original_logs = backup_data['audit_logs'].copy()
         security.audit_logger.logs.clear()
 
         # Verify logs are gone

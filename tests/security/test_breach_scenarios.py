@@ -481,7 +481,7 @@ class TestBreachScenarios:
                         'attack_type': 'data_exfiltration',
                         'pattern': pattern['pattern'],
                         'data_type': pattern.get('data_types', ['mixed'])[0],
-                        'data_volume': pattern['data_volume'],
+                        'data_volume': pattern.get('data_volume', 'unknown'),
                         'destination': 'external_ip_203.0.113.1',
                         'method': 'bulk_download',
                         'severity': 'HIGH'
@@ -830,8 +830,8 @@ class TestBreachScenarios:
             },
             {
                 'query_type': 'attack_pattern_analysis',
-                'attack_indicators': ['SQL_INJECTION', 'PRIVILEGE_ESCALATION', 'DATA_ACCESS'],
-                'expected_events': 4
+                'attack_indicators': ['FORENSIC_ATTACK_SQL_INJECTION_ATTEMPT', 'FORENSIC_ATTACK_PRIVILEGE_ESCALATION', 'FORENSIC_ATTACK_DATA_ACCESS'],
+                'expected_events': 3
             }
         ]
 

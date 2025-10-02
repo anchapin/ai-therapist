@@ -781,7 +781,7 @@ class SimplifiedAudioProcessor:
 
     def convert_audio_format(self, audio_data: AudioData, target_format: str) -> AudioData:
         """Convert audio to different format."""
-        if not SOUNDDEVICE_AVAILABLE:
+        if not self.features.get('format_conversion', False):
             return audio_data
 
         try:

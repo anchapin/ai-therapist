@@ -715,6 +715,9 @@ class TTSService:
     async def _synthesize_with_openai(self, text: str, profile: VoiceProfile, ssml_enabled: bool) -> TTSResult:
         """Synthesize speech using OpenAI TTS API."""
         try:
+            # Store original text for result
+            original_text = text
+
             # Prepare SSML if enabled
             if ssml_enabled and self.ssml_settings.enabled:
                 text = self._generate_ssml(text, profile)
@@ -743,13 +746,12 @@ class TTSService:
                 sample_rate=sample_rate,
                 channels=1,
                 format="float32",
-                duration=duration,
-                timestamp=time.time()
+                duration=duration
             )
 
             return TTSResult(
                 audio_data=audio_obj,
-                text=text,
+                text=original_text,
                 voice_profile=profile.name,
                 provider="openai",
                 duration=duration,
@@ -784,6 +786,9 @@ class TTSService:
         try:
             import elevenlabs
 
+            # Store original text for result
+            original_text = text
+
             # Prepare voice settings
             voice_settings = elevenlabs.VoiceSettings(
                 stability=profile.elevenlabs_settings.get('stability', 0.5),
@@ -814,13 +819,12 @@ class TTSService:
                 sample_rate=sample_rate,
                 channels=1,
                 format="float32",
-                duration=duration,
-                timestamp=time.time()
+                duration=duration
             )
 
             return TTSResult(
                 audio_data=audio_obj,
-                text=text,
+                text=original_text,
                 voice_profile=profile.name,
                 provider="elevenlabs",
                 duration=duration,
@@ -841,6 +845,9 @@ class TTSService:
         try:
             import subprocess
             import tempfile
+
+            # Store original text for result
+            original_text = text
 
             # Create temporary files
             with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as text_file:
@@ -887,13 +894,12 @@ class TTSService:
                     sample_rate=sample_rate,
                     channels=1,
                     format="float32",
-                    duration=duration,
-                    timestamp=time.time()
+                    duration=duration
                 )
 
                 return TTSResult(
                     audio_data=audio_obj,
-                    text=text,
+                    text=original_text,
                     voice_profile=profile.name,
                     provider="piper",
                     duration=duration,

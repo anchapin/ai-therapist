@@ -66,12 +66,13 @@ def safe_import_module(module_name: str, module_path: str, package: Optional[str
         raise ImportError(f"Failed to load module {module_name}: {e}")
 
 
-def setup_voice_module_mocks(project_root: str) -> None:
+def setup_voice_module_mocks(project_root: str, mock_voice_module: bool = True) -> None:
     """
     Set up common mocks for voice module testing.
 
     Args:
         project_root: Root directory of the project
+        mock_voice_module: Whether to mock the voice module itself (set to False for config tests)
     """
     # List of modules to mock
     mock_modules = [
@@ -127,10 +128,11 @@ def setup_voice_module_mocks(project_root: str) -> None:
     }
     sys.modules['openai'] = openai_mock
 
-    # Create a voice module with proper __path__ to support relative imports
-    voice_module = MagicMock()
-    voice_module.__path__ = [str(Path(project_root) / 'voice')]
-    sys.modules['voice'] = voice_module
+    # Create a voice module with proper __path__ to support relative imports (only if requested)
+    if mock_voice_module:
+        voice_module = MagicMock()
+        voice_module.__path__ = [str(Path(project_root) / 'voice')]
+        sys.modules['voice'] = voice_module
 
 
 def get_voice_config_module(project_root: str) -> Any:

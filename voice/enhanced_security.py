@@ -153,6 +153,10 @@ class EnhancedAccessManager:
 
     def get_user_role(self, user_id: str) -> SecurityLevel:
         """Get user's role."""
+        # Handle None or empty user_id
+        if not user_id or not isinstance(user_id, str):
+            return SecurityLevel.GUEST
+
         # Extract role from user_id if not explicitly assigned
         if user_id in self.role_assignments:
             return self.role_assignments[user_id]
@@ -187,6 +191,10 @@ class EnhancedAccessManager:
     def has_access(self, user_id: str, resource_id: str, permission: str) -> bool:
         """Check if user has access to a resource with role-based permissions."""
 
+        # Handle None or empty user_id
+        if not user_id or not isinstance(user_id, str):
+            return False
+
         # First check explicit access records
         if user_id in self.access_records:
             if resource_id in self.access_records[user_id]:
@@ -199,12 +207,37 @@ class EnhancedAccessManager:
 
         # Check direct resource permissions
         if resource_id in role_permissions:
-            return permission in role_permissions[resource_id]
+            resource_permissions = role_permissions[resource_id]
+            # If the resource has full_access, allow any permission
+            if 'full_access' in resource_permissions:
+                return True
+            # Otherwise check for specific permission
+            return permission in resource_permissions
 
         # Check for wildcard permissions (e.g., admin 'full_access')
         for resource, permissions in role_permissions.items():
             if 'full_access' in permissions and user_role in [SecurityLevel.ADMIN]:
                 return True
+
+        # Check resource ownership logic
+        if self._check_resource_ownership(user_id, resource_id, permission):
+            return True
+
+        return False
+
+    def _check_resource_ownership(self, user_id: str, resource_id: str, permission: str) -> bool:
+        """Check if user has ownership-based access to a resource."""
+        # Patients can access their own voice data
+        if user_id.startswith('patient_') and resource_id == f'own_voice_data':
+            return permission in ['read', 'write']
+
+        # Therapists can access their assigned patient data
+        if user_id.startswith('therapist_') and resource_id == 'assigned_patient_data':
+            return permission in ['read', 'write']
+
+        # Admins can access admin panel
+        if user_id.startswith('admin_') and resource_id == 'admin_panel':
+            return permission in ['read', 'write', 'full_access']
 
         return False
 
