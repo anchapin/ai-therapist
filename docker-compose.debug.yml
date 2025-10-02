@@ -1,0 +1,242 @@
+version: '3.8'
+
+services:
+  # Ollama Service - Required for LLM functionality
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ai-therapist-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+      - ./scripts/ollama-setup.sh:/scripts/ollama-setup.sh
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_ORIGINS=*
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - ai-therapist-network
+
+  # Dependency Validation Service
+  dependency-checker:
+    build:
+      context: .
+      dockerfile: Dockerfile.debug
+    container_name: ai-therapist-dependency-checker
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+      - ./reports:/app/reports
+    environment:
+      - PYTHONPATH=/app
+      - DEBUG_MODE=true
+      - LOG_LEVEL=INFO
+    working_dir: /app
+    command: >
+      bash -c "
+        echo '=== DEPENDENCY VALIDATION ===' &&
+        python scripts/validate_dependencies.py &&
+        echo 'Dependency validation complete. Check reports/dependency-report.json'
+      "
+    networks:
+      - ai-therapist-network
+    depends_on:
+      - ollama
+
+  # Unit Test Debug Service
+  unit-test-debugger:
+    build:
+      context: .
+      dockerfile: Dockerfile.debug
+    container_name: ai-therapist-unit-debugger
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+      - ./reports:/app/reports
+    environment:
+      - PYTHONPATH=/app
+      - DEBUG_MODE=true
+      - LOG_LEVEL=DEBUG
+      - PYTEST_CURRENT_TEST=1
+    working_dir: /app
+    command: >
+      bash -c "
+        echo '=== UNIT TEST DEBUGGING ===' &&
+        python scripts/debug_unit_tests.py &&
+        echo 'Unit test debugging complete. Check reports/unit-debug-report.json'
+      "
+    networks:
+      - ai-therapist-network
+    depends_on:
+      - dependency-checker
+
+  # Integration Test Debug Service
+  integration-test-debugger:
+    build:
+      context: .
+      dockerfile: Dockerfile.debug
+    container_name: ai-therapist-integration-debugger
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+      - ./reports:/app/reports
+    environment:
+      - PYTHONPATH=/app
+      - DEBUG_MODE=true
+      - LOG_LEVEL=DEBUG
+      - OLLAMA_HOST=http://ollama:11434
+      - CI=true
+    working_dir: /app
+    command: >
+      bash -c "
+        echo '=== INTEGRATION TEST DEBUGGING ===' &&
+        python scripts/debug_integration_tests.py &&
+        echo 'Integration test debugging complete. Check reports/integration-debug-report.json'
+      "
+    networks:
+      - ai-therapist-network
+    depends_on:
+      - unit-test-debugger
+      - ollama
+
+  # Security Test Debug Service
+  security-test-debugger:
+    build:
+      context: .
+      dockerfile: Dockerfile.debug
+    container_name: ai-therapist-security-debugger
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+      - ./reports:/app/reports
+    environment:
+      - PYTHONPATH=/app
+      - DEBUG_MODE=true
+      - LOG_LEVEL=DEBUG
+      - HIPAA_MODE=true
+    working_dir: /app
+    command: >
+      bash -c "
+        echo '=== SECURITY TEST DEBUGGING ===' &&
+        python scripts/debug_security_tests.py &&
+        echo 'Security test debugging complete. Check reports/security-debug-report.json'
+      "
+    networks:
+      - ai-therapist-network
+    depends_on:
+      - integration-test-debugger
+
+  # Performance Test Debug Service
+  performance-test-debugger:
+    build:
+      context: .
+      dockerfile: Dockerfile.debug
+    container_name: ai-therapist-performance-debugger
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+      - ./reports:/app/reports
+    environment:
+      - PYTHONPATH=/app
+      - DEBUG_MODE=true
+      - LOG_LEVEL=DEBUG
+      - MEMORY_PROFILING=true
+    working_dir: /app
+    command: >
+      bash -c "
+        echo '=== PERFORMANCE TEST DEBUGGING ===' &&
+        python scripts/debug_performance_tests.py &&
+        echo 'Performance test debugging complete. Check reports/performance-debug-report.json'
+      "
+    networks:
+      - ai-therapist-network
+    depends_on:
+      - security-test-debugger
+
+  # Automated Fix Application Service
+  fix-applier:
+    build:
+      context: .
+      dockerfile: Dockerfile.debug
+    container_name: ai-therapist-fix-applier
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+      - ./reports:/app/reports
+    environment:
+      - PYTHONPATH=/app
+      - DEBUG_MODE=true
+      - AUTO_FIX_MODE=true
+    working_dir: /app
+    command: >
+      bash -c "
+        echo '=== AUTOMATED FIX APPLICATION ===' &&
+        python scripts/apply_fixes.py &&
+        echo 'Fix application complete. Check reports/fix-report.json'
+      "
+    networks:
+      - ai-therapist-network
+    depends_on:
+      - unit-test-debugger
+      - integration-test-debugger
+      - security-test-debugger
+      - performance-test-debugger
+
+  # Final Test Validation Service
+  test-validator:
+    build:
+      context: .
+      dockerfile: Dockerfile.debug
+    container_name: ai-therapist-validator
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+      - ./reports:/app/reports
+    environment:
+      - PYTHONPATH=/app
+      - VALIDATION_MODE=true
+      - OLLAMA_HOST=http://ollama:11434
+      - CI=true
+    working_dir: /app
+    command: >
+      bash -c "
+        echo '=== FINAL TEST VALIDATION ===' &&
+        python scripts/validate_all_tests.py &&
+        echo 'Validation complete. Check reports/final-validation-report.json'
+      "
+    networks:
+      - ai-therapist-network
+    depends_on:
+      - fix-applier
+      - ollama
+
+  # Monitoring and Logging Service
+  debug-monitor:
+    image: nginx:alpine
+    container_name: ai-therapist-debug-monitor
+    ports:
+      - "8080:80"
+    volumes:
+      - ./reports:/usr/share/nginx/html/reports
+      - ./logs:/usr/share/nginx/html/logs
+      - ./monitoring/nginx.conf:/etc/nginx/nginx.conf
+    networks:
+      - ai-therapist-network
+    depends_on:
+      - test-validator
+
+volumes:
+  ollama_data:
+    driver: local
+
+networks:
+  ai-therapist-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
