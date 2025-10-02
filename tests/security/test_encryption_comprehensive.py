@@ -142,11 +142,11 @@ class TestEncryptionComprehensive:
         # Encrypt with current key
         encrypted_current = security.encrypt_data(test_data, user_id)
 
-        # Simulate key rotation by patching datetime
-        with patch('voice.security.datetime') as mock_datetime:
+        # Simulate key rotation by patching _get_current_time method
+        with patch.object(security, '_get_current_time') as mock_get_time:
             # Move time forward by encryption_key_rotation_days + 1
             future_date = datetime.now() + timedelta(days=security.original_config.encryption_key_rotation_days + 1)
-            mock_datetime.now.return_value = future_date
+            mock_get_time.return_value = future_date
 
             # Try to decrypt with "old" key - should fail
             with pytest.raises((SecurityError, ValueError)):

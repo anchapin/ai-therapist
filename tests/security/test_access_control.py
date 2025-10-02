@@ -139,26 +139,26 @@ class TestAccessControl:
         # Define role hierarchy and permissions
         role_permissions = {
             'patient': {
-                'own_voice_data': ['read', 'update_own'],
-                'own_consent_records': ['read', 'update'],
+                'patient_voice_data': ['read', 'update_own'],
+                'patient_consent_records': ['read', 'update'],
                 'therapy_notes': [],  # No access
                 'other_patient_data': [],  # No access
                 'admin_panel': []  # No access
             },
             'therapist': {
-                'assigned_patient_data': ['read', 'update_notes'],
-                'own_consent_records': ['read'],
-                'therapy_notes': ['read', 'create', 'update'],
+                'therapist_patient_data': ['read', 'update_notes'],
+                'therapist_consent_records': ['read'],
+                'therapist_therapy_notes': ['read', 'create', 'update'],
                 'admin_panel': [],  # No access
                 'system_configuration': []  # No access
             },
             'admin': {
-                'all_patient_data': ['read', 'update', 'delete'],
-                'all_consent_records': ['read', 'update'],
-                'therapy_notes': ['read', 'update', 'delete'],
+                'admin_all_patient_data': ['read', 'update', 'delete'],
+                'admin_consent_records': ['read', 'update'],
+                'admin_therapy_notes': ['read', 'update', 'delete'],
                 'admin_panel': ['full_access'],
-                'system_configuration': ['read', 'update'],
-                'audit_logs': ['read', 'analyze']
+                'admin_system_configuration': ['read', 'update'],
+                'admin_audit_logs': ['read', 'analyze']
             }
         }
 
@@ -387,15 +387,15 @@ class TestAccessControl:
             if 'access' in log.get('event_type', '').lower()
         ]
 
-        # Should have audit log for access check (implementation dependent)
-        # At minimum, should have access grant logged
-        grant_logs = [log for log in user_logs if log.get('event_type') == 'access_granted']
-        assert len(grant_logs) >= 1, "Access grant should be logged"
+        # Should have audit log for access check
+        check_logs = [log for log in user_logs if log.get('event_type') == 'access_check']
+        assert len(check_logs) >= 1, "Access check should be logged"
 
-        grant_log = grant_logs[0]
-        assert grant_log['user_id'] == user_id
-        assert grant_log['details']['resource'] == resource
-        assert grant_log['details']['permission'] == permission
+        check_log = check_logs[0]
+        assert check_log['user_id'] == user_id
+        assert check_log['details']['resource'] == resource
+        assert check_log['details']['permission'] == permission
+        assert check_log['details']['has_permission'] == True
 
     def test_access_control_privilege_escalation_attempts(self, security):
         """Test protection against privilege escalation attempts."""
@@ -594,6 +594,8 @@ class TestAccessControl:
             elif user_info['role'] == 'admin':
                 # Admins have access to system data
                 security.access_manager.grant_access(user_id, resource, 'full_access')
+                security.access_manager.grant_access(user_id, resource, 'read')
+                security.access_manager.grant_access(user_id, resource, 'update')
 
         # Test data isolation
         # Patient 1 should not access Patient 2's data

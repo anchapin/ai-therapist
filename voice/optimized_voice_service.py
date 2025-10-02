@@ -12,8 +12,6 @@ from enum import Enum
 import time
 import json
 
-# Add __spec__ attribute for Python 3.12 compatibility
-__spec__ = None
 
 class VoiceServiceState(Enum):
     """Voice service states."""
@@ -42,6 +40,23 @@ class VoiceCommand:
     timestamp: float
     session_id: str
     metadata: Dict[str, Any] = field(default_factory=dict)
+
+@dataclass
+class OptimizedAudioData:
+    """Optimized audio data for processing."""
+    data: bytes
+    sample_rate: int = 16000
+    channels: int = 1
+    format: str = "wav"
+    duration: float = 0.0
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self):
+        """Calculate duration if not provided."""
+        if self.duration == 0.0 and self.data:
+            # Rough estimate: 1 second of audio = sample_rate * channels * 2 bytes (16-bit)
+            bytes_per_second = self.sample_rate * self.channels * 2
+            self.duration = len(self.data) / bytes_per_second
 
 class OptimizedVoiceService:
     """Complete optimized voice service with all expected functionality."""
@@ -87,9 +102,7 @@ class OptimizedVoiceService:
             'on_voice_output': []
         }
 
-        # Add __spec__ attribute for Python 3.12 compatibility
-        self.__spec__ = None
-
+        
     async def initialize(self) -> bool:
         """Initialize the voice service."""
         try:
