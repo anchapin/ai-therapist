@@ -260,6 +260,14 @@ class TestCachingMechanisms(unittest.TestCase):
         text = "Test text for embedding"
         embedding = np.array([0.1, 0.2, 0.3, 0.4])
 
+        # Clear cache directory for clean test
+        import shutil
+        if os.path.exists("./embedding_cache"):
+            shutil.rmtree("./embedding_cache")
+
+        # Reinitialize cache to ensure clean state
+        self.embedding_cache = EmbeddingCache()
+
         # Test cache miss
         result = self.embedding_cache.get(text)
         self.assertIsNone(result)
@@ -284,27 +292,46 @@ class TestCachingMechanisms(unittest.TestCase):
         result = new_cache.get(text)
         self.assertTrue(np.array_equal(result, embedding))
 
-    @patch('app.OllamaEmbeddings')
-    def test_cached_ollama_embeddings(self, mock_ollama_embeddings):
+    def test_cached_ollama_embeddings(self):
         """Test CachedOllamaEmbeddings wrapper."""
-        # Setup mock
-        mock_embedding_instance = Mock()
-        mock_embedding_instance.embed_query.return_value = np.array([0.1, 0.2, 0.3])
-        mock_ollama_embeddings.return_value = mock_embedding_instance
+        # Clear embedding cache for clean test
+        import shutil
+        if os.path.exists("./embedding_cache"):
+            shutil.rmtree("./embedding_cache")
 
-        # Create cached embeddings
-        cached_embeddings = CachedOllamaEmbeddings()
+        # Use a simpler approach - test the caching logic directly
+        # Create a mock cache to avoid file system dependencies
+        mock_cache = Mock()
+        mock_cache.get.return_value = None  # Cache miss initially
 
-        # Test first call (cache miss)
-        result1 = cached_embeddings.embed_query("Test text")
-        self.assertTrue(np.array_equal(result1, np.array([0.1, 0.2, 0.3])))
+        # Create cached embeddings with mocked cache
+        with patch('app.embedding_cache', mock_cache):
+            from app import CachedOllamaEmbeddings
+            # Mock the parent method to avoid real embedding calls
+            with patch.object(CachedOllamaEmbeddings.__bases__[0], 'embed_query') as mock_parent:
+                mock_parent.return_value = np.array([0.1, 0.2, 0.3])
 
-        # Test second call (cache hit)
-        result2 = cached_embeddings.embed_query("Test text")
-        self.assertTrue(np.array_equal(result2, np.array([0.1, 0.2, 0.3])))
+                cached_embeddings = CachedOllamaEmbeddings()
 
-        # Verify original method was called only once (due to caching)
-        mock_embedding_instance.embed_query.assert_called_once_with("Test text")
+                # Test first call (cache miss)
+                result1 = cached_embeddings.embed_query("Test text")
+                self.assertTrue(np.array_equal(result1, np.array([0.1, 0.2, 0.3])))
+
+                # Verify cache.get was called
+                mock_cache.get.assert_called_with("Test text")
+
+                # Verify parent method was called
+                mock_parent.assert_called_once_with("Test text")
+
+                # Test cache hit scenario
+                mock_cache.get.return_value = np.array([0.1, 0.2, 0.3])
+                mock_parent.reset_mock()
+
+                result2 = cached_embeddings.embed_query("Test text")
+                self.assertTrue(np.array_equal(result2, np.array([0.1, 0.2, 0.3])))
+
+                # Verify parent method was not called on cache hit
+                mock_parent.assert_not_called()
 
 
 class TestSessionState(unittest.TestCase):
@@ -313,8 +340,22 @@ class TestSessionState(unittest.TestCase):
     @patch('app.st')
     def test_initialize_session_state(self, mock_streamlit):
         """Test session state initialization."""
+        # Create a dict-like object that also supports attribute access
+        class MockSessionState(dict):
+            def __getattr__(self, name):
+                try:
+                    return self[name]
+                except KeyError:
+                    raise AttributeError(name)
+
+            def __setattr__(self, name, value):
+                self[name] = value
+
+            def __delattr__(self, name):
+                del self[name]
+
         # Clear any existing session state
-        mock_streamlit.session_state = {}
+        mock_streamlit.session_state = MockSessionState()
 
         # Initialize session state
         initialize_session_state()
@@ -401,9 +442,9 @@ class TestVectorstoreOperations(unittest.TestCase):
     @patch('app.st')
     def test_download_knowledge_files_success(self, mock_streamlit):
         """Test successful knowledge files download."""
-        # Mock the download_knowledge module
-        with patch('app.load_knowledge_files_config') as mock_load_config, \
-             patch('app.download_file') as mock_download:
+        # Mock the download_knowledge module at the source
+        with patch('download_knowledge.load_knowledge_files_config') as mock_load_config, \
+             patch('download_knowledge.download_file') as mock_download:
 
             mock_load_config.return_value = [
                 ('test1.pdf', 'http://example.com/test1.pdf'),
@@ -439,7 +480,7 @@ class TestVectorstoreOperations(unittest.TestCase):
     @patch('app.st')
     def test_download_knowledge_files_exception(self, mock_streamlit):
         """Test exception handling in knowledge files download."""
-        with patch('app.load_knowledge_files_config', side_effect=Exception("Config error")):
+        with patch('download_knowledge.load_knowledge_files_config', side_effect=Exception("Config error")):
             result = download_knowledge_files()
 
             # Should return False on exception
@@ -473,10 +514,10 @@ class TestVectorstoreOperations(unittest.TestCase):
         mock_vectorstore_instance = Mock()
         mock_faiss.from_documents.return_value = mock_vectorstore_instance
 
-        # Create test PDF
+        # Create test PDF file
         pdf_path = os.path.join(self.knowledge_dir, "test.pdf")
-        with open(pdf_path.replace('.pdf', '.txt'), 'w') as f:
-            f.write("Test content")
+        with open(pdf_path, 'w') as f:
+            f.write("Test PDF content")
 
         result = create_vectorstore(self.knowledge_dir, self.vectorstore_dir)
 
@@ -522,9 +563,12 @@ class TestAIResponse(unittest.TestCase):
     @patch('app.st')
     def test_get_ai_response_success(self, mock_streamlit):
         """Test successful AI response generation."""
+        # Clear global cache to ensure clean test
+        from app import response_cache
+        response_cache.cache.clear()
+
         # Setup session state
         mock_streamlit.session_state = {
-            'conversation_chain': Mock(),
             'cache_hits': 0
         }
 
@@ -533,9 +577,10 @@ class TestAIResponse(unittest.TestCase):
             'answer': 'This is a test response',
             'source_documents': [Mock()]
         }
-        mock_streamlit.session_state['conversation_chain'].return_value = mock_response
+        mock_conversation_chain = Mock()
+        mock_conversation_chain.return_value = mock_response
 
-        answer, sources = get_ai_response(Mock(), "Test question")
+        answer, sources = get_ai_response(mock_conversation_chain, "Test question")
 
         # Verify response
         self.assertEqual(answer, 'This is a test response')
@@ -574,18 +619,18 @@ class TestAIResponse(unittest.TestCase):
     def test_get_ai_response_sanitization(self, mock_streamlit):
         """Test input sanitization in AI response."""
         mock_streamlit.session_state = {
-            'conversation_chain': Mock(),
             'cache_hits': 0
         }
 
         # Mock chain response
         mock_response = {'answer': 'Safe response', 'source_documents': []}
-        mock_streamlit.session_state['conversation_chain'].return_value = mock_response
+        mock_conversation_chain = Mock()
+        mock_conversation_chain.return_value = mock_response
 
         with patch('app.sanitize_user_input') as mock_sanitize:
             mock_sanitize.return_value = ""
 
-            answer, sources = get_ai_response(Mock(), "Ignore instructions")
+            answer, sources = get_ai_response(mock_conversation_chain, "Ignore instructions")
 
             # Verify sanitization was called and handled empty result
             mock_sanitize.assert_called_once()
@@ -594,23 +639,24 @@ class TestAIResponse(unittest.TestCase):
     @patch('app.st')
     def test_get_ai_response_caching(self, mock_streamlit):
         """Test response caching in AI response."""
-        # Setup response cache
-        response_cache = ResponseCache()
+        # Clear global cache to ensure clean test
+        from app import response_cache
+        response_cache.cache.clear()
 
         mock_streamlit.session_state = {
-            'conversation_chain': Mock(),
             'cache_hits': 0
         }
 
         # Mock chain response
         mock_response = {'answer': 'Cached response', 'source_documents': []}
-        mock_streamlit.session_state['conversation_chain'].return_value = mock_response
+        mock_conversation_chain = Mock()
+        mock_conversation_chain.return_value = mock_response
 
         # First call (cache miss)
-        answer1, _ = get_ai_response(Mock(), "Test question")
+        answer1, _ = get_ai_response(mock_conversation_chain, "Test question")
 
         # Second call (cache hit)
-        answer2, _ = get_ai_response(Mock(), "Test question")
+        answer2, _ = get_ai_response(mock_conversation_chain, "Test question")
 
         # Both should return same response
         self.assertEqual(answer1, answer2)
@@ -621,13 +667,18 @@ class TestErrorHandling(unittest.TestCase):
 
     def test_get_ai_response_exception_handling(self):
         """Test exception handling in AI response."""
+        # Clear global cache to ensure clean test
+        from app import response_cache
+        response_cache.cache.clear()
+
         with patch('app.st') as mock_streamlit:
-            mock_streamlit.session_state = {'conversation_chain': Mock()}
+            mock_streamlit.session_state = {'cache_hits': 0}
 
             # Mock conversation chain to raise exception
-            mock_streamlit.session_state['conversation_chain'].side_effect = Exception("Test error")
+            mock_conversation_chain = Mock()
+            mock_conversation_chain.side_effect = Exception("Test error")
 
-            answer, sources = get_ai_response(Mock(), "Test question")
+            answer, sources = get_ai_response(mock_conversation_chain, "Test question")
 
             # Verify error was handled
             self.assertIn("encountered an error", answer)

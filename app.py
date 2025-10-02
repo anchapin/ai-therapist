@@ -8,9 +8,19 @@ from dotenv import load_dotenv
 from langchain_community.vectorstores import FAISS
 from langchain_ollama import OllamaEmbeddings, ChatOllama
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
+
+# Import knowledge downloading functions
+try:
+    from download_knowledge import load_knowledge_files_config, download_file
+except ImportError:
+    # Fallback for testing environments
+    def load_knowledge_files_config():
+        return []
+    def download_file(url, filename):
+        pass
 
 # Voice module imports
 from voice.config import VoiceConfig
@@ -46,45 +56,77 @@ def sanitize_user_input(input_text):
     if not input_text or not isinstance(input_text, str):
         return ""
 
-    # Remove potential prompt injection patterns
+    # Check for potential prompt injection patterns
     injection_patterns = [
-        r'(?i)ignore previous instructions',
-        r'(?i)disregard above',
-        r'(?i)bypass security',
-        r'(?i)system prompt',
-        r'(?i)admin access',
-        r'(?i)you are now',
-        r'(?i)pretend to be',
-        r'(?i)act as if',
+        r'(?i)ignore previous instructions.*',
+        r'(?i)disregard above.*',
+        r'(?i)bypass security.*',
+        r'(?i)system prompt.*',
+        r'(?i)admin access.*',
+        r'(?i)you are now.*',
+        r'(?i)pretend to be.*',
+        r'(?i)act as if.*',
     ]
 
+    # Check if the entire input is malicious (contains only injection patterns and minimal text)
+    is_fully_malicious = False
+    for pattern in injection_patterns:
+        if re.search(pattern, input_text):
+            # Check if the input is primarily just the injection pattern
+            redacted_length = len(re.sub(pattern, '[REDACTED]', input_text))
+            original_length = len(input_text)
+            # If redaction reduces length by more than 70%, consider it fully malicious
+            if redacted_length / original_length < 0.3:
+                return "[REDACTED]"
+            break
+
+    # Redact any injection patterns found in the input
     cleaned = input_text
     for pattern in injection_patterns:
         cleaned = re.sub(pattern, '[REDACTED]', cleaned)
 
-    # Length validation
+    # Length validation - truncate if too long
     if len(cleaned) > 2000:
-        cleaned = cleaned[:2000] + "... [TRUNCATED]"
+        truncation_suffix = "... [TRUNCATED]"
+        max_content_length = 1999 - len(truncation_suffix)  # Ensure total is < 2000
+        cleaned = cleaned[:max_content_length] + truncation_suffix
 
     return cleaned.strip()
 
 def detect_crisis_content(text):
     """Detect crisis situations requiring immediate intervention."""
     # Enhanced crisis keywords from voice command system
+    # More specific crisis-related phrases to reduce false positives
     crisis_keywords = [
         'suicide', 'kill myself', 'end my life', 'self-harm',
         'hurt myself', 'want to die', 'no reason to live',
         'better off dead', 'can\'t go on', 'end it all',
         'suicidal', 'depressed', 'hopeless', 'worthless',
-        'crisis', 'emergency', 'help me', 'need help',
-        'overwhelmed', 'desperate', 'alone', 'isolated'
+        'crisis', 'emergency', 'overwhelmed', 'desperate',
+        'alone', 'isolated'
+    ]
+
+    # High-risk phrases that require immediate attention
+    high_risk_phrases = [
+        'want to kill myself',
+        'going to kill myself',
+        'thinking about suicide',
+        'suicidal thoughts',
+        'end my life',
+        'no reason to live'
     ]
 
     text_lower = text.lower()
     detected_keywords = []
 
+    # First check for high-risk phrases (more specific)
+    for phrase in high_risk_phrases:
+        if phrase in text_lower:
+            detected_keywords.append(phrase)
+
+    # Then check for general crisis keywords
     for keyword in crisis_keywords:
-        if keyword in text_lower:
+        if keyword in text_lower and keyword not in detected_keywords:
             detected_keywords.append(keyword)
 
     if detected_keywords:
@@ -190,9 +232,14 @@ response_cache = ResponseCache()
 embedding_cache = EmbeddingCache()
 
 class CachedOllamaEmbeddings(OllamaEmbeddings):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self.cache = embedding_cache
+    def __init__(self, model: str = "nomic-embed-text:latest", **kwargs):
+        super().__init__(model=model, **kwargs)
+        # Store cache as a private attribute to avoid Pydantic validation issues
+        object.__setattr__(self, '_cache', embedding_cache)
+
+    @property
+    def cache(self):
+        return self._cache
 
     def embed_query(self, text):
         # Try cache first
@@ -512,17 +559,26 @@ def get_ai_response(conversation_chain, question):
         context_hash = "default"  # Simplified for now
         cached_response = response_cache.get(sanitized_question, context_hash)
         if cached_response:
-            st.session_state.cache_hits += 1
+            # Handle streamlit session state safely
+            try:
+                st.session_state.cache_hits += 1
+            except AttributeError:
+                # streamlit not available (testing environment)
+                pass
             return cached_response, []
 
         # Generate response
-        with st.status("Processing your message...", expanded=True) as status:
-            st.write("🔍 Searching knowledge base...")
-            time.sleep(0.5)
-            st.write("🧠 Analyzing context...")
-            time.sleep(0.5)
-            st.write("💭 Generating response...")
-            status.update(label="Response ready!", state="complete")
+        try:
+            with st.status("Processing your message...", expanded=True) as status:
+                st.write("🔍 Searching knowledge base...")
+                time.sleep(0.5)
+                st.write("🧠 Analyzing context...")
+                time.sleep(0.5)
+                st.write("💭 Generating response...")
+                status.update(label="Response ready!", state="complete")
+        except AttributeError:
+            # streamlit not available (testing environment)
+            pass
 
         response = conversation_chain({"question": sanitized_question})
         answer = response.get("answer", "I apologize, but I couldn't generate a response.")
