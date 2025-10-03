@@ -65,9 +65,9 @@ class TestMemoryLeakDetection:
         assert not self.memory_manager.is_monitoring
 
         stats = self.memory_manager.get_memory_stats()
-        assert 'total_memory_mb' in stats
-        assert 'process_memory_mb' in stats
-        assert stats['process_memory_mb'] >= 0
+        assert hasattr(stats, 'total_memory_mb')
+        assert hasattr(stats, 'process_memory_mb')
+        assert stats.process_memory_mb >= 0
 
     def test_garbage_collection_trigger(self):
         """Test automatic garbage collection triggering."""
@@ -88,7 +88,7 @@ class TestMemoryLeakDetection:
         alerts_received = []
 
         def alert_callback(level, stats):
-            alerts_received.append((level.value, stats['process_memory_mb']))
+            alerts_received.append((level.value, stats.process_memory_mb))
 
         self.memory_manager.register_alert_callback(alert_callback)
         self.memory_manager.start_monitoring()

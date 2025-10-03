@@ -15,6 +15,11 @@ from unittest.mock import Mock, patch, MagicMock
 import numpy as np
 from typing import List, Dict, Any
 import queue
+import sys
+import os
+
+# Add the parent directory to the path to ensure proper imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 # Import voice services
 from voice.audio_processor import SimplifiedAudioProcessor, AudioData
@@ -32,6 +37,9 @@ class TestLoadPerformance:
             voice_enabled = True
             default_voice_profile = 'default'
             voice_commands_enabled = True
+            stt_provider = "mock"
+            tts_provider = "mock"
+            
             class audio:
                 max_buffer_size = 300
                 max_memory_mb = 100
@@ -43,6 +51,12 @@ class TestLoadPerformance:
                 stream_chunk_duration = 0.1
                 compression_enabled = True
                 compression_level = 6
+            
+            def get_preferred_stt_service(self):
+                return self.stt_provider
+            
+            def get_preferred_tts_service(self):
+                return self.tts_provider
         
         self.config = MockConfig()
         self.security = Mock()
