@@ -26,77 +26,78 @@ from voice.config import VoiceConfig, SecurityConfig
 from voice.security import VoiceSecurity
 
 
+@pytest.fixture
+def mock_config():
+    """Create mock configuration for testing."""
+    config = Mock(spec=VoiceConfig)
+    config.voice_enabled = True
+    config.stt_enabled = True
+    config.tts_enabled = True
+    config.get_preferred_stt_service.return_value = "openai"
+    config.get_preferred_tts_service.return_value = "openai"
+    config.stt_language = "en"
+    config.tts_language = "en"
+    config.security = Mock(spec=SecurityConfig)
+    config.security_enabled = True
+    config.encryption_enabled = True
+    config.voice_commands_enabled = True
+    config.voice_input_enabled = True
+    config.voice_output_enabled = True
+    config.default_voice_profile = "calm_therapist"
+    config.stt_confidence_threshold = 0.7
+
+    # Add missing attributes
+    config.performance = Mock()
+    config.performance.cache_size = 100
+    config.performance.cache_enabled = True
+    config.performance.streaming_enabled = True
+    config.performance.parallel_processing = True
+    config.performance.buffer_size = 4096
+    config.performance.processing_timeout = 30000
+
+    # Add audio attributes
+    config.audio = Mock()
+    config.audio.sample_rate = 16000
+    config.audio.channels = 1
+    config.audio.chunk_size = 1024
+    config.audio.max_buffer_size = 300
+    config.audio.max_memory_mb = 100
+
+    # Add voice profiles attribute
+    config.voice_profiles = {}
+    config.voice_profile_path = "./voice_profiles"
+    config.default_voice_profile = "calm_therapist"
+    config.stt_timeout = 10.0
+    config.stt_max_retries = 2
+    config.stt_fallback_enabled = True
+    config.tts_voice = "alloy"
+    config.tts_speed = 1.0
+    config.tts_pitch = 1.0
+    config.tts_model = "tts-1"
+    config.tts_fallback_enabled = True
+
+    # Add voice command timeout
+    config.voice_command_timeout = 5000
+
+    return config
+
+
+@pytest.fixture
+def mock_security():
+    """Create mock security module."""
+    security = Mock(spec=VoiceSecurity)
+    security.initialize.return_value = True
+    security.process_audio = AsyncMock(return_value=AudioData(np.array([]), 16000, 0.0, 1))
+    security.validate_audio = AsyncMock(return_value=True)
+    security.encrypt_audio = AsyncMock(return_value=b"encrypted_audio")
+    security.decrypt_audio = AsyncMock(return_value=AudioData(np.array([]), 16000, 0.0, 1))
+    # Add health_check method
+    security.health_check = Mock(return_value={"status": "healthy", "issues": []})
+    return security
+
+
 class TestMultiProviderFallbacks:
     """Test multi-provider fallback mechanisms."""
-
-    @pytest.fixture
-    def mock_config(self):
-        """Create mock configuration for testing."""
-        config = Mock(spec=VoiceConfig)
-        config.voice_enabled = True
-        config.stt_enabled = True
-        config.tts_enabled = True
-        config.get_preferred_stt_service.return_value = "openai"
-        config.get_preferred_tts_service.return_value = "openai"
-        config.stt_language = "en"
-        config.tts_language = "en"
-        config.security = Mock(spec=SecurityConfig)
-        config.security_enabled = True
-        config.encryption_enabled = True
-        config.voice_commands_enabled = True
-        config.voice_input_enabled = True
-        config.voice_output_enabled = True
-        config.default_voice_profile = "calm_therapist"
-        config.stt_confidence_threshold = 0.7
-
-        # Add missing attributes
-        config.performance = Mock()
-        config.performance.cache_size = 100
-        config.performance.cache_enabled = True
-        config.performance.streaming_enabled = True
-        config.performance.parallel_processing = True
-        config.performance.buffer_size = 4096
-        config.performance.processing_timeout = 30000
-
-        # Add audio attributes
-        config.audio = Mock()
-        config.audio.sample_rate = 16000
-        config.audio.channels = 1
-        config.audio.chunk_size = 1024
-        config.audio.max_buffer_size = 300
-        config.audio.max_memory_mb = 100
-
-        # Add voice profiles attribute
-        config.voice_profiles = {}
-        config.voice_profile_path = "./voice_profiles"
-        config.default_voice_profile = "calm_therapist"
-        config.stt_timeout = 10.0
-        config.stt_max_retries = 2
-        config.stt_fallback_enabled = True
-        config.tts_voice = "alloy"
-        config.tts_speed = 1.0
-        config.tts_pitch = 1.0
-        config.tts_model = "tts-1"
-        config.tts_fallback_enabled = True
-
-        # Add voice command timeout
-        config.voice_command_timeout = 5000
-
-        return config
-
-
-    @pytest.fixture
-    def mock_security(self):
-        """Create mock security module."""
-        security = Mock(spec=VoiceSecurity)
-        security.initialize.return_value = True
-        security.process_audio = AsyncMock(return_value=AudioData(np.array([]), 16000, 0.0, 1))
-        security.validate_audio = AsyncMock(return_value=True)
-        security.encrypt_audio = AsyncMock(return_value=b"encrypted_audio")
-        security.decrypt_audio = AsyncMock(return_value=AudioData(np.array([]), 16000, 0.0, 1))
-        # Add health_check method
-        security.health_check = Mock(return_value={"status": "healthy", "issues": []})
-        return security
 
     def test_stt_provider_fallback_chain(self, mock_config, mock_security):
         """Test STT provider fallback chain."""

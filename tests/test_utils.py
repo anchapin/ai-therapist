@@ -162,6 +162,24 @@ def get_stt_service_module(project_root: str) -> Any:
     )
 
 
+def get_tts_service_module(project_root: str) -> Any:
+    """Get or import the TTS service module."""
+    return safe_import_module(
+        "voice.tts_service",
+        str(Path(project_root) / "voice" / "tts_service.py"),
+        package="voice"
+    )
+
+
+def get_security_module(project_root: str) -> Any:
+    """Get or import the security module."""
+    return safe_import_module(
+        "voice.security",
+        str(Path(project_root) / "voice" / "security.py"),
+        package="voice"
+    )
+
+
 def clear_module_cache() -> None:
     """Clear the module cache (useful for testing)."""
     global _loaded_modules

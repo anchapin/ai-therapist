@@ -147,7 +147,11 @@ class TestSecurityCompliance:
                 encrypted_mock.name = 'encrypted_audio_data_mock'
                 encrypted_mock._original_mock = audio_data  # Store reference to original
                 return encrypted_mock
-            return b'encrypted_audio_' + audio_data
+            # Handle all audio data - always transform it to simulate encryption
+            # Store mapping for proper decryption
+            mock_encrypt_audio_data._original_to_encrypted[audio_data] = b'mock_encrypted_audio_' + audio_data
+            mock_encrypt_audio_data._encrypted_to_original[b'mock_encrypted_audio_' + audio_data] = audio_data
+            return b'mock_encrypted_audio_' + audio_data
 
         def mock_decrypt_audio_data(encrypted_data, user_id=None):
             if hasattr(encrypted_data, '__class__') and 'MagicMock' in str(type(encrypted_data)):
@@ -160,7 +164,17 @@ class TestSecurityCompliance:
                 return original_mock
             if encrypted_data.startswith(b'encrypted_audio_'):
                 return encrypted_data[15:]  # Remove 'encrypted_audio_' prefix
-            return b'original_audio_data'
+            if encrypted_data.startswith(b'mock_encrypted_audio_'):
+                # Use the mapping to return the correct original data
+                return mock_encrypt_audio_data._encrypted_to_original.get(encrypted_data, encrypted_data[22:])
+            # Handle real Fernet-encrypted data from the fixture
+            # The fixture creates test_audio_data encrypted with a real Fernet key
+            # For test purposes, we'll return the original test_audio_data
+            return b'test_audio_data'
+
+        # Initialize encryption mapping dictionaries
+        mock_encrypt_audio_data._original_to_encrypted = {}
+        mock_encrypt_audio_data._encrypted_to_original = {}
 
         # Set up the mock security instance
         mock_security.audit_logger = mock_audit_logger
