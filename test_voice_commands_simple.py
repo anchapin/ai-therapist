@@ -14,12 +14,14 @@ from datetime import datetime
 # Add the project root to the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# Mock the missing dependencies
-class MockVoiceConfig:
-    """Mock VoiceConfig for testing."""
-    def __init__(self):
-        self.voice_commands_enabled = True
-        self.voice_command_min_confidence = 0.6
+# Import comprehensive mock configuration
+from voice.mock_config import create_mock_voice_config
+
+# Create mock config for testing
+MockVoiceConfig = create_mock_voice_config(
+    voice_commands_enabled=True,
+    voice_command_min_confidence=0.6
+)
 
 # Simple test focusing on command processing
 async def test_command_processing():

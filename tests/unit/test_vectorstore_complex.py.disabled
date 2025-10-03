@@ -248,7 +248,7 @@ class TestBuildVectorstore(unittest.TestCase):
         # Setup mock
         mock_doc = Mock()
         mock_doc.page_content = "Test content"
-        mock_doc.metadata = {}
+        mock_doc.metadata = {'source': 'test_metadata.pdf'}  # Add the expected metadata
         mock_documents = [mock_doc]
 
         mock_loader_instance = Mock()

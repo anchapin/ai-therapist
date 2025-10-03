@@ -12,14 +12,16 @@ import os
 # Add the project root to the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# Mock the missing config class
-class MockVoiceConfig:
-    """Mock VoiceConfig for testing."""
-    def __init__(self):
-        self.voice_commands_enabled = True
-        self.voice_command_min_confidence = 0.6
-        self.voice_command_wake_word = "hey therapist"
-        self.voice_command_timeout = 30000
+# Import comprehensive mock configuration
+from voice.mock_config import create_mock_voice_config
+
+# Create mock config for testing
+MockVoiceConfig = create_mock_voice_config(
+    voice_commands_enabled=True,
+    voice_command_min_confidence=0.6,
+    voice_command_wake_word="hey therapist",
+    voice_command_timeout=30000
+)
 
 async def test_voice_commands():
     """Test voice commands functionality."""

@@ -137,3 +137,30 @@ test_api_key/
 
 # Additional integration test files
 tests/integration/*_fixed.py
+# Generated files and backups to ignore
+*.backup
+test_results.xml
+test_env_*.py
+=5.9.0
+credentials/
+
+# Temporary and debug files
+*.tmp
+*.temp
+*.log
+
+# Test artifacts
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db

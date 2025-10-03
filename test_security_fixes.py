@@ -17,6 +17,9 @@ from pathlib import Path
 # Add the project root to the path
 sys.path.insert(0, str(Path(__file__).parent))
 
+# Import comprehensive mock configuration
+from voice.mock_config import MockVoiceConfig, MockSecurityConfig, MockAudioConfig, create_mock_voice_config
+
 def test_security_validation():
     """Test input validation in security module."""
     print("Testing security validation...")
@@ -25,22 +28,18 @@ def test_security_validation():
         from voice.config import VoiceConfig
         from voice.security import VoiceSecurity
 
-        # Create a minimal config for testing
-        class MockSecurityConfig:
-            encryption_enabled = False
-            consent_required = False
-            hipaa_compliance_enabled = False
-            gdpr_compliance_enabled = False
-            data_localization = False
-            data_retention_hours = 24
-            emergency_protocols_enabled = False
-            privacy_mode = False
-            anonymization_enabled = False
-
-        class MockVoiceConfig:
-            security = MockSecurityConfig()
-
-        config = MockVoiceConfig()
+        # Create comprehensive mock config for testing
+        config = create_mock_voice_config(
+            security_encryption_enabled=False,
+            security_consent_required=False,
+            security_hipaa_compliance_enabled=False,
+            security_gdpr_compliance_enabled=False,
+            security_data_localization=False,
+            security_data_retention_hours=24,
+            security_emergency_protocols_enabled=False,
+            security_privacy_mode=False,
+            security_anonymization_enabled=False
+        )
         security = VoiceSecurity(config)
 
         # Test valid inputs
@@ -118,18 +117,14 @@ def test_audio_buffer_memory():
         from voice.config import VoiceConfig
         from voice.audio_processor import SimplifiedAudioProcessor
 
-        # Create a minimal config for testing
-        class MockAudioConfig:
-            sample_rate = 16000
-            channels = 1
-            chunk_size = 1024
-            format = "wav"
-            max_buffer_size = 10  # Small buffer for testing
-
-        class MockVoiceConfig:
-            audio = MockAudioConfig()
-
-        config = MockVoiceConfig()
+        # Create comprehensive mock config for testing
+        config = create_mock_voice_config(
+            audio_sample_rate=16000,
+            audio_channels=1,
+            audio_chunk_size=1024,
+            audio_format="wav",
+            audio_max_buffer_size=10  # Small buffer for testing
+        )
         processor = SimplifiedAudioProcessor(config)
 
         # Check that audio_buffer is a deque with maxlen
@@ -163,21 +158,13 @@ def test_session_thread_safety():
         from voice.voice_service import VoiceService
         from voice.security import VoiceSecurity
 
-        # Create minimal configs for testing
-        class MockConfig:
-            voice_enabled = True
-            default_voice_profile = "default"
-
-        class MockSecurityConfig:
-            encryption_enabled = False
-            consent_required = False
-
-        class MockVoiceConfig:
-            voice_enabled = True
-            default_voice_profile = "default"
-            security = MockSecurityConfig()
-
-        config = MockVoiceConfig()
+        # Create comprehensive mock config for testing
+        config = create_mock_voice_config(
+            voice_enabled=True,
+            default_voice_profile="default",
+            security_encryption_enabled=False,
+            security_consent_required=False
+        )
         security = VoiceSecurity(config)
         service = VoiceService(config, security)
 
@@ -219,21 +206,13 @@ def test_async_sync_fix():
         from voice.security import VoiceSecurity
         from voice.audio_processor import AudioData
 
-        # Create minimal configs for testing
-        class MockConfig:
-            voice_enabled = True
-            default_voice_profile = "default"
-
-        class MockSecurityConfig:
-            encryption_enabled = False
-            consent_required = False
-
-        class MockVoiceConfig:
-            voice_enabled = True
-            default_voice_profile = "default"
-            security = MockSecurityConfig()
-
-        config = MockVoiceConfig()
+        # Create comprehensive mock config for testing
+        config = create_mock_voice_config(
+            voice_enabled=True,
+            default_voice_profile="default",
+            security_encryption_enabled=False,
+            security_consent_required=False
+        )
         security = VoiceSecurity(config)
         service = VoiceService(config, security)
 

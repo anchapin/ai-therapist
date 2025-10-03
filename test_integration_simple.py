@@ -11,6 +11,9 @@ import os
 # Add the project root to the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# Import comprehensive mock configuration
+from voice.mock_config import create_mock_voice_config
+
 def test_crisis_detection_import():
     """Test that crisis detection functions can be imported."""
     print("🧠 Testing Crisis Detection Integration")
@@ -55,20 +58,17 @@ def test_voice_command_import():
     print("-" * 40)
 
     try:
-        # Mock VoiceConfig to avoid audio dependencies
-        class MockVoiceConfig:
-            def __init__(self):
-                self.voice_commands_enabled = True
-                self.voice_command_min_confidence = 0.6
-                self.voice_command_wake_word = "hey therapist"
-                self.voice_command_timeout = 30000
-
         # Test voice command imports
         from voice.commands import VoiceCommandProcessor, CommandCategory, SecurityLevel
         print("✓ Voice command classes imported successfully")
 
-        # Create processor with mock config
-        config = MockVoiceConfig()
+        # Create processor with comprehensive mock config
+        config = create_mock_voice_config(
+            voice_commands_enabled=True,
+            voice_command_min_confidence=0.6,
+            voice_command_wake_word="hey therapist",
+            voice_command_timeout=30000
+        )
         processor = VoiceCommandProcessor(config)
         print("✓ Voice command processor initialized")
 
@@ -104,13 +104,11 @@ def test_integration_logic():
         from app import detect_crisis_content, generate_crisis_response
         from voice.commands import VoiceCommandProcessor, CommandCategory
 
-        # Mock VoiceConfig
-        class MockVoiceConfig:
-            def __init__(self):
-                self.voice_commands_enabled = True
-                self.voice_command_min_confidence = 0.6
-
-        config = MockVoiceConfig()
+        # Create comprehensive mock config
+        config = create_mock_voice_config(
+            voice_commands_enabled=True,
+            voice_command_min_confidence=0.6
+        )
         processor = VoiceCommandProcessor(config)
 
         # Test that voice system uses app's crisis detection

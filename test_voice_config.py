@@ -16,6 +16,9 @@ import numpy as np
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
 
+# Import comprehensive mock configuration
+from voice.mock_config import MockVoiceConfig as ComprehensiveMockVoiceConfig, MockSecurityConfig as ComprehensiveMockSecurityConfig, MockAudioConfig as ComprehensiveMockAudioConfig, create_mock_voice_config
+
 
 class MockSecurityConfig:
     """Mock security configuration for testing."""
@@ -45,10 +48,21 @@ class MockAudioConfig:
 class MockVoiceConfig:
     """Mock voice configuration for testing."""
     def __init__(self):
-        self.voice_enabled = True
-        self.default_voice_profile = "default"
-        self.security = MockSecurityConfig()
-        self.audio = MockAudioConfig()
+        # Use comprehensive mock configuration
+        comprehensive_config = create_mock_voice_config(
+            voice_enabled=True,
+            default_voice_profile="default"
+        )
+        self.voice_enabled = comprehensive_config.voice_enabled
+        self.default_voice_profile = comprehensive_config.default_voice_profile
+        self.security = comprehensive_config.security
+        self.audio = comprehensive_config.audio
+
+        # Add other commonly needed attributes
+        self.session_timeout_minutes = comprehensive_config.session_timeout_minutes
+        self.voice_commands_enabled = comprehensive_config.voice_commands_enabled
+        self.voice_input_enabled = comprehensive_config.voice_input_enabled
+        self.voice_output_enabled = comprehensive_config.voice_output_enabled
 
 
 class MockAudioDevices:
