@@ -1287,6 +1287,25 @@ class VoiceConfig:
     def openai_max_tokens(self) -> int:
         """Get OpenAI max tokens."""
         return getattr(self, '_openai_max_tokens', 1000)
+    # Performance configuration environment variables
+    VOICE_MEMORY_THRESHOLD_LOW = int(os.getenv("VOICE_MEMORY_THRESHOLD_LOW", "256"))
+    VOICE_MEMORY_THRESHOLD_MEDIUM = int(os.getenv("VOICE_MEMORY_THRESHOLD_MEDIUM", "512"))
+    VOICE_MEMORY_THRESHOLD_HIGH = int(os.getenv("VOICE_MEMORY_THRESHOLD_HIGH", "768"))
+    VOICE_MEMORY_THRESHOLD_CRITICAL = int(os.getenv("VOICE_MEMORY_THRESHOLD_CRITICAL", "1024"))
+    VOICE_MONITORING_INTERVAL = float(os.getenv("VOICE_MONITORING_INTERVAL", "30.0"))
+    VOICE_GC_THRESHOLD = int(os.getenv("VOICE_GC_THRESHOLD", "500"))
+    VOICE_CLEANUP_INTERVAL = float(os.getenv("VOICE_CLEANUP_INTERVAL", "300.0"))
+    VOICE_CACHE_SIZE = int(os.getenv("VOICE_CACHE_SIZE", "1000"))
+    VOICE_CACHE_MAX_MEMORY_MB = int(os.getenv("VOICE_CACHE_MAX_MEMORY_MB", "256"))
+    VOICE_ENABLE_COMPRESSION = os.getenv("VOICE_ENABLE_COMPRESSION", "true").lower() == "true"
+    VOICE_SESSION_CLEANUP_INTERVAL = int(os.getenv("VOICE_SESSION_CLEANUP_INTERVAL", "300"))
+    VOICE_MAX_SESSION_AGE = int(os.getenv("VOICE_MAX_SESSION_AGE", "3600"))
+    VOICE_INACTIVE_SESSION_TIMEOUT = int(os.getenv("VOICE_INACTIVE_SESSION_TIMEOUT", "1800"))
+    VOICE_MAX_CONNECTIONS = int(os.getenv("VOICE_MAX_CONNECTIONS", "5"))
+    VOICE_MAX_ASYNC_WORKERS = int(os.getenv("VOICE_MAX_ASYNC_WORKERS", "3"))
+    VOICE_STREAM_BUFFER_SIZE = int(os.getenv("VOICE_STREAM_BUFFER_SIZE", "10"))
+    VOICE_STREAM_CHUNK_DURATION = float(os.getenv("VOICE_STREAM_CHUNK_DURATION", "0.1"))
+    VOICE_COMPRESSION_LEVEL = int(os.getenv("VOICE_COMPRESSION_LEVEL", "6"))
 
     @openai_max_tokens.setter
     def openai_max_tokens(self, value: int):

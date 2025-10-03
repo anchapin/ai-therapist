@@ -27,6 +27,17 @@ __spec__ = None
 # Diagnostic logging for __spec__ AttributeError debugging
 import sys
 print(f"[DEBUG] voice.security module loading in Python {sys.version}")
+# Authentication integration
+try:
+    from auth.auth_service import AuthService
+    from auth.user_model import UserProfile, UserRole
+    AUTH_AVAILABLE = True
+except ImportError:
+    AUTH_AVAILABLE = False
+    print("[WARNING] Authentication module not available - running in anonymous mode")
+
+# Database imports
+from ..database.models import AuditLogRepository, ConsentRepository, VoiceDataRepository
 print(f"[DEBUG] __spec__ initialized as: {__spec__}")
 print(f"[DEBUG] Module __name__: {__name__}")
 
@@ -123,6 +134,7 @@ class AuditLogEntry:
     severity: str = "INFO"
 
 
+    def __init__(self, config=None, auth_service=None):
 class SecurityError(Exception):
     """Security-related errors."""
     pass
@@ -148,12 +160,27 @@ class VoiceSecurity:
         self.key_creation_time = datetime.now()
         self.encryption_key_rotation_days = config.encryption_key_rotation_days if config else 90
 
-        # Audit logging
+        # Database repositories
+        self.audit_repo = AuditLogRepository()
+        self.consent_repo = ConsentRepository()
+        self.voice_data_repo = VoiceDataRepository()
+
+        # Legacy audit logging (for backward compatibility)
         self.audit_logger = AuditLogger(self)
 
-        # Consent management
+        # Legacy consent management (for backward compatibility)
         self.consent_manager = ConsentManager(self)
 
+        # Authentication integration
+        self.auth_service = auth_service
+        if self.auth_service is None and AUTH_AVAILABLE:
+            # Try to get auth service from global context or create one
+            try:
+                import streamlit as st
+                if hasattr(st.session_state, 'auth_service') and st.session_state.auth_service:
+                    self.auth_service = st.session_state.auth_service
+            except:
+                pass
         # Access control
         self.access_manager = AccessManager(self)
 
@@ -594,9 +621,25 @@ class VoiceSecurity:
         return anonymized
 
     def _log_security_event(self, event_type: str, user_id: str, action: str,
-                           resource: str, result: str, details: Dict[str, Any] = None):
+                            resource: str, result: str, details: Dict[str, Any] = None):
         """Log security-related events."""
         if self.audit_logging_enabled:
+            # Log to database
+            from ..database.models import AuditLog
+            audit_log = AuditLog.create(
+                event_type=event_type,
+                user_id=user_id,
+                details={
+                    'action': action,
+                    'resource': resource,
+                    'result': result,
+                    **(details or {})
+                },
+                severity="INFO"
+            )
+            self.audit_repo.save(audit_log)
+
+            # Also log to legacy system for backward compatibility
             self.audit_logger.log_event(
                 event_type=event_type,
                 user_id=user_id,

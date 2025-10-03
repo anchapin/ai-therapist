@@ -164,3 +164,7 @@ htmlcov/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Sensitive voice data
+voice_data/
+voice_profiles/

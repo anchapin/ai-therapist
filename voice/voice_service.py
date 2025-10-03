@@ -30,6 +30,17 @@ from .tts_service import TTSService, TTSResult
 from .security import VoiceSecurity
 from .commands import VoiceCommandProcessor
 
+# Security imports for PII protection
+try:
+    from ..security.pii_protection import PIIProtection
+    PII_AVAILABLE = True
+except ImportError:
+    PII_AVAILABLE = False
+    print("[WARNING] PII protection module not available - voice sanitization disabled")
+
+# Database imports
+from ..database.models import SessionRepository, VoiceDataRepository, AuditLogRepository, ConsentRepository
+
 class VoiceSessionState(Enum):
     """Voice session states."""
     IDLE = "idle"
@@ -103,13 +114,30 @@ class VoiceService:
         self.security = security
         self.logger = logging.getLogger(__name__)
 
+        # Initialize PII protection if available
+        self.pii_protection = None
+        if PII_AVAILABLE:
+            try:
+                from ..security.pii_protection import PIIProtection
+                self.pii_protection = PIIProtection()
+                self.logger.info("PII protection initialized for voice service")
+            except Exception as e:
+                self.logger.warning(f"Failed to initialize PII protection: {e}")
+                self.pii_protection = None
+
         # Initialize components
         self.audio_processor = SimplifiedAudioProcessor(config)
         self.stt_service = STTService(config)
         self.tts_service = TTSService(config)
         self.command_processor = VoiceCommandProcessor(config)
 
-        # Session management
+        # Database repositories
+        self.session_repo = SessionRepository()
+        self.voice_data_repo = VoiceDataRepository()
+        self.audit_repo = AuditLogRepository()
+        self.consent_repo = ConsentRepository()
+
+        # Session management (keep in-memory for active sessions, persist to database)
         self.sessions: Dict[str, VoiceSession] = {}
         self.current_session_id: Optional[str] = None
         self._sessions_lock = threading.RLock()  # Thread-safe session access
@@ -265,7 +293,7 @@ class VoiceService:
         except Exception as e:
             self.logger.error(f"Error processing voice queue: {str(e)}")
 
-    def create_session(self, session_id: Optional[str] = None, voice_profile: Optional[str] = None) -> str:
+    def create_session(self, session_id: Optional[str] = None, voice_profile: Optional[str] = None, user_id: Optional[str] = None) -> str:
         """Create a new voice session."""
         if session_id is None:
             session_id = f"session_{int(time.time() * 1000)}_{hash(time.time())}"
@@ -285,11 +313,24 @@ class VoiceService:
                     conversation_history=[],
                     current_voice_profile=voice_profile or getattr(self.config, 'default_voice_profile', 'default'),
                     audio_buffer=[],
-                    metadata={}
+                    metadata={'user_id': user_id} if user_id else {}
                 )
 
                 self.sessions[session_id] = session
                 self.current_session_id = session_id
+
+                # Persist session metadata to database if user_id provided
+                if user_id:
+                    from ..database.models import Session
+                    db_session = Session.create(
+                        user_id=user_id,
+                        session_timeout_minutes=30,  # Default timeout
+                        ip_address=None,
+                        user_agent=None
+                    )
+                    # Override session_id to match voice session
+                    db_session.session_id = session_id
+                    self.session_repo.save(db_session)
 
                 self.metrics['sessions_created'] += 1
 
@@ -467,14 +508,50 @@ class VoiceService:
                 stt_result = self._create_mock_stt_result("Mock transcription")
 
             if stt_result and hasattr(stt_result, 'text') and stt_result.text.strip():
-                # Add to conversation history
-                session.conversation_history.append({
+                # Sanitize transcription for PII protection
+                sanitized_text = stt_result.text
+                pii_detected = []
+
+                if self.pii_protection:
+                    try:
+                        # Get user role for PII access control
+                        user_role = session.metadata.get('user_role', 'patient')
+                        user_id = session.metadata.get('user_id')
+
+                        # Sanitize the transcription text
+                        sanitized_text = self.pii_protection.sanitize_text(
+                            stt_result.text,
+                            context="voice_transcription",
+                            user_role=user_role
+                        )
+
+                        # Check for PII detection (for metadata)
+                        pii_results = self.pii_protection.detector.detect_pii(
+                            stt_result.text, context="voice_transcription"
+                        )
+                        pii_detected = [result.pii_type.value for result in pii_results]
+
+                        # Log PII detection in voice metadata
+                        if pii_detected:
+                            self.logger.info(f"PII detected in voice transcription for session {session_id}: {pii_detected}")
+
+                    except Exception as e:
+                        self.logger.warning(f"PII sanitization failed for session {session_id}: {e}")
+                        # Continue with original text if sanitization fails
+
+                # Add to conversation history with PII metadata
+                conversation_entry = {
                     'type': 'user',
-                    'text': stt_result.text,
+                    'text': sanitized_text,
+                    'original_text': stt_result.text if sanitized_text != stt_result.text else None,
                     'timestamp': time.time(),
                     'confidence': getattr(stt_result, 'confidence', 0.95),
-                    'provider': getattr(stt_result, 'provider', 'mock')
-                })
+                    'provider': getattr(stt_result, 'provider', 'mock'),
+                    'pii_detected': pii_detected if pii_detected else None,
+                    'sanitized': sanitized_text != stt_result.text
+                }
+
+                session.conversation_history.append(conversation_entry)
 
                 # Update metrics
                 self.metrics['total_interactions'] += 1

@@ -27,6 +27,10 @@ from voice.config import VoiceConfig
 from voice.security import VoiceSecurity
 from voice.voice_service import VoiceService
 from voice.voice_ui import VoiceUIComponents
+# Authentication imports
+from auth.auth_service import AuthService
+from auth.middleware import AuthMiddleware
+from auth.user_model import UserRole
 from voice.commands import VoiceCommandProcessor, CommandCategory, SecurityLevel
 
 # Load environment variables
@@ -373,6 +377,25 @@ def initialize_session_state():
         st.session_state.voice_command_processor = None
     if "voice_consent_given" not in st.session_state:
         st.session_state.voice_consent_given = False
+    # Authentication session state
+    if "auth_token" not in st.session_state:
+        st.session_state.auth_token = None
+    if "user" not in st.session_state:
+        st.session_state.user = None
+    if "auth_time" not in st.session_state:
+        st.session_state.auth_time = None
+    if "auth_service" not in st.session_state:
+        st.session_state.auth_service = None
+    if "auth_middleware" not in st.session_state:
+        st.session_state.auth_middleware = None
+    if "show_register" not in st.session_state:
+        st.session_state.show_register = False
+    if "show_reset" not in st.session_state:
+        st.session_state.show_reset = False
+    if "show_profile" not in st.session_state:
+        st.session_state.show_profile = False
+    if "show_change_password" not in st.session_state:
+        st.session_state.show_change_password = False
     if "voice_setup_complete" not in st.session_state:
         st.session_state.voice_setup_complete = False
     if "voice_setup_step" not in st.session_state:
@@ -899,6 +922,16 @@ def show_voice_features():
 def main():
     """Sets up and runs the AI Therapist Streamlit application.
 
+    # Initialize authentication service and middleware
+    if st.session_state.auth_service is None:
+        st.session_state.auth_service = AuthService()
+    if st.session_state.auth_middleware is None:
+        st.session_state.auth_middleware = AuthMiddleware(st.session_state.auth_service)
+
+    # Check authentication before proceeding
+    if not st.session_state.auth_middleware.is_authenticated():
+        st.session_state.auth_middleware.show_login_form()
+        return
     This main function orchestrates the entire application flow:
     1.  Configures the Streamlit page.
     2.  Initializes the session state.
@@ -1104,6 +1137,10 @@ def main():
         if st.button("Clear Conversation"):
             st.session_state.messages = []
             st.rerun()
+        # User authentication menu
+        st.session_state.auth_middleware.show_user_menu()
+
+        st.markdown("---")
 
         if st.button("Clear Cache"):
             response_cache.cache.clear()

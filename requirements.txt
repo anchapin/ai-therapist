@@ -54,6 +54,7 @@ num2words>=0.5.12
 # Security & Privacy
 cryptography>=41.0.0
 bcrypt>=4.1.0
+PyJWT>=2.8.0
 
 # Testing Dependencies
 pytest>=8.4.0

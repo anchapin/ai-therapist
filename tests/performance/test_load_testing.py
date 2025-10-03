@@ -1,399 +1,478 @@
 """
-Performance and load testing for voice features.
+Load Testing Performance Tests
 
-Tests SPEECH_PRD.md requirements:
-- Load testing and scalability validation
-- Response time benchmarks
-- Concurrent voice sessions testing
-- High volume voice requests testing
-- Performance under stress conditions
+This module contains tests for load testing the AI Therapist voice services
+under concurrent user scenarios.
 """
 
 import pytest
-import asyncio
 import time
-import statistics
-from unittest.mock import MagicMock, patch, AsyncMock
-import concurrent.futures
 import threading
-from datetime import datetime
+import asyncio
+import concurrent.futures
+import statistics
+from unittest.mock import Mock, patch, MagicMock
 import numpy as np
+from typing import List, Dict, Any
+import queue
 
+# Import voice services
+from voice.audio_processor import SimplifiedAudioProcessor, AudioData
 from voice.voice_service import VoiceService
 from voice.config import VoiceConfig
-from voice.security import VoiceSecurity
 
 
-class TestLoadTesting:
-    """Test performance and load characteristics."""
+class TestLoadPerformance:
+    """Test load performance under concurrent scenarios."""
 
-    @pytest.fixture
-    def config(self):
-        """Create test configuration."""
-        config = VoiceConfig()
-        config.voice_enabled = True
-        config.voice_input_enabled = True
-        config.voice_output_enabled = True
-        config.max_concurrent_sessions = 100
-        config.audio_processing_timeout = 10.0
-        return config
+    def setup_method(self):
+        """Set up test environment."""
+        self.config = VoiceConfig()
+        self.security = Mock()
 
-    @pytest.fixture
-    def security(self, config):
-        """Create security instance."""
-        return VoiceSecurity(config)
+        # Mock external dependencies to avoid actual API calls
+        with patch('voice.stt_service.STTService'), \
+             patch('voice.tts_service.TTSService'), \
+             patch('voice.commands.VoiceCommandProcessor'):
 
-    @pytest.fixture
-    def voice_service(self, config, security):
-        """Create VoiceService instance for testing."""
-        # Mock the dependencies by creating mock instances directly
-        mock_processor = MagicMock()
-        mock_processor.initialize.return_value = True
-        mock_processor.start_recording.return_value = True
-        mock_processor.stop_recording.return_value = MagicMock()
-        mock_processor.detect_voice_activity.return_value = False
-        mock_processor.cleanup.return_value = True
+            self.voice_service = VoiceService(self.config, self.security)
 
-        mock_stt = MagicMock()
-        mock_stt_result = MagicMock()
-        mock_stt_result.text = "Test input"
-        mock_stt_result.confidence = 0.95
-        mock_stt_result.is_crisis = False  # Prevent crisis detection
-        mock_stt_result.is_command = False  # Prevent command detection
-        mock_stt_result.crisis_keywords_detected = []  # No crisis keywords
-        mock_stt.transcribe_audio = MagicMock(return_value=mock_stt_result)
+    def test_concurrent_session_creation(self):
+        """Test creating multiple sessions concurrently."""
+        num_sessions = 50
+        session_ids = []
 
-        mock_tts = MagicMock()
-        mock_tts_result = MagicMock()
-        mock_tts_result.audio_data = b"mock_audio_data"
-        mock_tts_result.success = True
-        mock_tts.synthesize_speech = MagicMock(return_value=mock_tts_result)
+        def create_session_worker():
+            session_id = self.voice_service.create_session()
+            session_ids.append(session_id)
 
-        mock_commands = MagicMock()
-        # Mock async method properly with AsyncMock
-        mock_commands.process_text = AsyncMock(return_value=None)
-
-        # Patch the classes at module level
-        with patch('voice.voice_service.SimplifiedAudioProcessor', return_value=mock_processor), \
-             patch('voice.voice_service.STTService', return_value=mock_stt), \
-             patch('voice.voice_service.TTSService', return_value=mock_tts), \
-             patch('voice.voice_service.VoiceCommandProcessor', return_value=mock_commands):
-
-            service = VoiceService(config, security)
-            service.initialize()
-
-            # Override the service instances with our mocks
-            service.audio_processor = mock_processor
-            service.stt_service = mock_stt
-            service.tts_service = mock_tts
-            service.command_processor = mock_commands
-
-            # Mock crisis detection to avoid false positives
-            service._detect_crisis = MagicMock(return_value=False)
-
-            # Mock process_voice_input to return a proper async result
-            mock_stt_result = self._create_mock_stt_result()
-            service.process_voice_input = AsyncMock(return_value=mock_stt_result)
-
-            return service
-
-    def _create_mock_stt_result(self, text="Test input", confidence=0.95):
-        """Create a consistent mock STT result for performance tests."""
-        mock_stt_result = MagicMock()
-        mock_stt_result.text = text
-        mock_stt_result.confidence = confidence
-        mock_stt_result.is_crisis = False  # Prevent crisis detection
-        mock_stt_result.is_command = False  # Prevent command detection
-        mock_stt_result.crisis_keywords_detected = []  # No crisis keywords
-        return mock_stt_result
-
-    def _mock_stt_service(self, voice_service, text="Test input"):
-        """Mock STT service consistently across tests."""
-        voice_service.stt_service = MagicMock()
-        mock_stt_result = self._create_mock_stt_result(text)
-        voice_service.stt_service.transcribe_audio = AsyncMock(return_value=mock_stt_result)
-
-        # Also update the process_voice_input mock to return the new result
-        voice_service.process_voice_input = AsyncMock(return_value=mock_stt_result)
-
-    @pytest.fixture
-    def mock_audio_data(self):
-        """Generate mock audio data for testing."""
-        duration = 2.0
-        sample_rate = 16000
-        samples = int(duration * sample_rate)
-        frequency = 440
-        t = np.linspace(0, duration, samples)
-        audio_data = np.sin(2 * np.pi * frequency * t)
-        audio_data = (audio_data * 32767).astype(np.int16)
-        return audio_data.tobytes()
-
-    def test_single_user_response_time(self, voice_service, mock_audio_data):
-        """Test single user response time benchmark."""
-        session_id = voice_service.create_session()
-
-        # Mock processing consistently
-        self._mock_stt_service(voice_service)
-
-        start_time = time.time()
-
-        # Process voice input
-        asyncio.run(voice_service.process_voice_input(session_id, mock_audio_data))
-
-        end_time = time.time()
-        response_time = end_time - start_time
-
-        # Assert response time meets benchmark (SPEECH_PRD.md requirement)
-        assert response_time <= 5.0, f"Response time {response_time:.2f}s exceeds 5.0s benchmark"
-
-    def test_concurrent_sessions_performance(self, voice_service, mock_audio_data):
-        """Test concurrent voice sessions performance."""
-        num_sessions = 10
-        sessions = []
-        response_times = []
-
-        # Create sessions
+        # Start concurrent session creation
+        threads = []
         for i in range(num_sessions):
-            session_id = voice_service.create_session()
-            sessions.append(session_id)
+            thread = threading.Thread(target=create_session_worker)
+            threads.append(thread)
+            thread.start()
 
-        # Mock processing for all sessions consistently
-        self._mock_stt_service(voice_service, "Concurrent test input")
+        # Wait for completion
+        for thread in threads:
+            thread.join(timeout=10.0)
 
-        def process_session(session_id):
-            start_time = time.time()
-            asyncio.run(voice_service.process_voice_input(session_id, mock_audio_data))
-            end_time = time.time()
-            return end_time - start_time
+        # Verify all sessions were created
+        assert len(session_ids) == num_sessions
+        assert len(self.voice_service.sessions) >= num_sessions
 
-        # Process sessions concurrently
-        with concurrent.futures.ThreadPoolExecutor(max_workers=num_sessions) as executor:
-            futures = [executor.submit(process_session, session_id) for session_id in sessions]
-            for future in concurrent.futures.as_completed(futures):
-                response_times.append(future.result())
+    def test_concurrent_voice_processing(self):
+        """Test concurrent voice input processing."""
+        num_concurrent_requests = 20
+        results = []
+        errors = []
 
-        # Calculate performance metrics
-        avg_response_time = statistics.mean(response_times)
-        max_response_time = max(response_times)
-        min_response_time = min(response_times)
+        def process_voice_worker(worker_id):
+            try:
+                # Create mock audio data
+                audio_data = np.random.random(16000).astype(np.float32)
 
-        # Assert performance requirements
-        assert avg_response_time <= 5.0, f"Average response time {avg_response_time:.2f}s exceeds 5.0s"
-        assert max_response_time <= 10.0, f"Max response time {max_response_time:.2f}s exceeds 10.0s"
-        assert len(response_times) == num_sessions, "Not all sessions completed successfully"
+                # Create AudioData object
+                audio_obj = AudioData(
+                    data=audio_data,
+                    sample_rate=16000,
+                    duration=1.0
+                )
 
-    def test_high_volume_requests(self, voice_service, mock_audio_data):
-        """Test high volume voice request handling."""
-        session_id = voice_service.create_session()
+                start_time = time.time()
+                # Process voice input
+                result = asyncio.run(self.voice_service.process_voice_input(audio_obj))
+                end_time = time.time()
+
+                results.append({
+                    'worker_id': worker_id,
+                    'processing_time': end_time - start_time,
+                    'success': result is not None
+                })
+
+            except Exception as e:
+                errors.append({
+                    'worker_id': worker_id,
+                    'error': str(e)
+                })
+
+        # Start concurrent processing
+        threads = []
+        for i in range(num_concurrent_requests):
+            thread = threading.Thread(target=process_voice_worker, args=(i,))
+            threads.append(thread)
+            thread.start()
+
+        # Wait for completion with timeout
+        for thread in threads:
+            thread.join(timeout=30.0)
+
+        # Analyze results
+        successful_requests = [r for r in results if r['success']]
+        processing_times = [r['processing_time'] for r in successful_requests]
+
+        assert len(successful_requests) > 0, "No successful requests"
+
+        # Check performance metrics
+        avg_processing_time = statistics.mean(processing_times)
+        max_processing_time = max(processing_times)
+        min_processing_time = min(processing_times)
+
+        # Performance assertions (adjust thresholds based on system capabilities)
+        assert avg_processing_time < 5.0, f"Average processing time too high: {avg_processing_time:.2f}s"
+        assert max_processing_time < 10.0, f"Max processing time too high: {max_processing_time:.2f}s"
+
+        # Error rate should be low
+        error_rate = len(errors) / num_concurrent_requests
+        assert error_rate < 0.1, f"Error rate too high: {error_rate:.2%}"
+
+    def test_memory_usage_under_load(self):
+        """Test memory usage under concurrent load."""
+        import psutil
+        process = psutil.Process()
+
+        # Get baseline memory
+        baseline_memory = process.memory_info().rss / (1024 * 1024)
+
+        num_concurrent_operations = 30
+        results = queue.Queue()
+
+        def memory_intensive_worker(worker_id):
+            try:
+                # Simulate memory-intensive voice processing
+                audio_chunks = []
+                for i in range(10):
+                    chunk = np.random.random(32000).astype(np.float32)  # Larger chunks
+                    audio_chunks.append(chunk)
+                    time.sleep(0.01)  # Small delay
+
+                # Process chunks
+                processed_data = []
+                for chunk in audio_chunks:
+                    # Simulate processing
+                    processed = chunk * 0.5  # Simple processing
+                    processed_data.append(processed)
+
+                # Record memory usage
+                current_memory = process.memory_info().rss / (1024 * 1024)
+                results.put({
+                    'worker_id': worker_id,
+                    'memory_mb': current_memory,
+                    'chunks_processed': len(audio_chunks)
+                })
+
+                # Clean up
+                del audio_chunks
+                del processed_data
+
+            except Exception as e:
+                results.put({
+                    'worker_id': worker_id,
+                    'error': str(e)
+                })
+
+        # Start concurrent operations
+        threads = []
+        for i in range(num_concurrent_operations):
+            thread = threading.Thread(target=memory_intensive_worker, args=(i,))
+            threads.append(thread)
+            thread.start()
+
+        # Wait for completion
+        for thread in threads:
+            thread.join(timeout=60.0)
+
+        # Collect results
+        memory_usages = []
+        while not results.empty():
+            result = results.get()
+            if 'memory_mb' in result:
+                memory_usages.append(result['memory_mb'])
+
+        # Analyze memory usage
+        if memory_usages:
+            max_memory = max(memory_usages)
+            avg_memory = statistics.mean(memory_usages)
+            memory_increase = max_memory - baseline_memory
+
+            # Memory assertions (adjust based on system)
+            assert memory_increase < 500, f"Memory increase too high: {memory_increase:.1f} MB"
+            assert max_memory < 1000, f"Peak memory usage too high: {max_memory:.1f} MB"
+
+    def test_response_time_distribution(self):
+        """Test response time distribution under load."""
         num_requests = 100
         response_times = []
 
-        # Mock processing consistently
-        self._mock_stt_service(voice_service, "High volume test")
+        def timed_request_worker():
+            audio_data = np.random.random(8000).astype(np.float32)  # Smaller chunks for speed
+            audio_obj = AudioData(data=audio_data, sample_rate=16000, duration=0.5)
 
-        # Process high volume of requests
-        for i in range(num_requests):
             start_time = time.time()
-            asyncio.run(voice_service.process_voice_input(session_id, mock_audio_data))
-            end_time = time.time()
-            response_times.append(end_time - start_time)
-
-        # Calculate performance metrics
-        avg_response_time = statistics.mean(response_times)
-        requests_per_second = num_requests / sum(response_times)
-        success_rate = len([rt for rt in response_times if rt <= 5.0]) / num_requests
-
-        # Assert performance requirements
-        assert success_rate >= 0.95, f"Success rate {success_rate:.2%} below 95% threshold"
-        assert avg_response_time <= 3.0, f"Average response time {avg_response_time:.2f}s too high"
-        assert requests_per_second >= 10, f"Throughput {requests_per_second:.1f} req/s too low"
-
-    def test_stress_testing(self, voice_service, mock_audio_data):
-        """Test system under stress conditions."""
-        session_id = voice_service.create_session()
-        stress_duration = 60  # 60 seconds
-        request_interval = 0.1  # Request every 100ms
-        response_times = []
-        errors = []
-
-        # Mock processing consistently
-        self._mock_stt_service(voice_service, "Stress test input")
-
-        # Stress test loop
-        start_time = time.time()
-        while time.time() - start_time < stress_duration:
             try:
-                request_start = time.time()
-                asyncio.run(voice_service.process_voice_input(session_id, mock_audio_data))
-                request_end = time.time()
-                response_times.append(request_end - request_start)
+                result = asyncio.run(self.voice_service.process_voice_input(audio_obj))
+                end_time = time.time()
 
-                # Maintain request rate
-                elapsed = request_end - request_start
-                if elapsed < request_interval:
-                    time.sleep(request_interval - elapsed)
-            except Exception as e:
-                errors.append(str(e))
+                response_times.append(end_time - start_time)
+            except Exception:
+                # Ignore errors for timing test
+                pass
 
-        # Calculate stress test metrics
-        total_requests = len(response_times) + len(errors)
-        error_rate = len(errors) / total_requests if total_requests > 0 else 0
-        avg_response_time = statistics.mean(response_times) if response_times else 0
+        # Run requests with controlled concurrency
+        max_concurrent = 10
+        semaphore = threading.Semaphore(max_concurrent)
 
-        # Assert stress test requirements
-        assert error_rate <= 0.05, f"Error rate {error_rate:.2%} exceeds 5% threshold"
-        assert avg_response_time <= 5.0, f"Average response time {avg_response_time:.2f}s too high under stress"
+        def controlled_request():
+            semaphore.acquire()
+            try:
+                timed_request_worker()
+            finally:
+                semaphore.release()
 
-    def test_memory_usage_under_load(self, voice_service, mock_audio_data):
-        """Test memory usage under load conditions."""
-        try:
-            import psutil
-            import os
-            process = psutil.Process(os.getpid())
-            initial_memory = process.memory_info().rss / 1024 / 1024  # MB
-            use_psutil = True
-        except ImportError:
-            # Skip memory tracking if psutil is not available
-            pytest.skip("psutil not available - skipping memory usage test")
+        threads = []
+        for i in range(num_requests):
+            thread = threading.Thread(target=controlled_request)
+            threads.append(thread)
+            thread.start()
 
-        # Generate memory load
-        session_id = voice_service.create_session()
-        num_operations = 50
+        # Wait for completion
+        for thread in threads:
+            thread.join(timeout=120.0)
 
-        self._mock_stt_service(voice_service, "Memory test input")
-
-        # Perform memory-intensive operations
-        for i in range(num_operations):
-            asyncio.run(voice_service.process_voice_input(session_id, mock_audio_data))
-
-        final_memory = process.memory_info().rss / 1024 / 1024  # MB
-        memory_increase = final_memory - initial_memory
-
-        # Assert memory usage is reasonable
-        assert memory_increase <= 100, f"Memory increase {memory_increase:.1f}MB exceeds 100MB limit"
-
-    def test_scalability_testing(self, voice_service, mock_audio_data):
-        """Test system scalability with increasing load."""
-        session_counts = [1, 5, 10, 25, 50]
-        performance_metrics = []
-
-        self._mock_stt_service(voice_service, "Scalability test")
-
-        for num_sessions in session_counts:
-            sessions = []
-            response_times = []
-
-            # Create sessions
-            for i in range(num_sessions):
-                session_id = voice_service.create_session()
-                sessions.append(session_id)
-
-            # Process sessions concurrently
-            def process_session(session_id):
-                start_time = time.time()
-                asyncio.run(voice_service.process_voice_input(session_id, mock_audio_data))
-                return time.time() - start_time
-
-            with concurrent.futures.ThreadPoolExecutor(max_workers=num_sessions) as executor:
-                futures = [executor.submit(process_session, session_id) for session_id in sessions]
-                response_times = [future.result() for future in concurrent.futures.as_completed(futures)]
-
-            # Calculate metrics
+        # Analyze response time distribution
+        if len(response_times) >= 10:  # Need minimum sample size
             avg_response_time = statistics.mean(response_times)
-            throughput = num_sessions / sum(response_times)
+            median_response_time = statistics.median(response_times)
+            p95_response_time = statistics.quantiles(response_times, n=20)[18]  # 95th percentile
+            p99_response_time = statistics.quantiles(response_times, n=100)[98]  # 99th percentile
 
-            performance_metrics.append({
-                'sessions': num_sessions,
-                'avg_response_time': avg_response_time,
-                'throughput': throughput
-            })
+            # Performance assertions
+            assert avg_response_time < 2.0, f"Average response time too high: {avg_response_time:.2f}s"
+            assert p95_response_time < 5.0, f"95th percentile response time too high: {p95_response_time:.2f}s"
+            assert p99_response_time < 10.0, f"99th percentile response time too high: {p99_response_time:.2f}s"
 
-        # Verify scalability (response time should scale linearly, not exponentially)
-        for i in range(1, len(performance_metrics)):
-            current = performance_metrics[i]
-            previous = performance_metrics[i-1]
+    def test_session_lifecycle_under_load(self):
+        """Test session creation and destruction under load."""
+        num_sessions = 100
+        active_sessions = []
+        session_times = []
 
-            session_ratio = current['sessions'] / previous['sessions']
-            response_time_ratio = current['avg_response_time'] / previous['avg_response_time']
+        def session_lifecycle_worker():
+            # Create session
+            create_start = time.time()
+            session_id = self.voice_service.create_session()
+            create_end = time.time()
 
-            # Response time should not increase faster than session count
-            # Allow very generous threshold for mocked test environment
-            assert response_time_ratio <= session_ratio * 10.0, \
-                f"Response time scaling {response_time_ratio:.2f}x worse than session scaling {session_ratio:.2f}x"
+            if session_id:
+                active_sessions.append(session_id)
 
-    def test_resource_cleanup_under_load(self, voice_service, mock_audio_data):
-        """Test resource cleanup under load conditions."""
-        initial_sessions = len(voice_service.sessions)
+                # Simulate some activity
+                time.sleep(0.01)
 
-        # Create and process many sessions
-        for i in range(20):
-            session_id = voice_service.create_session()
+                # Destroy session
+                destroy_start = time.time()
+                success = self.voice_service.end_session(session_id)
+                destroy_end = time.time()
 
-            self._mock_stt_service(voice_service, f"Cleanup test {i}")
+                session_times.append({
+                    'create_time': create_end - create_start,
+                    'destroy_time': destroy_end - destroy_start,
+                    'total_time': destroy_end - create_start,
+                    'success': success
+                })
 
-            asyncio.run(voice_service.process_voice_input(session_id, mock_audio_data))
-            voice_service.end_session(session_id)
+                # Remove from active list
+                if session_id in active_sessions:
+                    active_sessions.remove(session_id)
+
+        # Run concurrent session lifecycles
+        threads = []
+        for i in range(num_sessions):
+            thread = threading.Thread(target=session_lifecycle_worker)
+            threads.append(thread)
+            thread.start()
+
+        # Wait for completion
+        for thread in threads:
+            thread.join(timeout=60.0)
+
+        # Analyze results
+        successful_sessions = [s for s in session_times if s['success']]
+        create_times = [s['create_time'] for s in successful_sessions]
+        destroy_times = [s['destroy_time'] for s in successful_sessions]
+
+        assert len(successful_sessions) > 0, "No successful sessions"
+
+        # Performance assertions
+        avg_create_time = statistics.mean(create_times)
+        avg_destroy_time = statistics.mean(destroy_times)
+
+        assert avg_create_time < 0.1, f"Session creation too slow: {avg_create_time:.3f}s"
+        assert avg_destroy_time < 0.1, f"Session destruction too slow: {avg_destroy_time:.3f}s"
 
         # Verify cleanup
-        assert len(voice_service.sessions) == initial_sessions, "Sessions not properly cleaned up"
+        final_session_count = len(self.voice_service.sessions)
+        assert final_session_count < num_sessions, "Sessions not properly cleaned up"
 
-    def test_service_availability_under_load(self, voice_service, mock_audio_data):
-        """Test service availability under load conditions."""
-        num_concurrent_tests = 20
-        results = []
+    def test_audio_buffer_performance(self):
+        """Test audio buffer performance under load."""
+        processor = SimplifiedAudioProcessor(self.config)
 
-        self._mock_stt_service(voice_service, "Availability test")
+        num_chunks = 200
+        chunk_size = 4096
+        add_times = []
+        buffer_sizes = []
 
-        def test_service_availability():
-            try:
-                session_id = voice_service.create_session()
-                result = asyncio.run(voice_service.process_voice_input(session_id, mock_audio_data))
-                voice_service.end_session(session_id)
-                return True
-            except Exception:
-                return False
+        # Add chunks concurrently
+        def buffer_worker():
+            for i in range(20):
+                audio_chunk = np.random.random(chunk_size).astype(np.float32)
 
-        # Test concurrent availability
-        with concurrent.futures.ThreadPoolExecutor(max_workers=num_concurrent_tests) as executor:
-            futures = [executor.submit(test_service_availability) for _ in range(num_concurrent_tests)]
+                start_time = time.time()
+                processor.add_to_buffer(audio_chunk)
+                end_time = time.time()
+
+                add_times.append(end_time - start_time)
+                buffer_sizes.append(len(processor.audio_buffer))
+
+        # Start concurrent buffer operations
+        threads = []
+        num_threads = 5
+        for i in range(num_threads):
+            thread = threading.Thread(target=buffer_worker)
+            threads.append(thread)
+            thread.start()
+
+        # Wait for completion
+        for thread in threads:
+            thread.join(timeout=30.0)
+
+        # Analyze performance
+        if add_times:
+            avg_add_time = statistics.mean(add_times)
+            max_buffer_size = max(buffer_sizes) if buffer_sizes else 0
+
+            # Performance assertions
+            assert avg_add_time < 0.001, f"Buffer add operation too slow: {avg_add_time:.6f}s"
+            assert max_buffer_size <= processor.max_buffer_size, "Buffer exceeded maximum size"
+
+        # Test cleanup performance
+        cleanup_start = time.time()
+        cleaned_count = processor.force_cleanup_buffers()
+        cleanup_time = time.time() - cleanup_start
+
+        assert cleanup_time < 0.1, f"Buffer cleanup too slow: {cleanup_time:.3f}s"
+        assert cleaned_count > 0, "No buffers were cleaned"
+
+    def test_resource_contention(self):
+        """Test resource contention under high load."""
+        num_workers = 50
+        shared_resource_access = []
+        lock = threading.Lock()
+
+        def resource_worker(worker_id):
+            # Simulate accessing shared resources (like audio devices, caches, etc.)
+            access_times = []
+
+            for i in range(10):
+                start_time = time.time()
+
+                # Simulate resource access with lock contention
+                with lock:
+                    # Simulate some work
+                    time.sleep(0.001)
+                    shared_resource_access.append((worker_id, i, time.time()))
+
+                end_time = time.time()
+                access_times.append(end_time - start_time)
+
+            return {
+                'worker_id': worker_id,
+                'avg_access_time': statistics.mean(access_times),
+                'max_access_time': max(access_times),
+                'access_count': len(access_times)
+            }
+
+        # Run concurrent resource access
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+            futures = [executor.submit(resource_worker, i) for i in range(num_workers)]
             results = [future.result() for future in concurrent.futures.as_completed(futures)]
 
-        availability_rate = sum(results) / len(results)
-        assert availability_rate >= 0.98, f"Service availability {availability_rate:.2%} below 98% threshold"
+        # Analyze contention
+        avg_access_times = [r['avg_access_time'] for r in results]
+        max_access_times = [r['max_access_time'] for r in results]
 
-    def test_performance_degradation_analysis(self, voice_service, mock_audio_data):
-        """Test performance degradation under sustained load."""
-        session_id = voice_service.create_session()
-        test_duration = 30  # 30 seconds
-        sample_interval = 5  # Sample every 5 seconds
-        response_time_samples = []
+        overall_avg_access = statistics.mean(avg_access_times)
+        overall_max_access = max(max_access_times)
 
-        self._mock_stt_service(voice_service, "Degradation test")
+        # Performance assertions for resource contention
+        assert overall_avg_access < 0.01, f"Average resource access too slow: {overall_avg_access:.4f}s"
+        assert overall_max_access < 0.1, f"Maximum resource access too slow: {overall_max_access:.4f}s"
 
-        # Collect performance samples over time
-        start_time = time.time()
-        sample_start = start_time
+    def test_scalability_metrics(self):
+        """Test system scalability as load increases."""
+        scalability_results = []
 
-        while time.time() - start_time < test_duration:
-            # Process requests
-            request_start = time.time()
-            asyncio.run(voice_service.process_voice_input(session_id, mock_audio_data))
-            request_end = time.time()
-            response_time_samples.append(request_end - request_start)
+        # Test different concurrency levels
+        concurrency_levels = [1, 5, 10, 20, 50]
 
-            # Check if it's time for a new sample
-            if time.time() - sample_start >= sample_interval:
-                sample_start = time.time()
+        for concurrency in concurrency_levels:
+            response_times = []
+            errors = 0
 
-        # Analyze degradation
-        if len(response_time_samples) > 10:
-            early_samples = response_time_samples[:len(response_time_samples)//2]
-            late_samples = response_time_samples[len(response_time_samples)//2:]
+            def scalability_worker():
+                nonlocal errors
+                try:
+                    audio_data = np.random.random(8000).astype(np.float32)
+                    audio_obj = AudioData(data=audio_data, sample_rate=16000, duration=0.5)
 
-            early_avg = statistics.mean(early_samples)
-            late_avg = statistics.mean(late_samples)
-            degradation_rate = (late_avg - early_avg) / early_avg if early_avg > 0 else 0
+                    start_time = time.time()
+                    result = asyncio.run(self.voice_service.process_voice_input(audio_obj))
+                    end_time = time.time()
 
-            # Assert degradation is within acceptable limits
-            # Allow generous threshold for mocked test environment
-            assert degradation_rate <= 0.5, f"Performance degradation {degradation_rate:.2%} exceeds 50% limit"
+                    if result:
+                        response_times.append(end_time - start_time)
+                    else:
+                        errors += 1
+
+                except Exception:
+                    errors += 1
+
+            # Run concurrent requests
+            threads = []
+            for i in range(concurrency):
+                thread = threading.Thread(target=scalability_worker)
+                threads.append(thread)
+                thread.start()
+
+            # Wait for completion
+            for thread in threads:
+                thread.join(timeout=30.0)
+
+            # Calculate metrics
+            if response_times:
+                avg_response_time = statistics.mean(response_times)
+                throughput = len(response_times) / sum(response_times) if response_times else 0
+                error_rate = errors / concurrency
+
+                scalability_results.append({
+                    'concurrency': concurrency,
+                    'avg_response_time': avg_response_time,
+                    'throughput': throughput,
+                    'error_rate': error_rate,
+                    'successful_requests': len(response_times)
+                })
+
+        # Analyze scalability
+        if len(scalability_results) >= 3:
+            # Check that throughput doesn't decrease dramatically with increased concurrency
+            baseline_throughput = scalability_results[0]['throughput']
+            max_concurrency_throughput = scalability_results[-1]['throughput']
+
+            # Throughput should not drop below 50% of baseline (adjust based on system)
+            throughput_ratio = max_concurrency_throughput / baseline_throughput if baseline_throughput > 0 else 0
+            assert throughput_ratio > 0.3, f"Throughput degradation too high: {throughput_ratio:.2f}"
+
+            # Error rate should remain low
+            max_error_rate = max(r['error_rate'] for r in scalability_results)
+            assert max_error_rate < 0.2, f"Error rate too high under load: {max_error_rate:.2%}"

@@ -49,6 +49,15 @@ try:
     import librosa
 except ImportError:
     librosa = None
+# Performance optimization imports
+try:
+    from ..performance.memory_manager import MemoryManager
+    from ..performance.cache_manager import CacheManager
+    PERFORMANCE_MODULES_AVAILABLE = True
+except ImportError:
+    PERFORMANCE_MODULES_AVAILABLE = False
+    MemoryManager = None
+    CacheManager = None
 LIBROSA_AVAILABLE = librosa is not None
 
 # Audio data structures
@@ -167,6 +176,43 @@ class SimplifiedAudioProcessor:
         self.audio = None
         self.stream = None
 
+        # Performance optimization components
+        self.memory_manager = None
+        self.cache_manager = None
+        if PERFORMANCE_MODULES_AVAILABLE:
+            try:
+                self.memory_manager = MemoryManager({
+                    'memory_threshold_low': 256,
+                    'memory_threshold_medium': 512,
+                    'memory_threshold_high': 768,
+                    'memory_threshold_critical': 1024,
+                    'monitoring_interval': 60.0,
+                    'gc_threshold': 500,
+                    'cleanup_interval': 300.0
+                })
+                self.cache_manager = CacheManager({
+                    'max_cache_size': 50,
+                    'max_memory_mb': 128,
+                    'enable_compression': True
+                })
+                self.memory_manager.register_cleanup_callback(self._memory_cleanup_callback)
+                self.memory_manager.start_monitoring()
+                self.cache_manager.start()
+                self.logger.info("Performance optimization modules initialized")
+            except Exception as e:
+                self.logger.warning(f"Failed to initialize performance modules: {e}")
+
+        # Streaming audio processing
+        self.streaming_enabled = True
+        self.stream_buffer_size = getattr(config.audio, "stream_buffer_size", 10) if config and hasattr(config, 'audio') else 10
+        self.stream_chunk_duration = getattr(config.audio, "stream_chunk_duration", 0.1) if config and hasattr(config, 'audio') else 0.1
+        self.streaming_queue = asyncio.Queue(maxsize=self.stream_buffer_size) if asyncio else None
+        self.streaming_active = False
+        self.streaming_thread = None
+
+        # Audio data compression for storage
+        self.compression_enabled = getattr(config.audio, "compression_enabled", True) if config and hasattr(config, 'audio') else True
+        self.compression_level = getattr(config.audio, "compression_level", 6) if config and hasattr(config, 'audio') else 6
         self.logger.info(f"Audio processor initialized with features: {self.features}")
     
     def _initialize_features(self):
@@ -951,6 +997,209 @@ class SimplifiedAudioProcessor:
                 time.sleep(0.2)
                 # Then try to stop properly
                 self.stop_recording()
+    def _memory_cleanup_callback(self):
+        """Memory cleanup callback for memory manager."""
+        try:
+            self.logger.info("Performing memory cleanup for audio processor")
+            self.force_cleanup_buffers()
+
+            # Clear any cached data
+            if self.cache_manager:
+                self.cache_manager.clear()
+
+            # Force garbage collection on audio-related objects
+            import gc
+            collected = gc.collect()
+            self.logger.info(f"Garbage collection collected {collected} objects")
+
+        except Exception as e:
+            self.logger.error(f"Error in memory cleanup callback: {e}")
+
+    def start_streaming_recording(self, chunk_callback: Optional[Callable[[AudioData], None]] = None) -> bool:
+        """Start streaming audio recording with chunk processing."""
+        if not self.streaming_enabled or not asyncio:
+            self.logger.warning("Streaming not available or asyncio not available")
+            return False
+
+        if self.streaming_active:
+            self.logger.warning("Streaming already active")
+            return False
+
+        try:
+            with self._lock:
+                self.streaming_active = True
+                self.streaming_thread = threading.Thread(
+                    target=self._streaming_worker,
+                    args=(chunk_callback,),
+                    daemon=True,
+                    name="audio-streaming"
+                )
+                self.streaming_thread.start()
+                self.logger.info("Streaming recording started")
+                return True
+
+        except Exception as e:
+            self.logger.error(f"Error starting streaming recording: {e}")
+            self.streaming_active = False
+            return False
+
+    def stop_streaming_recording(self) -> bool:
+        """Stop streaming audio recording."""
+        if not self.streaming_active:
+            return True
+
+        try:
+            self.streaming_active = False
+
+            if self.streaming_thread and self.streaming_thread.is_alive():
+                self.streaming_thread.join(timeout=2.0)
+                if self.streaming_thread.is_alive():
+                    self.logger.warning("Streaming thread did not terminate cleanly")
+
+            self.logger.info("Streaming recording stopped")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error stopping streaming recording: {e}")
+            return False
+
+    def _streaming_worker(self, chunk_callback: Optional[Callable[[AudioData], None]]):
+        """Background worker for streaming audio processing."""
+        try:
+            if not SOUNDDEVICE_AVAILABLE:
+                return
+
+            import sounddevice as sd
+
+            def audio_callback(indata, frames, time_info, status):
+                if status or not self.streaming_active:
+                    return
+
+                try:
+                    # Convert to AudioData
+                    audio_chunk = AudioData(
+                        data=indata.flatten().astype(np.float32),
+                        sample_rate=self.sample_rate,
+                        channels=self.channels,
+                        format=self.format,
+                        duration=len(indata) / self.sample_rate
+                    )
+
+                    # Process chunk (noise reduction, etc.)
+                    if self.features['noise_reduction'] and NOISEREDUCE_AVAILABLE:
+                        audio_chunk.data = nr.reduce_noise(
+                            y=audio_chunk.data,
+                            sr=audio_chunk.sample_rate,
+                            stationary=True,
+                            prop_decrease=0.8
+                        )
+
+                    # Add to streaming queue for async processing
+                    if self.streaming_queue and not self.streaming_queue.full():
+                        try:
+                            self.streaming_queue.put_nowait(audio_chunk)
+                        except asyncio.QueueFull:
+                            self.logger.warning("Streaming queue full, dropping chunk")
+
+                    # Call callback if provided
+                    if chunk_callback:
+                        try:
+                            chunk_callback(audio_chunk)
+                        except Exception as e:
+                            self.logger.error(f"Error in streaming chunk callback: {e}")
+
+                except Exception as e:
+                    self.logger.error(f"Error processing streaming audio chunk: {e}")
+
+            # Start streaming
+            with sd.InputStream(
+                samplerate=self.sample_rate,
+                channels=self.channels,
+                callback=audio_callback,
+                blocksize=int(self.sample_rate * self.stream_chunk_duration)
+            ):
+                while self.streaming_active:
+                    time.sleep(0.1)
+
+        except Exception as e:
+            self.logger.error(f"Error in streaming worker: {e}")
+        finally:
+            self.streaming_active = False
+
+    async def get_streaming_chunk(self) -> Optional[AudioData]:
+        """Get next streaming audio chunk asynchronously."""
+        if not self.streaming_queue:
+            return None
+
+        try:
+            chunk = await asyncio.wait_for(
+                self.streaming_queue.get(),
+                timeout=1.0
+            )
+            return chunk
+        except asyncio.TimeoutError:
+            return None
+        except Exception as e:
+            self.logger.error(f"Error getting streaming chunk: {e}")
+            return None
+
+    def compress_audio_data(self, audio_data: AudioData) -> bytes:
+        """Compress audio data for storage."""
+        if not self.compression_enabled:
+            return audio_data.to_bytes()
+
+        try:
+            import zlib
+            raw_bytes = audio_data.to_bytes()
+            compressed = zlib.compress(raw_bytes, level=self.compression_level)
+            self.logger.debug(f"Compressed audio from {len(raw_bytes)} to {len(compressed)} bytes")
+            return compressed
+        except Exception as e:
+            self.logger.error(f"Error compressing audio data: {e}")
+            return audio_data.to_bytes()
+
+    def decompress_audio_data(self, compressed_data: bytes) -> Optional[AudioData]:
+        """Decompress audio data."""
+        if not self.compression_enabled:
+            return AudioData.from_bytes(compressed_data)
+
+        try:
+            import zlib
+            decompressed = zlib.decompress(compressed_data)
+            return AudioData.from_bytes(decompressed)
+        except Exception as e:
+            self.logger.error(f"Error decompressing audio data: {e}")
+            return None
+
+    def get_performance_stats(self) -> Dict[str, Any]:
+        """Get performance statistics."""
+        stats = {
+            'streaming_active': self.streaming_active,
+            'compression_enabled': self.compression_enabled,
+            'buffer_size': len(self.audio_buffer),
+            'buffer_memory_mb': self._buffer_bytes_estimate / (1024 * 1024),
+            'streaming_queue_size': self.streaming_queue.qsize() if self.streaming_queue else 0,
+        }
+
+        # Add memory manager stats if available
+        if self.memory_manager:
+            stats.update({
+                'memory_manager_active': True,
+                'memory_manager_stats': self.memory_manager.get_performance_metrics()
+            })
+        else:
+            stats['memory_manager_active'] = False
+
+        # Add cache manager stats if available
+        if self.cache_manager:
+            stats.update({
+                'cache_manager_active': True,
+                'cache_manager_stats': self.cache_manager.get_stats()
+            })
+        else:
+            stats['cache_manager_active'] = False
+
+        return stats
 
             # Stop playback
             if self.is_playing:
