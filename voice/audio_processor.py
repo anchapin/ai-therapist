@@ -138,7 +138,7 @@ class SimplifiedAudioProcessor:
         self.is_playing = False
         
         # Audio buffers (with memory-safe bounded deque)
-        max_buffer_size = getattr(config.audio, "max_buffer_size", 300)  # ~30 seconds at 10ms chunks
+        max_buffer_size = int(getattr(config.audio, "max_buffer_size", 300))  # ~30 seconds at 10ms chunks
         self.max_buffer_size = max_buffer_size
         self.audio_buffer = deque(maxlen=max_buffer_size)
 
@@ -997,23 +997,19 @@ class SimplifiedAudioProcessor:
                 time.sleep(0.2)
                 # Then try to stop properly
                 self.stop_recording()
-    def _memory_cleanup_callback(self):
-        """Memory cleanup callback for memory manager."""
-        try:
-            self.logger.info("Performing memory cleanup for audio processor")
-            self.force_cleanup_buffers()
-
-            # Clear any cached data
-            if self.cache_manager:
-                self.cache_manager.clear()
-
-            # Force garbage collection on audio-related objects
-            import gc
-            collected = gc.collect()
-            self.logger.info(f"Garbage collection collected {collected} objects")
 
         except Exception as e:
-            self.logger.error(f"Error in memory cleanup callback: {e}")
+            self.logger.error(f"Error during cleanup: {e}")
+            # Force cleanup even if errors occur
+            try:
+                with self._lock:
+                    self.audio_buffer.clear()
+                    self._buffer_bytes_estimate = 0
+                    self.is_recording = False
+                    self.is_playing = False
+                    self.state = AudioProcessorState.IDLE
+            except Exception as cleanup_error:
+                self.logger.error(f"Error during forced cleanup: {cleanup_error}")
 
     def start_streaming_recording(self, chunk_callback: Optional[Callable[[AudioData], None]] = None) -> bool:
         """Start streaming audio recording with chunk processing."""
@@ -1201,39 +1197,23 @@ class SimplifiedAudioProcessor:
 
         return stats
 
-            # Stop playback
-            if self.is_playing:
-                self.stop_playback()
-
-            # Wait for threads to finish with longer timeout
-            if self._recording_thread and self._recording_thread.is_alive():
-                self._recording_thread.join(timeout=2.0)
-                if self._recording_thread.is_alive():
-                    self.logger.warning("Recording thread did not terminate cleanly")
-
-            # Clear all buffers and reset memory tracking
-            with self._lock:
-                self.audio_buffer.clear()
-                self._buffer_bytes_estimate = 0
-                self.recording_start_time = None
-                self.recording_duration = 0.0
-
-            # Reset state
-            self.state = AudioProcessorState.IDLE
-            self.logger.info("Audio processor cleaned up successfully")
-
-        except Exception as e:
-            self.logger.error(f"Error during cleanup: {e}")
-            # Force cleanup even if errors occur
+    def _memory_cleanup_callback(self):
+            """Memory cleanup callback for memory manager."""
             try:
-                with self._lock:
-                    self.audio_buffer.clear()
-                    self._buffer_bytes_estimate = 0
-                    self.is_recording = False
-                    self.is_playing = False
-                    self.state = AudioProcessorState.IDLE
-            except Exception as cleanup_error:
-                self.logger.error(f"Error during forced cleanup: {cleanup_error}")
+                self.logger.info("Performing memory cleanup for audio processor")
+                self.force_cleanup_buffers()
+    
+                # Clear any cached data
+                if self.cache_manager:
+                    self.cache_manager.clear()
+    
+                # Force garbage collection on audio-related objects
+                import gc
+                collected = gc.collect()
+                self.logger.info(f"Garbage collection collected {collected} objects")
+    
+            except Exception as e:
+                self.logger.error(f"Error in memory cleanup callback: {e}")
 
 # Backward compatibility
 AudioProcessor = SimplifiedAudioProcessor

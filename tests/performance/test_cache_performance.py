@@ -30,8 +30,11 @@ class TestCachePerformance:
             'max_cache_size': 100,
             'max_memory_mb': 50,
             'enable_compression': True,
-            'eviction_policy': 'lru'
+            'eviction_policy': 'lru',
+            'cleanup_interval': 1.0,  # Fast cleanup for tests
+            'stats_interval': 0.5      # Fast stats for tests
         })
+        self.cache.start()  # Start background tasks
 
     def teardown_method(self):
         """Clean up test environment."""
@@ -126,8 +129,11 @@ class TestCachePerformance:
         compressed_cache = CacheManager({
             'max_cache_size': 100,
             'max_memory_mb': 50,
-            'enable_compression': True
+            'enable_compression': True,
+            'cleanup_interval': 1.0,
+            'stats_interval': 0.5
         })
+        compressed_cache.start()
 
         start_time = time.time()
         compressed_cache.set("compress_key", test_data, ttl_seconds=300)
@@ -341,8 +347,11 @@ class TestCachePerformance:
             test_cache = CacheManager({
                 'max_cache_size': max_size,
                 'max_memory_mb': 50,
-                'enable_compression': True
+                'enable_compression': True,
+                'cleanup_interval': 1.0,
+                'stats_interval': 0.5
             })
+            test_cache.start()
 
             # Fill cache to capacity
             for i in range(max_size + 10):  # Slightly over capacity

@@ -15,7 +15,7 @@ from security.pii_protection import (
     PIIProtection, PIIDetector, PIIMasker, PIIType, MaskingStrategy, PIIDetectionResult
 )
 from security.response_sanitizer import ResponseSanitizer, SensitivityLevel
-from security.pii_config import PIIDetectionRules, PIIConfig
+from security.pii_config import PIIDetectionRules, PIIConfig, PIIDetectionPattern
 
 # Import voice security for integration tests
 from voice.security import VoiceSecurity

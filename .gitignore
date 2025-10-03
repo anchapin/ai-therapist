@@ -168,3 +168,64 @@ Thumbs.db
 # Sensitive voice data
 voice_data/
 voice_profiles/
+
+# Test reports and validation artifacts
+*_report.json
+*test_report.json
+*validation_report.json
+*test_fixes_report.json
+*final_test_report.json
+comprehensive_*_report.json
+ultimate_*_report.json
+targeted_*_report.json
+test_*_report.json
+
+# Test analysis and diagnostic scripts
+*test_diagnosis.py
+*test_analysis.py
+*security_validation.py
+*validation_*.py
+*test_environment_*.py
+
+# Fix and troubleshooting scripts
+*fixes*.py
+*fix_*.py
+*troubleshoot*.py
+*debug_*.py
+*targeted_fixes.py
+*comprehensive_fix.py
+*final_*_fix.py
+*ultimate_*_fix.py
+*integration_*_fixes.py
+
+# Disabled test files
+*.disabled
+*_disabled.py
+
+# Backup files
+*.backup_pre_*
+*.backup
+*_pre_*.py
+
+# Test validation scripts
+validate_*.py
+test_*_validation.py
+
+# Standalone test scripts
+test_*_direct.py
+test_*_minimal.py
+test_*_standalone.py
+test_*_enhanced.py
+test_*_simple.py
+test_*_working.py
+
+# Coverage and analysis files
+coverage.json
+.coverage.*
+htmlcov/
+.pytest_cache/
+.nox/
+.tox/
+
+# Temporary session files
+=*.*

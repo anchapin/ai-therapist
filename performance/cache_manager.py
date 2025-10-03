@@ -149,11 +149,16 @@ class CacheManager:
         """Stop background maintenance threads."""
         self.is_running = False
 
+        # Wait for threads to stop with longer timeout for tests
         if self.cleanup_thread and self.cleanup_thread.is_alive():
-            self.cleanup_thread.join(timeout=5.0)
+            self.cleanup_thread.join(timeout=10.0)
+            if self.cleanup_thread.is_alive():
+                self.logger.warning("Cleanup thread did not stop gracefully")
 
         if self.stats_thread and self.stats_thread.is_alive():
-            self.stats_thread.join(timeout=5.0)
+            self.stats_thread.join(timeout=10.0)
+            if self.stats_thread.is_alive():
+                self.logger.warning("Stats thread did not stop gracefully")
 
         self.logger.info("Cache manager background tasks stopped")
 
@@ -383,10 +388,18 @@ class CacheManager:
         while self.is_running:
             try:
                 self._cleanup_expired_entries()
-                time.sleep(self.cleanup_interval)
+                # Use interruptible sleep for tests
+                for _ in range(int(self.cleanup_interval * 10)):  # Break into 0.1s chunks
+                    if not self.is_running:
+                        break
+                    time.sleep(0.1)
             except Exception as e:
                 self.logger.error(f"Error in cleanup worker: {e}")
-                time.sleep(30.0)
+                # Use interruptible sleep for error recovery
+                for _ in range(300):  # 30 seconds in 0.1s chunks
+                    if not self.is_running:
+                        break
+                    time.sleep(0.1)
 
     def _stats_worker(self):
         """Background statistics worker."""
@@ -399,10 +412,18 @@ class CacheManager:
                     self._update_stats()
                     last_update = current_time
 
-                time.sleep(10.0)  # Check every 10 seconds
+                # Use interruptible sleep for tests
+                for _ in range(100):  # 10 seconds in 0.1s chunks
+                    if not self.is_running:
+                        break
+                    time.sleep(0.1)
             except Exception as e:
                 self.logger.error(f"Error in stats worker: {e}")
-                time.sleep(30.0)
+                # Use interruptible sleep for error recovery
+                for _ in range(300):  # 30 seconds in 0.1s chunks
+                    if not self.is_running:
+                        break
+                    time.sleep(0.1)
 
     def _cleanup_expired_entries(self):
         """Remove expired entries from cache."""

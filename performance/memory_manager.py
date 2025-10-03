@@ -170,11 +170,16 @@ class MemoryManager:
         """Stop memory monitoring."""
         self.is_monitoring = False
 
+        # Wait for threads to stop with longer timeout for tests
         if self.monitoring_thread and self.monitoring_thread.is_alive():
-            self.monitoring_thread.join(timeout=5.0)
+            self.monitoring_thread.join(timeout=10.0)
+            if self.monitoring_thread.is_alive():
+                self.logger.warning("Monitoring thread did not stop gracefully")
 
         if self.cleanup_thread and self.cleanup_thread.is_alive():
-            self.cleanup_thread.join(timeout=5.0)
+            self.cleanup_thread.join(timeout=10.0)
+            if self.cleanup_thread.is_alive():
+                self.logger.warning("Cleanup thread did not stop gracefully")
 
         self.logger.info("Memory monitoring stopped")
 
@@ -374,11 +379,19 @@ class MemoryManager:
                 if len(self.memory_history) % 10 == 0:  # Every 10 monitoring cycles
                     self.detect_memory_leaks()
 
-                time.sleep(self.monitoring_interval)
+                # Use a shorter sleep with interruptible wait for tests
+                for _ in range(int(self.monitoring_interval * 10)):  # Break into 0.1s chunks
+                    if not self.is_monitoring:
+                        break
+                    time.sleep(0.1)
 
             except Exception as e:
                 self.logger.error(f"Error in monitoring worker: {e}")
-                time.sleep(5.0)  # Back off on errors
+                # Use interruptible sleep for error recovery
+                for _ in range(50):  # 5 seconds in 0.1s chunks
+                    if not self.is_monitoring:
+                        break
+                    time.sleep(0.1)
 
     def _cleanup_worker(self):
         """Background cleanup worker."""
@@ -388,11 +401,19 @@ class MemoryManager:
                 if current_time - self.last_cleanup_time >= self.cleanup_interval:
                     self.trigger_memory_cleanup()
 
-                time.sleep(60.0)  # Check every minute
+                # Use interruptible sleep for tests
+                for _ in range(600):  # 60 seconds in 0.1s chunks
+                    if not self.is_monitoring:
+                        break
+                    time.sleep(0.1)
 
             except Exception as e:
                 self.logger.error(f"Error in cleanup worker: {e}")
-                time.sleep(30.0)  # Back off on errors
+                # Use interruptible sleep for error recovery
+                for _ in range(300):  # 30 seconds in 0.1s chunks
+                    if not self.is_monitoring:
+                        break
+                    time.sleep(0.1)
 
     def _check_memory_thresholds(self, stats: MemoryStats):
         """Check memory usage against thresholds and trigger alerts."""

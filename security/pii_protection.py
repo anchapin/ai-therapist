@@ -364,9 +364,14 @@ class PIIProtection:
         # Masking strategy from env
         strategy_env = os.getenv("PII_MASKING_STRATEGY", "partial_mask").upper()
         try:
-            self.config.masking_strategy = MaskingStrategy[strategy_env + "_MASK"]
-            self.masker.strategy = self.config.masking_strategy
-        except KeyError:
+            # Remove the _MASK suffix for enum lookup
+            strategy_name = strategy_env.replace("_MASK", "")
+            if hasattr(MaskingStrategy, strategy_name):
+                self.config.masking_strategy = MaskingStrategy[strategy_name]
+                self.masker.strategy = self.config.masking_strategy
+            else:
+                self.logger.warning(f"Invalid masking strategy: {strategy_env}, using default")
+        except (KeyError, AttributeError):
             self.logger.warning(f"Invalid masking strategy: {strategy_env}, using default")
 
     def sanitize_text(self, text: str, context: Optional[str] = None,
@@ -385,36 +390,33 @@ class PIIProtection:
         if not self.config.enable_detection or not text:
             return text
 
-        # Check role-based access
-        if not self._has_pii_access(user_role):
-            detections = self.detector.detect_pii(text, context)
-            masked_text = text
+        # Always perform PII detection and masking for security
+        detections = self.detector.detect_pii(text, context)
+        masked_text = text
 
-            # Sort by position (reverse order to maintain indices)
-            detections.sort(key=lambda x: x.start_pos, reverse=True)
+        # Sort by position (reverse order to maintain indices)
+        detections.sort(key=lambda x: x.start_pos, reverse=True)
 
-            for detection in detections:
-                if self._should_mask_for_role(detection.pii_type, user_role):
-                    mask = self.masker.mask_value(detection.value, detection.pii_type)
-                    masked_text = (
-                        masked_text[:detection.start_pos] +
-                        mask +
-                        masked_text[detection.end_pos:]
-                    )
+        for detection in detections:
+            if self._should_mask_for_role(detection.pii_type, user_role):
+                mask = self.masker.mask_value(detection.value, detection.pii_type)
+                masked_text = (
+                    masked_text[:detection.start_pos] +
+                    mask +
+                    masked_text[detection.end_pos:]
+                )
 
-                    # Audit the masking
-                    if self.audit_enabled:
-                        self._audit_pii_access(
-                            "mask",
-                            detection.pii_type,
-                            detection.value,
-                            user_role,
-                            context
-                        )
+            # Always audit PII access regardless of masking
+            if self.audit_enabled:
+                self._audit_pii_access(
+                    "access",
+                    detection.pii_type,
+                    detection.value,
+                    user_role,
+                    context
+                )
 
-            return masked_text
-
-        return text
+        return masked_text
 
     def sanitize_dict(self, data: Dict[str, Any], user_role: Optional[str] = None,
                      context: Optional[str] = None) -> Dict[str, Any]:
@@ -434,26 +436,25 @@ class PIIProtection:
 
         result = data.copy()
 
-        # Check role-based access
-        if not self._has_pii_access(user_role):
-            detections = self.detector.detect_in_dict(data)
-
-            for field_path, detection in detections:
-                if self._should_mask_for_role(detection.pii_type, user_role):
-                    # Navigate to the field and mask it
-                    self._mask_field_in_dict(result, field_path, detection)
-
-                    # Audit the masking
-                    if self.audit_enabled:
-                        self._audit_pii_access(
-                            "mask",
-                            detection.pii_type,
-                            detection.value,
-                            user_role,
-                            context,
-                            field_path
-                        )
-
+        # Always perform PII detection and masking based on role
+        detections = self.detector.detect_in_dict(data)
+        
+        for field_path, detection in detections:
+            if self._should_mask_for_role(detection.pii_type, user_role):
+                # Navigate to the field and mask it
+                self._mask_field_in_dict(result, field_path, detection)
+                
+                # Audit the masking
+                if self.audit_enabled:
+                    self._audit_pii_access(
+                        "mask",
+                        detection.pii_type,
+                        detection.value,
+                        user_role,
+                        context,
+                        field_path
+                    )
+        
         return result
 
     def _mask_field_in_dict(self, data: Dict[str, Any], field_path: str,
@@ -476,30 +477,60 @@ class PIIProtection:
 
     def _has_pii_access(self, user_role: Optional[str]) -> bool:
         """Check if user role has access to full PII."""
-        if not self.config.sensitive_roles_only:
-            return True
-
-        if not user_role or not self.config.allowed_roles:
+        # Define role hierarchy for PII access
+        admin_roles = ["admin", "administrator"]
+        therapist_roles = ["therapist", "doctor", "clinician", "counselor"]
+        patient_roles = ["patient", "client"]
+        
+        if not user_role:
             return False
-
-        return user_role.lower() in [role.lower() for role in self.config.allowed_roles]
+            
+        user_role_lower = user_role.lower()
+        
+        # Admins have full access
+        if user_role_lower in admin_roles:
+            return True
+            
+        # Therapists have access to medical PII
+        if user_role_lower in therapist_roles:
+            return True
+            
+        # Patients have limited access to their own data
+        if user_role_lower in patient_roles:
+            return True
+            
+        # All other roles have no access
+        return False
 
     def _should_mask_for_role(self, pii_type: PIIType, user_role: Optional[str]) -> bool:
         """Determine if PII should be masked for the given role."""
-        # Always mask sensitive medical information for non-authorized roles
-        sensitive_types = {
-            PIIType.MEDICAL_CONDITION, PIIType.MEDICATION, PIIType.TREATMENT,
-            PIIType.MEDICAL_ID, PIIType.VOICE_TRANSCRIPTION
-        }
-
-        if pii_type in sensitive_types and not self._has_pii_access(user_role):
-            return True
-
-        # Role-based masking
-        if self.config.sensitive_roles_only and not self._has_pii_access(user_role):
-            return True
-
-        return False
+        if not user_role:
+            return True  # Mask if no role specified
+            
+        user_role_lower = user_role.lower()
+        
+        # Define what each role can see
+        admin_roles = ["admin", "administrator"]
+        therapist_roles = ["therapist", "doctor", "clinician", "counselor"]
+        patient_roles = ["patient", "client"]
+        
+        # Admins can see everything
+        if user_role_lower in admin_roles:
+            return False
+            
+        # Therapists can see medical information but not personal contact info
+        if user_role_lower in therapist_roles:
+            # Therapists should see medical info but mask contact info
+            contact_pii = {PIIType.EMAIL, PIIType.PHONE, PIIType.ADDRESS, PIIType.SSN}
+            return pii_type in contact_pii
+            
+        # Patients can see their own medical info but not contact info of others
+        if user_role_lower in patient_roles:
+            # Patients should have all PII masked for privacy
+            return True  # Mask all PII for patients
+            
+        # All other roles get everything masked
+        return True
 
     def _audit_pii_access(self, action: str, pii_type: PIIType, value: str,
                          user_role: Optional[str], context: Optional[str],
@@ -576,6 +607,7 @@ class PIIProtection:
         """Perform health check on PII protection system."""
         return {
             "status": "healthy",
+            "pii_protection_status": "active",
             "components": {
                 "detector": "operational",
                 "masker": "operational",

@@ -93,8 +93,11 @@ class TestMemoryLeakDetection:
         self.memory_manager.register_alert_callback(alert_callback)
         self.memory_manager.start_monitoring()
 
-        # Wait a bit for monitoring to run
-        time.sleep(2.0)
+        # Wait a bit for monitoring to run (reduced time for faster tests)
+        time.sleep(0.5)
+
+        # Stop monitoring to ensure clean teardown
+        self.memory_manager.stop_monitoring()
 
         # Check if any alerts were generated (may not trigger in test environment)
         # This is mainly testing that the monitoring system works
@@ -110,10 +113,13 @@ class TestMemoryLeakDetection:
         for i in range(10):
             # Create some objects
             leak_objects.append([f"test_data_{i}"] * 100)
-            time.sleep(0.1)  # Small delay
+            time.sleep(0.01)  # Reduced delay for faster tests
 
-        # Wait for leak detection to run
-        time.sleep(2.0)
+        # Wait for leak detection to run (reduced time)
+        time.sleep(0.5)
+
+        # Stop monitoring to ensure clean teardown
+        self.memory_manager.stop_monitoring()
 
         # Check for detected leaks
         leaks = self.memory_manager.detect_memory_leaks()
@@ -136,7 +142,21 @@ class TestMemoryLeakDetection:
 
     def test_audio_processor_memory_cleanup(self):
         """Test audio processor memory cleanup."""
-        config = VoiceConfig()
+        # Create a mock config for testing
+        class MockConfig:
+            class audio:
+                max_buffer_size = 300
+                max_memory_mb = 100
+                sample_rate = 16000
+                channels = 1
+                chunk_size = 1024
+                format = 'wav'
+                stream_buffer_size = 10
+                stream_chunk_duration = 0.1
+                compression_enabled = True
+                compression_level = 6
+        
+        config = MockConfig()
         processor = SimplifiedAudioProcessor(config)
 
         # Simulate audio processing
@@ -158,37 +178,60 @@ class TestMemoryLeakDetection:
 
     def test_voice_service_session_cleanup(self):
         """Test voice service session cleanup."""
-        config = VoiceConfig()
+        # Create a mock config for testing
+        class MockConfig:
+            voice_enabled = True
+            default_voice_profile = 'default'
+            voice_commands_enabled = True
+            class audio:
+                max_buffer_size = 300
+                max_memory_mb = 100
+                sample_rate = 16000
+                channels = 1
+                chunk_size = 1024
+                format = 'wav'
+                stream_buffer_size = 10
+                stream_chunk_duration = 0.1
+                compression_enabled = True
+                compression_level = 6
+        
+        config = MockConfig()
         security = Mock()
-        voice_service = VoiceService(config, security)
+        
+        # Mock external dependencies
+        with patch('voice.stt_service.STTService'), \
+             patch('voice.tts_service.TTSService'), \
+             patch('voice.commands.VoiceCommandProcessor'):
+            
+            voice_service = VoiceService(config, security)
 
-        # Create several sessions
-        session_ids = []
-        for i in range(5):
-            session_id = voice_service.create_session(f"test_user_{i}")
-            session_ids.append(session_id)
+            # Create several sessions
+            session_ids = []
+            for i in range(5):
+                session_id = voice_service.create_session(f"test_user_{i}")
+                session_ids.append(session_id)
 
-        # Verify sessions were created
-        assert len(voice_service.sessions) >= 5
+            # Verify sessions were created
+            assert len(voice_service.sessions) >= 5
 
-        # Simulate session inactivity by updating timestamps
-        current_time = time.time()
-        for session_id in session_ids[:3]:  # Make first 3 sessions old
-            if session_id in voice_service.sessions:
-                voice_service.sessions[session_id].last_activity = current_time - 7200  # 2 hours ago
+            # Simulate session inactivity by updating timestamps
+            current_time = time.time()
+            for session_id in session_ids[:3]:  # Make first 3 sessions old
+                if session_id in voice_service.sessions:
+                    voice_service.sessions[session_id].last_activity = current_time - 7200  # 2 hours ago
 
-        # Clean up old sessions (this would be done by background cleanup in real usage)
-        # For testing, we'll manually call cleanup logic
-        old_sessions = []
-        for session_id, session in voice_service.sessions.items():
-            if current_time - session.last_activity > 3600:  # 1 hour timeout
-                old_sessions.append(session_id)
+            # Clean up old sessions (this would be done by background cleanup in real usage)
+            # For testing, we'll manually call cleanup logic
+            old_sessions = []
+            for session_id, session in voice_service.sessions.items():
+                if current_time - session.last_activity > 3600:  # 1 hour timeout
+                    old_sessions.append(session_id)
 
-        for session_id in old_sessions:
-            voice_service.destroy_session(session_id)
+            for session_id in old_sessions:
+                voice_service.end_session(session_id)
 
-        # Verify old sessions were cleaned up
-        assert len(voice_service.sessions) < len(session_ids)
+            # Verify old sessions were cleaned up
+            assert len(voice_service.sessions) < len(session_ids)
 
     def test_concurrent_memory_operations(self):
         """Test memory operations under concurrent load."""
