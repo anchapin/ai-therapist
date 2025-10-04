@@ -206,6 +206,7 @@ test_*_report.json
 *.backup_pre_*
 *.backup
 *_pre_*.py
+*.backup
 
 # Test validation scripts
 validate_*.py
@@ -222,6 +223,7 @@ test_*_working.py
 # Coverage and analysis files
 coverage.json
 .coverage.*
+.coverage.*.*
 htmlcov/
 .pytest_cache/
 .nox/
