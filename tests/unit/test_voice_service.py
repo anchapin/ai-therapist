@@ -18,14 +18,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 # Mock dependencies to avoid import issues
 import numpy as np
+import sys
+import os
 
-@dataclass
-class AudioData:
-    """Mock AudioData class."""
-    data: np.ndarray
-    sample_rate: int
-    duration: float
-    channels: int
+# Add the mocks directory to the path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'mocks'))
+
+# Import our improved mocks
+from mock_audio_processor import MockAudioProcessor, AudioData
 
 @dataclass
 class STTResult:
@@ -201,15 +201,12 @@ class TestVoiceService:
     @pytest.fixture
     def mock_audio_processor(self):
         """Create mock audio processor."""
-        processor = Mock()
+        processor = MockAudioProcessor()
         processor.input_devices = ['microphone']
         processor.output_devices = ['speaker']
         processor.default_input_device = 'microphone'
         processor.default_output_device = 'speaker'
         processor.is_recording = False
-        processor.start_recording.return_value = True
-        processor.stop_recording.return_value = AudioData(np.array([0.1, 0.2, 0.3]), 16000, 0.1, 1)
-        processor.get_audio_devices.return_value = (['microphone'], ['speaker'])
         return processor
 
     @pytest.fixture
@@ -230,10 +227,10 @@ class TestVoiceService:
         service.get_current_provider.return_value = 'openai'
         service.synthesize_speech.return_value = TTSResult(
             audio_data=b'synthesized_audio',
+            text="Synthesized speech",
+            voice_profile='alloy',
             duration=1.5,
-            sample_rate=22050,
-            provider='openai',
-            voice='alloy'
+            provider='openai'
         )
         return service
 

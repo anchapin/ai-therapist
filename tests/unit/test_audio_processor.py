@@ -1,18 +1,36 @@
 import pytest
 import tempfile
 import os
+import sys
+import numpy as np
 from unittest.mock import Mock
-from voice.audio_processor import AudioProcessor
-from voice.voice_service import AudioData
+
+# Add the mocks directory to the path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'mocks'))
+
+# Import our improved mocks
+from mock_audio_processor import MockAudioProcessor, AudioData
 
 
 @pytest.fixture
 def processor():
     """Create a mock AudioProcessor for testing."""
-    mock_processor = Mock(spec=AudioProcessor)
-    mock_processor.save_audio.return_value = True
-    mock_processor.load_audio.return_value = None
+    mock_processor = MockAudioProcessor()
     return mock_processor
+
+
+@pytest.fixture
+def mock_audio_data():
+    """Create mock audio data for testing."""
+    samples = 16000  # 1 second at 16kHz
+    data = np.random.random(samples).astype(np.float32)
+    return AudioData(
+        data=data,
+        sample_rate=16000,
+        duration=1.0,
+        channels=1,
+        format="wav"
+    )
 
 
 @pytest.mark.parametrize("audio_format", ['wav'])

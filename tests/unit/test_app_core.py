@@ -13,6 +13,8 @@ Covers critical gaps in coverage analysis for main application logic:
 import os
 import sys
 import tempfile
+import threading
+import time
 import shutil
 import unittest
 from unittest.mock import Mock, patch, MagicMock
@@ -284,8 +286,12 @@ class TestCachingMechanisms(unittest.TestCase):
         import os
         import pickle
         
-        # Create temporary directory for cache
-        temp_cache_dir = tempfile.mkdtemp()
+        # Create unique temporary directory for cache
+        process_id = os.getpid()
+        thread_id = threading.get_ident()
+        timestamp = int(time.time() * 1000000)  # microseconds
+        unique_id = f"{process_id}_{thread_id}_{timestamp}"
+        temp_cache_dir = tempfile.mkdtemp(prefix=f"cache_test_{unique_id}_")
         
         try:
             text = "Persistent test text"
@@ -414,7 +420,12 @@ class TestVectorstoreOperations(unittest.TestCase):
 
     def setUp(self):
         """Set up vectorstore tests."""
-        self.test_dir = tempfile.mkdtemp()
+        # Create unique temporary directory to avoid conflicts
+        process_id = os.getpid()
+        thread_id = threading.get_ident()
+        timestamp = int(time.time() * 1000000)  # microseconds
+        unique_id = f"{process_id}_{thread_id}_{timestamp}"
+        self.test_dir = tempfile.mkdtemp(prefix=f"vectorstore_test_{unique_id}_")
         self.knowledge_dir = os.path.join(self.test_dir, "knowledge")
         self.vectorstore_dir = os.path.join(self.test_dir, "vectorstore")
 

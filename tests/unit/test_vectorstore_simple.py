@@ -8,6 +8,8 @@ import pytest
 import tempfile
 import shutil
 import os
+import threading
+import time
 from pathlib import Path
 from unittest.mock import Mock, patch
 import sys
@@ -22,7 +24,12 @@ class TestVectorStoreBasic:
 
     def setup_method(self):
         """Set up test environment."""
-        self.temp_dir = Path(tempfile.mkdtemp(prefix="vectorstore_test_"))
+        # Create unique temporary directory to avoid conflicts
+        process_id = os.getpid()
+        thread_id = threading.get_ident()
+        timestamp = int(time.time() * 1000000)  # microseconds
+        unique_id = f"{process_id}_{thread_id}_{timestamp}"
+        self.temp_dir = Path(tempfile.mkdtemp(prefix=f"vectorstore_test_{unique_id}_"))
         self.knowledge_dir = self.temp_dir / "knowledge"
         self.vectorstore_dir = self.temp_dir / "vectorstore"
         self.knowledge_dir.mkdir()

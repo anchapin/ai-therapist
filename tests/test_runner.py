@@ -11,6 +11,8 @@ import os
 import json
 import time
 import argparse
+import uuid
+import shutil
 from datetime import datetime
 from pathlib import Path
 import coverage
@@ -31,22 +33,35 @@ class VoiceFeatureTestRunner:
         self.test_results = {}
         self.coverage_data = None
         self.additional_pytest_args = additional_pytest_args or []
+        # Generate unique process ID for coverage database
+        self.process_id = str(uuid.uuid4())[:8]
+        self.coverage_dir = self.project_root / '.coverage_temp'
+        self.coverage_dir.mkdir(exist_ok=True)
 
     def run_all_tests(self):
         """Run all test suites and generate comprehensive report."""
-        print("🧪 AI Therapist Voice Features - Comprehensive Test Suite")
+        print("AI Therapist Voice Features - Comprehensive Test Suite")
         print("=" * 70)
 
-        # Initialize coverage
+        # Initialize coverage with unique database file
         try:
+            # Clean up any existing coverage files for this process
+            self._cleanup_coverage_files()
+            
+            # Create unique coverage database file for this process
+            coverage_data_file = self.coverage_dir / f'.coverage.{self.process_id}'
+            
             cov = coverage.Coverage(
                 source=['voice'],
-                omit=['*/__init__.py', '*/tests/*']
+                omit=['*/__init__.py', '*/tests/*'],
+                data_file=str(coverage_data_file),
+                config_file=False  # Disable config file to avoid conflicts
             )
             cov.start()
             coverage_enabled = True
+            print(f"Coverage initialized with database: {coverage_data_file}")
         except Exception as e:
-            print(f"⚠️  Coverage initialization failed: {e}")
+            print(f"WARNING Coverage initialization failed: {e}")
             print("   Running tests without coverage reporting...")
             cov = None
             coverage_enabled = False
@@ -81,7 +96,7 @@ class VoiceFeatureTestRunner:
 
         # Run each test category
         for category, config in test_categories.items():
-            print(f"\n🔍 Running {config['description']}...")
+            print(f"\nRunning {config['description']}...")
             print("-" * 50)
 
             if os.path.exists(config['path']):
@@ -94,11 +109,14 @@ class VoiceFeatureTestRunner:
 
                     # Add coverage arguments if coverage is enabled
                     if coverage_enabled:
+                        # Use process-specific coverage data file for pytest
+                        coverage_data_file = self.coverage_dir / f'.coverage.{self.process_id}'
                         pytest_args.extend([
                             '--cov=voice',
                             '--cov-report=term-missing',
                             '--cov-report=json',
-                            f'--cov-fail-under={config["target_coverage"]}'
+                            f'--cov-fail-under={config["target_coverage"]}',
+                            f'--cov-append'  # Use append mode to avoid conflicts
                         ])
 
                     # Add any additional pytest arguments passed from command line
@@ -117,13 +135,13 @@ class VoiceFeatureTestRunner:
                     }
 
                     if exit_code == 0:
-                        print(f"✅ {category} tests passed")
+                        print(f"PASSED {category} tests")
                     else:
-                        print(f"⚠️ {category} tests completed with issues (exit code {exit_code})")
+                        print(f"WARNING {category} tests completed with issues (exit code {exit_code})")
                         print("   This may be due to missing optional dependencies in CI environment")
 
                 except Exception as e:
-                    print(f"⚠️ Error running {category} tests: {e}")
+                    print(f"WARNING Error running {category} tests: {e}")
                     print("   Continuing with other test categories...")
                     self.test_results[category] = {
                         'exit_code': -1,
@@ -132,7 +150,7 @@ class VoiceFeatureTestRunner:
                         'timestamp': datetime.now().isoformat()
                     }
             else:
-                print(f"⚠️ {category} test directory not found: {config['path']}")
+                print(f"WARNING {category} test directory not found: {config['path']}")
                 self.test_results[category] = {
                     'exit_code': -1,
                     'error': 'Test directory not found',
@@ -145,17 +163,20 @@ class VoiceFeatureTestRunner:
             try:
                 cov.stop()
                 cov.save()
-                print("✅ Coverage data collected")
+                print("Coverage data collected")
             except Exception as e:
-                print(f"⚠️ Coverage collection failed: {e}")
+                print(f"WARNING Coverage collection failed: {e}")
                 coverage_enabled = False
+            finally:
+                # Clean up coverage files after collection
+                self._cleanup_coverage_files()
 
         # Generate coverage report
         if coverage_enabled and cov:
             try:
                 self.coverage_data = self._generate_coverage_report(cov)
             except Exception as e:
-                print(f"⚠️ Coverage report generation failed: {e}")
+                print(f"WARNING Coverage report generation failed: {e}")
                 self.coverage_data = None
         else:
             self.coverage_data = None
@@ -251,7 +272,7 @@ class VoiceFeatureTestRunner:
 
     def generate_comprehensive_report(self):
         """Generate comprehensive test report as per SPEECH_PRD.md requirements."""
-        print("\n📊 Generating Comprehensive Test Report...")
+        print("\nGenerating Comprehensive Test Report...")
         print("=" * 50)
 
         report = {
@@ -274,7 +295,7 @@ class VoiceFeatureTestRunner:
         with open(report_path, 'w') as f:
             json.dump(report, f, indent=2, default=str)
 
-        print(f"📄 Comprehensive test report saved to: {report_path}")
+        print(f"Comprehensive test report saved to: {report_path}")
 
         # Print summary
         self.print_test_summary(report)
@@ -394,7 +415,7 @@ class VoiceFeatureTestRunner:
 
     def print_test_summary(self, report):
         """Print test summary to console."""
-        print("\n📋 Test Summary")
+        print("\nTest Summary")
         print("=" * 30)
         print(f"Overall Status: {report['summary']['overall_status']}")
         print(f"Success Rate: {report['summary']['success_rate']:.1%}")
@@ -403,19 +424,46 @@ class VoiceFeatureTestRunner:
         if self.coverage_data:
             print(f"Test Coverage: {self.coverage_data['coverage_percentage']:.1%}")
 
-        print("\n🔍 Compliance Status")
+        print("\nCompliance Status")
         print("-" * 30)
         for requirement, status in report['compliance_analysis'].items():
-            icon = "✅" if status['status'] == 'COMPLETED' else "❌"
+            icon = "PASS" if status['status'] == 'COMPLETED' else "FAIL"
             print(f"{icon} {requirement}: {status['requirement']}")
 
         if report['recommendations']:
-            print("\n💡 Recommendations")
+            print("\nRecommendations")
             print("-" * 30)
             for rec in report['recommendations']:
-                icon = "🔴" if rec['priority'] == 'HIGH' else "🟡"
+                icon = "HIGH" if rec['priority'] == 'HIGH' else "MEDIUM"
                 print(f"{icon} [{rec['priority']}] {rec['issue']}")
                 print(f"   → {rec['recommendation']}")
+
+    def _cleanup_coverage_files(self):
+        """Clean up coverage files for this process."""
+        try:
+            # Remove coverage files specific to this process
+            coverage_pattern = f'.coverage.{self.process_id}*'
+            for coverage_file in self.coverage_dir.glob(coverage_pattern):
+                try:
+                    coverage_file.unlink()
+                    print(f"   Cleaned up coverage file: {coverage_file}")
+                except Exception as e:
+                    print(f"   Warning: Could not delete {coverage_file}: {e}")
+            
+            # Also clean up any stale coverage files older than 1 hour
+            import time
+            current_time = time.time()
+            for coverage_file in self.coverage_dir.glob('.coverage.*'):
+                if coverage_file.name != f'.coverage.{self.process_id}':
+                    try:
+                        file_age = current_time - coverage_file.stat().st_mtime
+                        if file_age > 3600:  # 1 hour in seconds
+                            coverage_file.unlink()
+                            print(f"   Cleaned up stale coverage file: {coverage_file}")
+                    except Exception as e:
+                        print(f"   Warning: Could not delete stale {coverage_file}: {e}")
+        except Exception as e:
+            print(f"   Warning: Coverage cleanup failed: {e}")
 
 
 def parse_args():

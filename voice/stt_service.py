@@ -62,10 +62,10 @@ class STTResult:
     """Speech-to-Text result with metadata."""
     text: str
     confidence: float
-    language: str
-    duration: float
-    provider: str
-    alternatives: List[Dict[str, Any]]
+    language: str = "en"
+    duration: float = 0.0
+    provider: str = "unknown"
+    alternatives: List[Dict[str, Any]] = field(default_factory=list)
     word_timestamps: Optional[List[Dict[str, Any]]] = None
     processing_time: float = 0.0
     timestamp: float = 0.0
@@ -83,6 +83,55 @@ class STTResult:
     is_command: bool = False  # Add missing is_command attribute
     sentiment: Optional[Dict[str, Any]] = None
     segments: Optional[List[Dict[str, Any]]] = None
+    error: Optional[str] = None  # Add error field for test compatibility
+    
+    def __post_init__(self):
+        """Post-initialization processing."""
+        # Set timestamp if not provided
+        if self.timestamp == 0.0:
+            import time
+            self.timestamp = time.time()
+    
+    @classmethod
+    def create_compatible(cls, **kwargs):
+        """
+        Create an STTResult with backward compatibility for different parameter patterns.
+        
+        This method handles the different ways tests create STTResult objects.
+        """
+        # Extract common parameters
+        text = kwargs.get('text', '')
+        confidence = kwargs.get('confidence', 0.0)
+        language = kwargs.get('language', 'en')
+        duration = kwargs.get('duration', 0.0)
+        provider = kwargs.get('provider', 'unknown')
+        alternatives = kwargs.get('alternatives', [])
+        
+        # Create STTResult with standard parameters
+        return cls(
+            text=text,
+            confidence=confidence,
+            language=language,
+            duration=duration,
+            provider=provider,
+            alternatives=alternatives,
+            word_timestamps=kwargs.get('word_timestamps', None),
+            processing_time=kwargs.get('processing_time', 0.0),
+            timestamp=kwargs.get('timestamp', 0.0),
+            audio_quality_score=kwargs.get('audio_quality_score', 0.0),
+            therapy_keywords=kwargs.get('therapy_keywords', []),
+            crisis_keywords=kwargs.get('crisis_keywords', []),
+            sentiment_score=kwargs.get('sentiment_score', None),
+            encryption_metadata=kwargs.get('encryption_metadata', None),
+            cached=kwargs.get('cached', False),
+            therapy_keywords_detected=kwargs.get('therapy_keywords_detected', []),
+            crisis_keywords_detected=kwargs.get('crisis_keywords_detected', []),
+            is_crisis=kwargs.get('is_crisis', False),
+            is_command=kwargs.get('is_command', False),
+            sentiment=kwargs.get('sentiment', None),
+            segments=kwargs.get('segments', None),
+            error=kwargs.get('error', None)
+        )
 
 class STTService:
     """Speech-to-Text service supporting multiple providers."""

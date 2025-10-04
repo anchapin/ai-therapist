@@ -12,6 +12,8 @@ import json
 import os
 import sys
 import logging
+import threading
+import time
 from pathlib import Path
 from typing import Dict, Any, Generator
 from unittest.mock import MagicMock, AsyncMock, patch
@@ -37,13 +39,20 @@ class TestEnvironmentManager:
     """Manages isolated test environments to prevent interference."""
 
     def __init__(self):
-        self.temp_dir: Path = Path(tempfile.mkdtemp(prefix="ai_therapist_test_"))
+        # Create unique temporary directory using process ID and thread ID
+        process_id = os.getpid()
+        thread_id = threading.get_ident()
+        timestamp = int(time.time() * 1000000)  # microseconds
+        unique_id = f"{process_id}_{thread_id}_{timestamp}"
+        self.temp_dir: Path = Path(tempfile.mkdtemp(prefix=f"ai_therapist_test_{unique_id}_"))
         self.original_env: Dict[str, str] = {}
         self.test_env_file: Path = self.temp_dir / ".env.test"
         self.voice_profiles_dir: Path = self.temp_dir / "voice_profiles"
         self.credentials_dir: Path = self.temp_dir / "credentials"
         self.logs_dir: Path = self.temp_dir / "test_logs"
         self.vectorstore_dir: Path = self.temp_dir / "test_vectorstore"
+        self.process_id = process_id
+        self.thread_id = thread_id
 
     def setup_test_environment(self):
         """Set up isolated test environment."""
@@ -264,7 +273,14 @@ def sample_audio_data():
 @pytest.fixture
 def mock_audio_data():
     """Mock AudioData object for testing."""
-    from voice.audio_processor import AudioData
+    try:
+        from voice.audio_processor import AudioData
+    except ImportError:
+        # Fallback for testing
+        import sys
+        import os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'mocks'))
+        from mock_audio_processor import AudioData
 
     # Generate sample audio data
     sample_rate = 16000
@@ -304,32 +320,61 @@ def test_voice_profile_data():
 
 @pytest.fixture(autouse=True)
 def setup_test_logging(isolated_test_env):
-    """Set up logging for individual tests."""
-    log_file = isolated_test_env.logs_dir / "test_output.log"
+    """Set up logging for individual tests with unique file paths."""
+    # Create unique log file name using process ID, thread ID, and timestamp
+    process_id = os.getpid()
+    thread_id = threading.get_ident()
+    timestamp = int(time.time() * 1000000)  # microseconds
+    unique_id = f"{process_id}_{thread_id}_{timestamp}"
+    
+    log_file = isolated_test_env.logs_dir / f"test_output_{unique_id}.log"
 
     # Configure test-specific logging
-    test_logger = logging.getLogger('test_session')
+    test_logger = logging.getLogger(f'test_session_{unique_id}')
     test_logger.setLevel(logging.DEBUG)
 
     # Remove existing handlers to avoid duplicates
     for handler in test_logger.handlers[:]:
+        handler.close()
         test_logger.removeHandler(handler)
 
-    # Add file handler for test logs
-    file_handler = logging.FileHandler(log_file)
-    file_handler.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    file_handler.setFormatter(formatter)
-    test_logger.addHandler(file_handler)
+    # Add file handler for test logs with proper error handling
+    try:
+        file_handler = logging.FileHandler(log_file, mode='w', encoding='utf-8')
+        file_handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(formatter)
+        test_logger.addHandler(file_handler)
+    except (OSError, IOError) as e:
+        # Fallback to console logging if file handler fails
+        print(f"Warning: Could not create log file {log_file}: {e}")
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        console_handler.setFormatter(formatter)
+        test_logger.addHandler(console_handler)
+        log_file = None  # Mark that we're using console fallback
 
     # Store log file path for test access
     test_logger.log_file = log_file
+    test_logger.unique_id = unique_id
 
     yield test_logger
 
-    # Cleanup: remove test log file after test
-    if log_file.exists():
-        log_file.unlink(missing_ok=True)
+    # Cleanup: close handlers and remove log file after test
+    for handler in test_logger.handlers[:]:
+        try:
+            handler.close()
+        except Exception:
+            pass  # Ignore errors during cleanup
+        test_logger.removeHandler(handler)
+
+    # Remove log file if it exists and was created
+    if log_file and log_file.exists():
+        try:
+            log_file.unlink(missing_ok=True)
+        except (OSError, IOError):
+            pass  # Ignore errors during cleanup
 
 
 @pytest.fixture

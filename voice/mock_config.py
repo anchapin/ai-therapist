@@ -36,6 +36,46 @@ class AudioConfig:
     compression_level: int = 6
 
 
+@dataclass
+class MockVoiceConfig:
+    """Mock voice configuration for testing."""
+    sample_rate: int = 16000
+    channels: int = 1
+    bit_depth: int = 16
+    buffer_size: int = 1024
+    input_device: Optional[str] = None
+    output_device: Optional[str] = None
+    noise_reduction: bool = True
+    echo_cancellation: bool = True
+    auto_gain_control: bool = True
+
+
+@dataclass
+class MockSecurityConfig:
+    """Mock security configuration for testing."""
+    encryption_enabled: bool = True
+    consent_required: bool = False
+    hipaa_compliance_enabled: bool = True
+    audit_logging_enabled: bool = True
+    data_retention_days: int = 30
+    max_login_attempts: int = 3
+    encryption_key_rotation_days: int = 90
+
+
+@dataclass
+class MockAudioConfig:
+    """Mock audio configuration for testing."""
+    sample_rate: int = 16000
+    channels: int = 1
+    bit_depth: int = 16
+    buffer_size: int = 1024
+    input_device: Optional[str] = None
+    output_device: Optional[str] = None
+    noise_reduction: bool = True
+    echo_cancellation: bool = True
+    auto_gain_control: bool = True
+
+
 class MockAuditLogger:
     """Mock audit logger for testing security features."""
     
@@ -86,6 +126,8 @@ class MockConfig:
         
         # Voice settings
         self.voice_enabled = True
+        self.voice_input_enabled = True
+        self.voice_output_enabled = True
         self.default_voice_profile = 'default'
         self.voice_commands_enabled = True
         self.voice_speed = 1.0
@@ -135,17 +177,39 @@ class MockConfig:
         
         # Initialize security
         self.security = VoiceSecurity(SecurityConfig())
+        
+        # Voice profiles
+        self.voice_profiles = {
+            'default': MockVoiceConfig(),
+            'calm_therapist': MockVoiceConfig()
+        }
     
     def get_preferred_stt_service(self) -> str:
         """Get the preferred STT service."""
-        return self.stt_provider
+        if self.is_openai_whisper_configured():
+            return "openai"
+        elif self.is_google_speech_configured():
+            return "google"
+        elif self.is_whisper_configured():
+            return "whisper"
+        else:
+            return "mock"
     
     def get_preferred_tts_service(self) -> str:
         """Get the preferred TTS service."""
-        return self.tts_provider
+        if self.is_elevenlabs_configured():
+            return "elevenlabs"
+        elif self.is_piper_configured():
+            return "piper"
+        else:
+            return "mock"
     
     def is_openai_whisper_configured(self) -> bool:
         """Check if OpenAI Whisper is configured."""
+        return bool(self.openai_api_key)
+    
+    def is_openai_tts_configured(self) -> bool:
+        """Check if OpenAI TTS is configured."""
         return bool(self.openai_api_key)
     
     def is_google_speech_configured(self) -> bool:
@@ -163,6 +227,22 @@ class MockConfig:
     def is_piper_configured(self) -> bool:
         """Check if Piper TTS is configured."""
         return True  # Always true for mock
+    
+    def get_voice_profile(self, profile_name: Optional[str] = None) -> MockVoiceConfig:
+        """Get voice profile by name or default."""
+        if profile_name and profile_name in self.voice_profiles:
+            return self.voice_profiles[profile_name]
+        elif self.default_voice_profile in self.voice_profiles:
+            return self.voice_profiles[self.default_voice_profile]
+        else:
+            return self.voice_profiles.get('default', MockVoiceConfig())
+    
+    def validate_configuration(self) -> List[str]:
+        """Validate configuration and return list of issues."""
+        issues = []
+        if not self.voice_enabled:
+            issues.append("Voice features are disabled")
+        return issues
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert configuration to dictionary."""
@@ -207,46 +287,6 @@ class MockConfig:
         if not isinstance(other, MockConfig):
             return False
         return self.to_dict() == other.to_dict()
-
-
-@dataclass
-class MockVoiceConfig:
-    """Mock voice configuration for testing."""
-    sample_rate: int = 16000
-    channels: int = 1
-    bit_depth: int = 16
-    buffer_size: int = 1024
-    input_device: Optional[str] = None
-    output_device: Optional[str] = None
-    noise_reduction: bool = True
-    echo_cancellation: bool = True
-    auto_gain_control: bool = True
-
-
-@dataclass
-class MockSecurityConfig:
-    """Mock security configuration for testing."""
-    encryption_enabled: bool = True
-    consent_required: bool = False
-    hipaa_compliance_enabled: bool = True
-    audit_logging_enabled: bool = True
-    data_retention_days: int = 30
-    max_login_attempts: int = 3
-    encryption_key_rotation_days: int = 90
-
-
-@dataclass
-class MockAudioConfig:
-    """Mock audio configuration for testing."""
-    sample_rate: int = 16000
-    channels: int = 1
-    bit_depth: int = 16
-    buffer_size: int = 1024
-    input_device: Optional[str] = None
-    output_device: Optional[str] = None
-    noise_reduction: bool = True
-    echo_cancellation: bool = True
-    auto_gain_control: bool = True
 
 
 def create_mock_voice_config() -> MockConfig:

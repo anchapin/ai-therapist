@@ -213,7 +213,8 @@ class TestServiceDegradation:
                         confidence=0.8,
                         language="en",
                         duration=1.0,
-                        provider="openai"
+                        provider="openai",
+                        alternatives=[]
                     )
                 )
 
@@ -223,7 +224,7 @@ class TestServiceDegradation:
                 )
             elif scenario["tts"] == "success":
                 service.tts_service.synthesize_speech = Mock(
-                    return_value=TTSResult(audio_data=b"tts_data", text="Test response", duration=1.0, provider="openai")
+                    return_value=TTSResult(audio_data=b"tts_data", text="Test response", voice_profile="default", duration=1.0, provider="openai")
                 )
 
             # Service should handle mixed success/failure gracefully
