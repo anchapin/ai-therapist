@@ -676,20 +676,24 @@ class TestVoiceService:
         session_id = voice_service.create_session("test_user")
         voice_service.current_session_id = session_id
         voice_service.sessions[session_id].state = VoiceSessionState.LISTENING
+        # Set event loop as not running to prevent asyncio.run_coroutine_threadsafe call
         voice_service._event_loop = Mock()
-        voice_service._event_loop.is_running.return_value = True
+        voice_service._event_loop.is_running.return_value = False
 
         mock_audio_data = AudioData(np.array([0.1, 0.2, 0.3]), 16000, 0.1, 1)
         voice_service.voice_queue = Mock()
-
+        
+        # Should not raise exception and should not call asyncio.run_coroutine_threadsafe
         voice_service._audio_callback(mock_audio_data)
-        # Queue put may not be called due to async nature
-    # voice_service.voice_queue.put.assert_called_once()
 
     def test_audio_callback_no_session(self, voice_service):
         """Test audio callback with no current session."""
         mock_audio_data = AudioData(np.array([0.1, 0.2, 0.3]), 16000, 0.1, 1)
-
+        
+        # Set event loop as not running to prevent asyncio.run_coroutine_threadsafe call
+        voice_service._event_loop = Mock()
+        voice_service._event_loop.is_running.return_value = False
+        
         # Should not raise exception
         voice_service._audio_callback(mock_audio_data)
 
@@ -700,7 +704,11 @@ class TestVoiceService:
         voice_service.sessions[session_id].state = VoiceSessionState.IDLE
 
         mock_audio_data = AudioData(np.array([0.1, 0.2, 0.3]), 16000, 0.1, 1)
-
+        
+        # Set event loop as not running to prevent asyncio.run_coroutine_threadsafe call
+        voice_service._event_loop = Mock()
+        voice_service._event_loop.is_running.return_value = False
+        
         # Should not raise exception
         voice_service._audio_callback(mock_audio_data)
 

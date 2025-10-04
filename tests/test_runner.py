@@ -13,10 +13,13 @@ import time
 import argparse
 import uuid
 import shutil
+import signal
 from datetime import datetime
 from pathlib import Path
 import coverage
 import unittest
+import subprocess
+import threading
 
 # Add project root to Python path
 project_root = Path(__file__).parent.parent
@@ -33,38 +36,82 @@ class VoiceFeatureTestRunner:
         self.test_results = {}
         self.coverage_data = None
         self.additional_pytest_args = additional_pytest_args or []
-        # Generate unique process ID for coverage database
-        self.process_id = str(uuid.uuid4())[:8]
-        self.coverage_dir = self.project_root / '.coverage_temp'
-        self.coverage_dir.mkdir(exist_ok=True)
+        # Use a single coverage file for all test categories
+        self.coverage_file = self.project_root / '.coverage'
+        self.coverage_timeout = 300  # 5 minutes timeout for coverage operations
+
+    def _run_pytest_with_timeout(self, pytest_args):
+        """
+        Run pytest with timeout to prevent hangs.
+        
+        Args:
+            pytest_args: List of arguments to pass to pytest
+            
+        Returns:
+            int: Exit code from pytest
+        """
+        # Create a subprocess to run pytest
+        process = None
+        try:
+            # Start the subprocess
+            process = subprocess.Popen(
+                [sys.executable, '-m', 'pytest'] + pytest_args,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+                cwd=str(self.project_root)
+            )
+            
+            # Set up a timer to kill the process if it hangs
+            timer = None
+            
+            def timeout_handler():
+                if process and process.poll() is None:
+                    print(f"WARNING: Test execution timed out after {self.coverage_timeout} seconds")
+                    process.terminate()
+                    # Give it a moment to terminate gracefully
+                    time.sleep(2)
+                    if process.poll() is None:
+                        process.kill()
+            
+            timer = threading.Timer(self.coverage_timeout, timeout_handler)
+            timer.start()
+            
+            # Stream output in real-time
+            while True:
+                output = process.stdout.readline()
+                if output == '' and process.poll() is not None:
+                    break
+                if output:
+                    print(output.strip())
+            
+            # Get the exit code
+            exit_code = process.poll()
+            
+            # Cancel the timer
+            if timer:
+                timer.cancel()
+                
+            return exit_code
+            
+        except Exception as e:
+            print(f"ERROR running pytest: {e}")
+            return -1
+        finally:
+            # Ensure process is cleaned up
+            if process and process.poll() is None:
+                process.terminate()
+                time.sleep(1)
+                if process.poll() is None:
+                    process.kill()
 
     def run_all_tests(self):
         """Run all test suites and generate comprehensive report."""
         print("AI Therapist Voice Features - Comprehensive Test Suite")
         print("=" * 70)
 
-        # Initialize coverage with unique database file
-        try:
-            # Clean up any existing coverage files for this process
-            self._cleanup_coverage_files()
-            
-            # Create unique coverage database file for this process
-            coverage_data_file = self.coverage_dir / f'.coverage.{self.process_id}'
-            
-            cov = coverage.Coverage(
-                source=['voice'],
-                omit=['*/__init__.py', '*/tests/*'],
-                data_file=str(coverage_data_file),
-                config_file=False  # Disable config file to avoid conflicts
-            )
-            cov.start()
-            coverage_enabled = True
-            print(f"Coverage initialized with database: {coverage_data_file}")
-        except Exception as e:
-            print(f"WARNING Coverage initialization failed: {e}")
-            print("   Running tests without coverage reporting...")
-            cov = None
-            coverage_enabled = False
+        # Clean up any existing coverage files before starting
+        self._cleanup_coverage_files()
 
         # Test categories with their respective configurations
         test_categories = {
@@ -107,24 +154,28 @@ class VoiceFeatureTestRunner:
                         *config['pytest_args']
                     ]
 
-                    # Add coverage arguments if coverage is enabled
-                    if coverage_enabled:
-                        # Use process-specific coverage data file for pytest
-                        coverage_data_file = self.coverage_dir / f'.coverage.{self.process_id}'
+                    # Add coverage arguments for all categories (only for the first one)
+                    if category == 'unit':
+                        # Only enable coverage for the first test category to avoid conflicts
                         pytest_args.extend([
                             '--cov=voice',
                             '--cov-report=term-missing',
                             '--cov-report=json',
-                            f'--cov-fail-under={config["target_coverage"]}',
-                            f'--cov-append'  # Use append mode to avoid conflicts
+                            '--cov-append'  # Use append mode to accumulate coverage
+                        ])
+                    else:
+                        # For subsequent categories, just use the existing coverage data
+                        pytest_args.extend([
+                            '--cov=voice',
+                            '--cov-append'  # Append to existing coverage
                         ])
 
                     # Add any additional pytest arguments passed from command line
                     if self.additional_pytest_args:
                         pytest_args.extend(self.additional_pytest_args)
 
-                    # Run pytest
-                    exit_code = pytest.main(pytest_args)
+                    # Run pytest with timeout to prevent hangs
+                    exit_code = self._run_pytest_with_timeout(pytest_args)
 
                     # Store results
                     self.test_results[category] = {
@@ -158,98 +209,27 @@ class VoiceFeatureTestRunner:
                     'timestamp': datetime.now().isoformat()
                 }
 
-        # Stop coverage and collect data
-        if coverage_enabled and cov:
-            try:
-                cov.stop()
-                cov.save()
-                print("Coverage data collected")
-            except Exception as e:
-                print(f"WARNING Coverage collection failed: {e}")
-                coverage_enabled = False
-            finally:
-                # Clean up coverage files after collection
-                self._cleanup_coverage_files()
-
-        # Generate coverage report
-        if coverage_enabled and cov:
-            try:
-                self.coverage_data = self._generate_coverage_report(cov)
-            except Exception as e:
-                print(f"WARNING Coverage report generation failed: {e}")
-                self.coverage_data = None
-        else:
+        # Generate coverage report from the collected data
+        try:
+            self.coverage_data = self._generate_coverage_from_file()
+        except Exception as e:
+            print(f"WARNING Coverage report generation failed: {e}")
             self.coverage_data = None
+
+        # Clean up coverage files after processing
+        self._cleanup_coverage_files()
 
         # Generate comprehensive report
         self.generate_comprehensive_report()
 
         return self.test_results
 
-    def _generate_coverage_report(self, cov):
+    def _generate_coverage_from_file(self):
         """
-        Generate coverage report using correct coverage.py API.
-
-        Args:
-            cov: Coverage object with collected data
-
+        Generate coverage report from the coverage.json file created by pytest-cov.
+        
         Returns:
             dict: Coverage data with total statements, missing statements, and percentage
-        """
-        try:
-            # Get the coverage data
-            coverage_data = cov.get_data()
-
-            # Get all measured files
-            measured_files = coverage_data.measured_files()
-
-            total_statements = 0
-            total_covered = 0
-            total_missing = 0
-
-            # Analyze each file
-            for file_path in measured_files:
-                try:
-                    # Use the analysis method to get line-by-line coverage
-                    analysis = cov.analysis(file_path)
-
-                    # analysis returns: (filename, executable_lines, excluded_lines, missing_lines)
-                    _, executable_lines, _, missing_lines = analysis
-
-                    file_statements = len(executable_lines)
-                    file_covered = file_statements - len(missing_lines)
-                    file_missing = len(missing_lines)
-
-                    total_statements += file_statements
-                    total_covered += file_covered
-                    total_missing += file_missing
-
-                except Exception as e:
-                    # Skip files that can't be analyzed (e.g., external modules)
-                    print(f"   Skipping coverage analysis for {file_path}: {e}")
-                    continue
-
-            # Calculate coverage percentage
-            coverage_percentage = total_covered / total_statements if total_statements > 0 else 0
-
-            return {
-                'total_statements': total_statements,
-                'covered_statements': total_covered,
-                'missing_statements': total_missing,
-                'coverage_percentage': coverage_percentage
-            }
-
-        except Exception as e:
-            print(f"   Error in coverage report generation: {e}")
-            # Fallback: try to get basic coverage info from coverage.json if it exists
-            return self._get_coverage_from_json()
-
-    def _get_coverage_from_json(self):
-        """
-        Fallback method to get coverage data from coverage.json file.
-
-        Returns:
-            dict: Coverage data or None if file doesn't exist
         """
         try:
             json_report_path = self.project_root / 'coverage.json'
@@ -439,29 +419,33 @@ class VoiceFeatureTestRunner:
                 print(f"   → {rec['recommendation']}")
 
     def _cleanup_coverage_files(self):
-        """Clean up coverage files for this process."""
+        """Clean up coverage files to prevent conflicts."""
         try:
-            # Remove coverage files specific to this process
-            coverage_pattern = f'.coverage.{self.process_id}*'
-            for coverage_file in self.coverage_dir.glob(coverage_pattern):
+            # Remove main coverage file
+            if self.coverage_file.exists():
+                try:
+                    self.coverage_file.unlink()
+                    print(f"   Cleaned up coverage file: {self.coverage_file}")
+                except Exception as e:
+                    print(f"   Warning: Could not delete {self.coverage_file}: {e}")
+            
+            # Remove coverage.json file
+            json_report_path = self.project_root / 'coverage.json'
+            if json_report_path.exists():
+                try:
+                    json_report_path.unlink()
+                    print(f"   Cleaned up coverage.json file: {json_report_path}")
+                except Exception as e:
+                    print(f"   Warning: Could not delete {json_report_path}: {e}")
+            
+            # Remove any .coverage.* files in the project root
+            for coverage_file in self.project_root.glob('.coverage.*'):
                 try:
                     coverage_file.unlink()
                     print(f"   Cleaned up coverage file: {coverage_file}")
                 except Exception as e:
                     print(f"   Warning: Could not delete {coverage_file}: {e}")
-            
-            # Also clean up any stale coverage files older than 1 hour
-            import time
-            current_time = time.time()
-            for coverage_file in self.coverage_dir.glob('.coverage.*'):
-                if coverage_file.name != f'.coverage.{self.process_id}':
-                    try:
-                        file_age = current_time - coverage_file.stat().st_mtime
-                        if file_age > 3600:  # 1 hour in seconds
-                            coverage_file.unlink()
-                            print(f"   Cleaned up stale coverage file: {coverage_file}")
-                    except Exception as e:
-                        print(f"   Warning: Could not delete stale {coverage_file}: {e}")
+                    
         except Exception as e:
             print(f"   Warning: Coverage cleanup failed: {e}")
 

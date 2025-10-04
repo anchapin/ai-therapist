@@ -285,6 +285,7 @@ class TestCachingMechanisms(unittest.TestCase):
         import shutil
         import os
         import pickle
+        import time
         
         # Create unique temporary directory for cache
         process_id = os.getpid()
@@ -313,7 +314,6 @@ class TestCachingMechanisms(unittest.TestCase):
             self.assertGreater(file_size, 0, f"Cache file is empty: {cache_file}")
             
             # Wait a bit to ensure file is written
-            import time
             time.sleep(0.1)
             
             # Create new cache instance (simulates restart)
