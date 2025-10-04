@@ -229,3 +229,9 @@ htmlcov/
 
 # Temporary session files
 =*.*
+
+# Roo agent configuration directory
+.roo/
+
+# Test fix scripts (debugging files)
+test_fix.py
