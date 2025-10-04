@@ -279,18 +279,48 @@ class TestCachingMechanisms(unittest.TestCase):
 
     def test_embedding_cache_file_persistence(self):
         """Test embedding cache file persistence."""
-        text = "Persistent test text"
-        embedding = np.array([0.5, 0.6, 0.7, 0.8])
+        import tempfile
+        import shutil
+        import os
+        import pickle
+        
+        # Create temporary directory for cache
+        temp_cache_dir = tempfile.mkdtemp()
+        
+        try:
+            text = "Persistent test text"
+            embedding = np.array([0.5, 0.6, 0.7, 0.8])
 
-        # Set embedding (should save to file)
-        self.embedding_cache.set(text, embedding)
+            # Create cache with temporary directory
+            cache = EmbeddingCache(cache_dir=temp_cache_dir)
+            
+            # Set embedding (should save to file)
+            cache.set(text, embedding)
+            
+            # Debug: Check if file was created
+            key = cache.get_embedding_key(text)
+            cache_file = os.path.join(temp_cache_dir, f"{key}.pkl")
+            self.assertTrue(os.path.exists(cache_file), f"Cache file not created at {cache_file}")
+            
+            # Debug: Check file size
+            file_size = os.path.getsize(cache_file)
+            self.assertGreater(file_size, 0, f"Cache file is empty: {cache_file}")
+            
+            # Wait a bit to ensure file is written
+            import time
+            time.sleep(0.1)
+            
+            # Create new cache instance (simulates restart)
+            new_cache = EmbeddingCache(cache_dir=temp_cache_dir)
 
-        # Create new cache instance (simulates restart)
-        new_cache = EmbeddingCache()
-
-        # Should retrieve from file
-        result = new_cache.get(text)
-        self.assertTrue(np.array_equal(result, embedding))
+            # Should retrieve from file
+            result = new_cache.get(text)
+            self.assertIsNotNone(result, "Result is None")
+            self.assertTrue(np.array_equal(result, embedding))
+            
+        finally:
+            # Clean up temporary directory
+            shutil.rmtree(temp_cache_dir, ignore_errors=True)
 
     def test_cached_ollama_embeddings(self):
         """Test CachedOllamaEmbeddings wrapper."""

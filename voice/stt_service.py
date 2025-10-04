@@ -442,19 +442,46 @@ class STTService:
     async def _transcribe_with_whisper(self, audio_data: AudioData) -> STTResult:
         """Transcribe audio using Whisper."""
         try:
+            # Check if Whisper model is available
+            if self.whisper_model is None:
+                self.logger.error("Whisper model not initialized")
+                # Return fallback result
+                return STTResult(
+                    text="",
+                    confidence=0.0,
+                    language="en",
+                    duration=audio_data.duration,
+                    provider="whisper",
+                    alternatives=[],
+                    audio_quality_score=0.0
+                )
+
             # Convert audio to format expected by Whisper
             audio_numpy = self._convert_audio_for_whisper(audio_data)
 
-            # Run Whisper transcription
-            result = self.whisper_model.transcribe(
-                audio_numpy,
-                language=self.config.whisper_language,
-                temperature=self.config.whisper_temperature,
-                beam_size=self.config.whisper_beam_size,
-                best_of=self.config.whisper_best_of,
-                fp16=False,  # Use FP32 for better compatibility
-                verbose=False
-            )
+            # Run Whisper transcription with error handling
+            try:
+                result = self.whisper_model.transcribe(
+                    audio_numpy,
+                    language=self.config.whisper_language,
+                    temperature=self.config.whisper_temperature,
+                    beam_size=self.config.whisper_beam_size,
+                    best_of=self.config.whisper_best_of,
+                    fp16=False,  # Use FP32 for better compatibility
+                    verbose=False
+                )
+            except Exception as whisper_error:
+                self.logger.error(f"Whisper transcription failed: {str(whisper_error)}")
+                # Return fallback result
+                return STTResult(
+                    text="",
+                    confidence=0.0,
+                    language="en",
+                    duration=audio_data.duration,
+                    provider="whisper",
+                    alternatives=[],
+                    audio_quality_score=0.0
+                )
 
             # Extract text and language
             text = result.get("text", "")
@@ -704,8 +731,13 @@ class STTService:
             if len(audio_data.data) == 0:
                 return 0.0
 
-            # Calculate RMS energy
-            rms = np.sqrt(np.mean(audio_data.data ** 2))
+            # Calculate RMS energy with error handling
+            try:
+                # Handle invalid values
+                clean_audio = np.nan_to_num(audio_data.data, nan=0.0, posinf=1.0, neginf=-1.0)
+                rms = np.sqrt(np.mean(clean_audio ** 2))
+            except (ValueError, RuntimeWarning):
+                rms = 0.0
 
             # Check for clipping
             max_amplitude = np.max(np.abs(audio_data.data))

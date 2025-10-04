@@ -255,7 +255,7 @@ class UserProfile:
 
         # Define what information is visible to different roles
         patient_visible = ['insurance_provider', 'emergency_contact']
-        therapist_visible = patient_visible + ['conditions', 'medications', 'allergies']
+        therapist_visible = patient_visible + ['condition', 'conditions', 'medication', 'medications', 'allergies']
         admin_visible = therapist_visible + ['treatment_history', 'diagnoses']
 
         visible_fields = {

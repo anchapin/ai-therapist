@@ -210,25 +210,43 @@ class ResponseSanitizer:
                       user_role: Optional[str], context: Dict[str, Any]) -> Dict[str, Any]:
         """Sanitize dictionary response data."""
         sanitized = {}
+        sanitized_any = False
 
         for key, value in data.items():
             # Check field-specific rules
             field_rule = self._get_field_rule(f"*.{key}", sensitivity, user_role)
+            original_value = value
+            was_sanitized = False
+            
             if field_rule:
                 if self._should_mask_field(field_rule, user_role):
                     sanitized[key] = self._mask_field_value(value, field_rule)
                     self.stats['pii_instances_masked'] += 1
+                    sanitized_any = True
+                    was_sanitized = True
                     continue
 
             # Recursively sanitize nested data
             if isinstance(value, dict):
                 sanitized[key] = self._sanitize_dict(value, sensitivity, user_role, context)
+                # Check if nested dict was sanitized
+                if "_sanitized" in sanitized[key]:
+                    sanitized_any = True
+                    was_sanitized = True
             elif isinstance(value, list):
                 sanitized[key] = self._sanitize_list(value, sensitivity, user_role, context)
             elif isinstance(value, str):
                 sanitized[key] = self._sanitize_text(value, sensitivity, user_role, context)
+                # Check if text was sanitized
+                if sanitized[key] != original_value:
+                    sanitized_any = True
+                    was_sanitized = True
             else:
                 sanitized[key] = value
+
+        # Add sanitization flag if any PII was masked
+        if sanitized_any:
+            sanitized["_sanitized"] = True
 
         return sanitized
 

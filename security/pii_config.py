@@ -245,6 +245,31 @@ class PIIDetectionRules:
             enabled_patterns.extend([p for p in self.custom_patterns if p.pii_type == "treatment" and p.enabled])
         if self.voice_transcriptions_enabled:
             enabled_patterns.extend([p for p in self.custom_patterns if p.pii_type == "voice_transcription" and p.enabled])
+        
+        # Add all other enabled patterns (including custom ones like SSN)
+        for p in self.custom_patterns:
+            if p.enabled and p not in enabled_patterns:
+                # Check if this PII type is enabled
+                pii_type_enabled = True
+                if p.pii_type == "ssn" and not self.ssn_enabled:
+                    pii_type_enabled = False
+                elif p.pii_type == "credit_card" and not self.credit_cards_enabled:
+                    pii_type_enabled = False
+                elif p.pii_type == "bank_account" and not self.bank_accounts_enabled:
+                    pii_type_enabled = False
+                elif p.pii_type == "insurance_id" and not self.insurance_ids_enabled:
+                    pii_type_enabled = False
+                elif p.pii_type == "medical_id" and not self.medical_ids_enabled:
+                    pii_type_enabled = False
+                elif p.pii_type == "dob" and not self.dob_enabled:
+                    pii_type_enabled = False
+                elif p.pii_type == "ip_address" and not self.ip_addresses_enabled:
+                    pii_type_enabled = False
+                elif p.pii_type == "location" and not self.location_data_enabled:
+                    pii_type_enabled = False
+                
+                if pii_type_enabled:
+                    enabled_patterns.append(p)
 
         return enabled_patterns
 

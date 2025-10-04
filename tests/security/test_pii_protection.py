@@ -171,6 +171,7 @@ class TestPIIProtection:
 
     def test_sanitize_dict_with_pii(self):
         """Test dictionary sanitization with PII."""
+        import json
         data = {
             "user": {
                 "email": "test@example.com",
@@ -181,7 +182,9 @@ class TestPIIProtection:
             }
         }
 
-        sanitized = self.pii_protection.sanitize_dict(data, user_role="patient")
+        # Create a deep copy to avoid modifying the original
+        data_copy = json.loads(json.dumps(data))
+        sanitized = self.pii_protection.sanitize_dict(data_copy, user_role="patient")
 
         assert sanitized["user"]["email"] != data["user"]["email"]
         assert "*" in sanitized["user"]["email"]
@@ -196,15 +199,26 @@ class TestPIIProtection:
 
         # Patient should see limited info
         patient_view = self.pii_protection.sanitize_dict(
-            {"medical": medical_data}, user_role="patient"
+            {"medical": medical_data.copy()}, user_role="patient"
         )
 
         # Therapist should see more info
         therapist_view = self.pii_protection.sanitize_dict(
-            {"medical": medical_data}, user_role="therapist"
+            {"medical": medical_data.copy()}, user_role="therapist"
         )
 
-        assert len(str(patient_view)) < len(str(therapist_view))
+        # Check that patient view has masked data
+        assert patient_view["medical"]["condition"] != medical_data["condition"]
+        assert patient_view["medical"]["medication"] != medical_data["medication"]
+        assert patient_view["medical"]["treatment"] != medical_data["treatment"]
+        
+        # Check that therapist view has unmasked data
+        assert therapist_view["medical"]["condition"] == medical_data["condition"]
+        assert therapist_view["medical"]["medication"] == medical_data["medication"]
+        assert therapist_view["medical"]["treatment"] == medical_data["treatment"]
+        
+        # Check that views are different
+        assert patient_view != therapist_view
 
     def test_hipaa_compliance_checking(self):
         """Test HIPAA compliance validation."""
@@ -480,15 +494,22 @@ class TestHIPAACompliance:
 
         # Patient access - limited
         patient_access = self.pii_protection.sanitize_dict(
-            {"medical": full_medical_data}, user_role="patient"
+            {"medical": full_medical_data.copy()}, user_role="patient"
         )
 
         # Therapist access - more complete
         therapist_access = self.pii_protection.sanitize_dict(
-            {"medical": full_medical_data}, user_role="therapist"
+            {"medical": full_medical_data.copy()}, user_role="therapist"
         )
 
-        assert len(str(patient_access)) < len(str(therapist_access))
+        # Check that patient view has masked diagnosis
+        assert patient_access["medical"]["diagnosis"] != full_medical_data["diagnosis"]
+        
+        # Check that therapist view has unmasked diagnosis
+        assert therapist_access["medical"]["diagnosis"] == full_medical_data["diagnosis"]
+        
+        # Check that views are different
+        assert patient_access != therapist_access
 
 
 class TestEndToEndPIIProtection:

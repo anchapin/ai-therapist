@@ -269,12 +269,14 @@ class TestCachePerformance:
 
     def test_cache_ttl_performance(self):
         """Test cache TTL performance."""
-        # Set items with TTL
+        # Set items with shorter TTL for faster tests
         ttl_items = 20
+        ttl_seconds = 1  # 1 second TTL for faster tests
+        
         for i in range(ttl_items):
             key = f"ttl_key_{i}"
             value = f"ttl_value_{i}"
-            self.cache.set(key, value, ttl_seconds=2)  # 2 second TTL
+            self.cache.set(key, value, ttl_seconds=ttl_seconds)
 
         # Verify items are accessible immediately
         hits = 0
@@ -285,18 +287,21 @@ class TestCachePerformance:
 
         assert hits == ttl_items, "All TTL items should be accessible immediately"
 
-        # Wait for TTL to expire
-        time.sleep(3)
+        # Wait for TTL to expire plus cleanup interval
+        time.sleep(ttl_seconds + self.cache.cleanup_interval + 0.5)
 
-        # Items should be expired
+        # Items should be expired - check both direct access and manual cleanup
+        # Force manual cleanup to ensure test reliability
+        self.cache._cleanup_expired_entries()
+        
         expired_hits = 0
         for i in range(ttl_items):
             key = f"ttl_key_{i}"
             if self.cache.get(key) is not None:
                 expired_hits += 1
 
-        # Most items should be expired (allowing some tolerance for timing)
-        assert expired_hits < ttl_items * 0.5, f"Too many items still accessible after TTL: {expired_hits}/{ttl_items}"
+        # All items should be expired now
+        assert expired_hits == 0, f"Items still accessible after TTL: {expired_hits}/{ttl_items}"
 
     def test_cache_statistics_accuracy(self):
         """Test cache statistics accuracy."""

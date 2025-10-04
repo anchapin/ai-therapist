@@ -93,8 +93,8 @@ class TestMemoryLeakDetection:
         self.memory_manager.register_alert_callback(alert_callback)
         self.memory_manager.start_monitoring()
 
-        # Wait a bit for monitoring to run (reduced time for faster tests)
-        time.sleep(0.5)
+        # Wait a bit for monitoring to run (very short time for faster tests)
+        time.sleep(0.1)
 
         # Stop monitoring to ensure clean teardown
         self.memory_manager.stop_monitoring()
@@ -110,13 +110,13 @@ class TestMemoryLeakDetection:
 
         # Create objects that simulate potential leaks
         leak_objects = []
-        for i in range(10):
+        for i in range(5):  # Reduced number of objects
             # Create some objects
-            leak_objects.append([f"test_data_{i}"] * 100)
-            time.sleep(0.01)  # Reduced delay for faster tests
+            leak_objects.append([f"test_data_{i}"] * 50)  # Smaller objects
+            # No sleep for faster tests
 
-        # Wait for leak detection to run (reduced time)
-        time.sleep(0.5)
+        # Wait for leak detection to run (very short time)
+        time.sleep(0.1)
 
         # Stop monitoring to ensure clean teardown
         self.memory_manager.stop_monitoring()

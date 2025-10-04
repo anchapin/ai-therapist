@@ -364,8 +364,14 @@ class PIIProtection:
         # Masking strategy from env
         strategy_env = os.getenv("PII_MASKING_STRATEGY", "partial_mask").upper()
         try:
-            # Remove the _MASK suffix for enum lookup
-            strategy_name = strategy_env.replace("_MASK", "")
+            # Handle different naming conventions
+            if strategy_env == "PARTIAL_MASK":
+                strategy_name = "PARTIAL_MASK"
+            elif strategy_env.endswith("_MASK"):
+                strategy_name = strategy_env
+            else:
+                strategy_name = f"{strategy_env}_MASK"
+            
             if hasattr(MaskingStrategy, strategy_name):
                 self.config.masking_strategy = MaskingStrategy[strategy_name]
                 self.masker.strategy = self.config.masking_strategy
@@ -440,7 +446,11 @@ class PIIProtection:
         detections = self.detector.detect_in_dict(data)
         
         for field_path, detection in detections:
-            if self._should_mask_for_role(detection.pii_type, user_role):
+            # Check if this PII should be masked for the given role
+            should_mask = self._should_mask_for_role(detection.pii_type, user_role)
+            
+            # Only mask if the role requires it
+            if should_mask:
                 # Navigate to the field and mask it
                 self._mask_field_in_dict(result, field_path, detection)
                 
@@ -448,6 +458,17 @@ class PIIProtection:
                 if self.audit_enabled:
                     self._audit_pii_access(
                         "mask",
+                        detection.pii_type,
+                        detection.value,
+                        user_role,
+                        context,
+                        field_path
+                    )
+            else:
+                # Still audit access even if not masked
+                if self.audit_enabled:
+                    self._audit_pii_access(
+                        "access",
                         detection.pii_type,
                         detection.value,
                         user_role,
@@ -474,6 +495,18 @@ class PIIProtection:
             current[field_name] = self.masker.mask_value(
                 current[field_name], detection.pii_type
             )
+    
+    def _get_nested_value(self, data: Dict[str, Any], field_path: str) -> Any:
+        """Get a value from a nested dictionary using a dot-separated path."""
+        parts = field_path.replace(']', '').replace('[', '.').split('.')
+        current = data
+        
+        for part in parts:
+            if part not in current:
+                return None
+            current = current[part]
+        
+        return current
 
     def _has_pii_access(self, user_role: Optional[str]) -> bool:
         """Check if user role has access to full PII."""
@@ -518,15 +551,17 @@ class PIIProtection:
         if user_role_lower in admin_roles:
             return False
             
-        # Therapists can see medical information but not personal contact info
+        # Therapists can see medical information and contact info
         if user_role_lower in therapist_roles:
-            # Therapists should see medical info but mask contact info
-            contact_pii = {PIIType.EMAIL, PIIType.PHONE, PIIType.ADDRESS, PIIType.SSN}
-            return pii_type in contact_pii
+            # Therapists should see both medical info and contact info unmasked
+            # Only mask highly sensitive PII like SSN
+            sensitive_pii = {PIIType.SSN}
+            # Return True if PII should be masked (sensitive info), False if should be visible
+            return pii_type in sensitive_pii
             
         # Patients can see their own medical info but not contact info of others
         if user_role_lower in patient_roles:
-            # Patients should have all PII masked for privacy
+            # Patients should have all PII masked for privacy including medical info
             return True  # Mask all PII for patients
             
         # All other roles get everything masked

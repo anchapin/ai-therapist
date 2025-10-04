@@ -221,13 +221,14 @@ class TestSimplifiedAudioProcessor:
         assert 'quality_analysis' in audio_processor.features
         assert 'format_conversion' in audio_processor.features
 
-    def test_initialize_features_with_vad_available(self, audio_processor):
+    def test_initialize_features_with_vad_available(self, mock_config):
         """Test feature initialization when VAD is available."""
         with patch('voice.audio_processor.VAD_AVAILABLE', True):
             mock_vad = Mock()
             with patch('voice.audio_processor.webrtcvad') as mock_webrtcvad:
                 mock_webrtcvad.Vad.return_value = mock_vad
-                audio_processor._initialize_features()
+                # Create new processor with VAD available from start
+                audio_processor = SimplifiedAudioProcessor(mock_config)
                 assert audio_processor.vad == mock_vad
 
     def test_initialize_features_without_vad(self, audio_processor):
@@ -247,11 +248,22 @@ class TestSimplifiedAudioProcessor:
             # vad attribute should not be created when VAD_AVAILABLE is False
             assert not hasattr(processor, 'vad') or processor.vad is None
 
-    def test_initialize_features_exception_handling(self, audio_processor):
+    def test_initialize_features_exception_handling(self, mock_config):
         """Test feature initialization exception handling."""
-        with patch.object(audio_processor, '_get_audio_devices', side_effect=Exception("Test error")):
-            audio_processor._initialize_features()
-            assert audio_processor.state == AudioProcessorState.ERROR
+        # Create processor with features that will trigger _get_audio_devices
+        with patch('voice.audio_processor.SOUNDDEVICE_AVAILABLE', True):
+            # Create processor first
+            audio_processor = SimplifiedAudioProcessor(mock_config)
+            
+            # Reset state to INITIALIZING before calling _initialize_features
+            audio_processor.state = AudioProcessorState.INITIALIZING
+            
+            # Now call _initialize_features directly with exception
+            with patch.object(audio_processor, '_get_audio_devices', side_effect=Exception("Test error")):
+                audio_processor._initialize_features()
+                
+                # State should be ERROR after exception handling
+                assert audio_processor.state == AudioProcessorState.ERROR
 
     def test_get_audio_devices_without_soundfile(self, audio_processor):
         """Test getting audio devices when soundfile is not available."""

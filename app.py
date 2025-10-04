@@ -273,9 +273,9 @@ class ResponseCache:
         }
 
 class EmbeddingCache:
-    def __init__(self):
+    def __init__(self, cache_dir="./embedding_cache"):
         self.cache = {}
-        self.cache_dir = "./embedding_cache"
+        self.cache_dir = cache_dir
         os.makedirs(self.cache_dir, exist_ok=True)
 
     def get_embedding_key(self, text):
@@ -293,8 +293,12 @@ class EmbeddingCache:
         if os.path.exists(cache_file):
             try:
                 import pickle
+                import numpy as np
                 with open(cache_file, 'rb') as f:
                     embedding = pickle.load(f)
+                # Convert list back to numpy array if needed
+                if isinstance(embedding, list):
+                    embedding = np.array(embedding)
                 self.cache[key] = embedding
                 return embedding
             except Exception:
@@ -307,13 +311,17 @@ class EmbeddingCache:
         self.cache[key] = embedding
 
         # Save to file cache
-        try:
-            import pickle
-            cache_file = os.path.join(self.cache_dir, f"{key}.pkl")
-            with open(cache_file, 'wb') as f:
-                pickle.dump(embedding, f)
-        except Exception:
-            pass
+        import pickle
+        cache_file = os.path.join(self.cache_dir, f"{key}.pkl")
+        # Convert numpy array to list for pickling
+        if hasattr(embedding, 'tolist'):
+            embedding_to_save = embedding.tolist()
+        else:
+            embedding_to_save = embedding
+        with open(cache_file, 'wb') as f:
+            pickle.dump(embedding_to_save, f)
+            f.flush()
+            os.fsync(f.fileno())
 
 # Global cache instances
 response_cache = ResponseCache()

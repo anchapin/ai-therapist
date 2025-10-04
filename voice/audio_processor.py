@@ -220,8 +220,14 @@ class SimplifiedAudioProcessor:
         try:
             # Initialize VAD if available
             if self.features['vad']:
-                self.vad = webrtcvad.Vad(2)  # Aggressiveness level 2
-                self.logger.info("VAD initialized")
+                try:
+                    self.vad = webrtcvad.Vad(2)  # Aggressiveness level 2
+                    self.logger.info("VAD initialized")
+                except Exception as e:
+                    self.logger.warning(f"Failed to initialize VAD: {e}")
+                    self.vad = None
+            else:
+                self.vad = None
             
             # Initialize audio device info
             if self.features['audio_capture']:
@@ -232,6 +238,9 @@ class SimplifiedAudioProcessor:
         except Exception as e:
             self.logger.error(f"Error initializing features: {e}")
             self.state = AudioProcessorState.ERROR
+            # Ensure VAD attribute exists even on error
+            if not hasattr(self, 'vad'):
+                self.vad = None
     
     def _get_audio_devices(self):
         """Get available audio devices."""
@@ -575,8 +584,16 @@ class SimplifiedAudioProcessor:
                     self.logger.warning("Cannot resample audio for VAD")
                     return []
             
-            # Convert to 16-bit PCM
-            audio_int16 = (audio_data.data * 32767).astype(np.int16)
+            # Convert to 16-bit PCM with error handling
+            try:
+                # Handle invalid values
+                clean_audio = np.nan_to_num(audio_data.data, nan=0.0, posinf=1.0, neginf=-1.0)
+                clean_audio = np.clip(clean_audio, -1.0, 1.0)
+                audio_int16 = (clean_audio * 32767).astype(np.int16)
+            except (ValueError, RuntimeWarning):
+                # Fallback: create silent audio
+                frame_length = int(16000 * 30 / 1000)  # 30ms frame
+                audio_int16 = np.zeros(frame_length, dtype=np.int16)
             
             # Process audio in 30ms frames
             frame_duration = 30  # ms
