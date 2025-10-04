@@ -235,3 +235,9 @@ htmlcov/
 
 # Test fix scripts (debugging files)
 test_fix.py
+
+# Scripts directory (debugging and utility scripts)
+scripts/
+
+# Test environment directory
+test-env/
