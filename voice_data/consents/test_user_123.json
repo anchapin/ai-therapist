@@ -1,0 +1,10 @@
+{
+  "user_id": "test_user_123",
+  "consent_type": "VOICE_DATA_PROCESSING",
+  "granted": true,
+  "timestamp": 1759332774.4461377,
+  "ip_address": "",
+  "user_agent": "",
+  "consent_text": "",
+  "metadata": {}
+}

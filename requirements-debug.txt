@@ -1,0 +1,87 @@
+# Additional debugging and development dependencies
+# Core Debugging Tools
+ipython>=8.0.0
+ipdb>=0.13.0
+pdb++>=0.10.0
+pdb++>=0.10.0
+
+# Advanced Logging and Profiling
+memory-profiler>=0.60.0
+line-profiler>=4.0.0
+py-spy>=0.3.0
+vmprof>=0.4.0
+
+# Test Debugging
+pytest-xdist>=3.0.0
+pytest-timeout>=2.1.0
+pytest-md>=0.2.0
+pytest-json-report>=1.5.0
+pytest-html>=3.1.0
+pytest-metadata>=3.0.0
+
+# Code Quality and Analysis
+flake8>=6.0.0
+black>=23.0.0
+isort>=5.12.0
+mypy>=1.0.0
+bandit>=1.7.0
+pylint>=2.17.0
+
+# Security Analysis
+safety>=2.3.0
+pip-audit>=2.5.0
+semgrep>=1.12.0
+
+# Performance Monitoring
+psutil>=5.9.0
+py-cpuinfo>=9.0.0
+GPUtil>=1.4.0
+distro>=1.8.0
+
+# Mock and Testing Enhancements
+responses>=0.23.0
+factory-boy>=3.2.0
+faker>=18.0.0
+freezegun>=1.2.0
+
+# Data Analysis for Test Results
+pandas>=2.0.0
+numpy>=1.24.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+jupyter>=1.0.0
+
+# HTTP and Network Debugging
+httpie>=3.2.0
+requests-mock>=1.10.0
+aioresponses>=0.7.0
+
+# Database Debugging (if needed)
+sqlite-utils>=3.30.0
+
+# Async Debugging
+asyncio-mqtt>=0.13.0
+aiofiles>=23.2.1
+pytest-asyncio>=0.21.0
+
+# Environment and Configuration Management
+python-decouple>=3.8
+environs>=9.5.0
+dynaconf>=3.2.0
+
+# Documentation
+sphinx>=6.0.0
+sphinx-rtd-theme>=1.2.0
+
+# Development Utilities
+watchdog>=3.0.0
+python-dotenv>=1.0.0
+rich>=13.0.0
+typer>=0.9.0
+
+# Container Debugging
+docker>=6.0.0
+
+# CI/CD Debugging
+pytest-cov>=4.0.0
+coverage>=7.2.0

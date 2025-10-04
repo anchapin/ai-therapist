@@ -1,0 +1,58 @@
+[
+  {
+    "timestamp": 1759332490.167555,
+    "event_type": "VOICE_INPUT",
+    "user_id": "recent_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "recent_session",
+    "result": "logged",
+    "details": {
+      "test": "recent_data"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.5299697,
+    "event_type": "VOICE_INPUT",
+    "user_id": "recent_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "recent_session",
+    "result": "logged",
+    "details": {
+      "test": "recent_data"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.6229377,
+    "event_type": "VOICE_INPUT",
+    "user_id": "recent_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "recent_session",
+    "result": "logged",
+    "details": {
+      "test": "recent_data"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.4406812,
+    "event_type": "VOICE_INPUT",
+    "user_id": "recent_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "recent_session",
+    "result": "logged",
+    "details": {
+      "test": "recent_data"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  }
+]

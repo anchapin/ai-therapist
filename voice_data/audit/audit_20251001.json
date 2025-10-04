@@ -1,0 +1,2092 @@
+[
+  {
+    "timestamp": 1759332412.6402452,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user_456",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "duration": 5.2,
+      "provider": "openai"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.0224555,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user_456",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "duration": 5.2,
+      "provider": "openai"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.0269957,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 0
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.0274649,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 1
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.027865,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 2
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.028217,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 3
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.0285668,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 4
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.1678312,
+    "event_type": "retention_policy",
+    "user_id": "system",
+    "session_id": "unknown",
+    "action": "apply_retention_policy",
+    "resource": "data_cleanup",
+    "result": "success",
+    "details": {
+      "removed_count": 0
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.191346,
+    "event_type": "access_granted",
+    "user_id": "test_user_123",
+    "session_id": "unknown",
+    "action": "grant_access",
+    "resource": "voice_session_456",
+    "result": "success",
+    "details": {
+      "permission": "read"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.1917036,
+    "event_type": "access_revoked",
+    "user_id": "test_user_123",
+    "session_id": "unknown",
+    "action": "revoke_access",
+    "resource": "voice_session_456",
+    "result": "success",
+    "details": {
+      "permission": "read"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.1952314,
+    "event_type": "security_scan",
+    "user_id": "system",
+    "session_id": "unknown",
+    "action": "perform_security_scan",
+    "resource": "security_assessment",
+    "result": "success",
+    "details": {
+      "security_score": 75
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.1994839,
+    "event_type": "security_incident",
+    "user_id": "malicious_user",
+    "session_id": "unknown",
+    "action": "report_incident",
+    "resource": "security_incident",
+    "result": "reported",
+    "details": {
+      "incident_id": "5cd85982-d14e-481a-a1ea-134e696ebf18",
+      "incident_type": "UNAUTHORIZED_ACCESS"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.2035863,
+    "event_type": "security_scan",
+    "user_id": "system",
+    "session_id": "unknown",
+    "action": "perform_security_scan",
+    "resource": "security_assessment",
+    "result": "success",
+    "details": {
+      "security_score": 75
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.2039838,
+    "event_type": "compliance_report",
+    "user_id": "system",
+    "session_id": "unknown",
+    "action": "generate_report",
+    "resource": "compliance",
+    "result": "success",
+    "details": {},
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.276931,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "session_0",
+    "result": "logged",
+    "details": {
+      "iteration": 0
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.2774024,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "session_1",
+    "result": "logged",
+    "details": {
+      "iteration": 1
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.2778687,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "session_2",
+    "result": "logged",
+    "details": {
+      "iteration": 2
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.2782428,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "session_3",
+    "result": "logged",
+    "details": {
+      "iteration": 3
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.27867,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "session_4",
+    "result": "logged",
+    "details": {
+      "iteration": 4
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.2790475,
+    "event_type": "security_scan",
+    "user_id": "system",
+    "session_id": "unknown",
+    "action": "perform_security_scan",
+    "resource": "security_assessment",
+    "result": "success",
+    "details": {
+      "security_score": 90
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.2829614,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_0",
+    "result": "logged",
+    "details": {
+      "test": "data_0"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.283415,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_1",
+    "result": "logged",
+    "details": {
+      "test": "data_1"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.2838318,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_2",
+    "result": "logged",
+    "details": {
+      "test": "data_2"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.2843285,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_3",
+    "result": "logged",
+    "details": {
+      "test": "data_3"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.2847583,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_4",
+    "result": "logged",
+    "details": {
+      "test": "data_4"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.2852302,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_5",
+    "result": "logged",
+    "details": {
+      "test": "data_5"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.2857063,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_6",
+    "result": "logged",
+    "details": {
+      "test": "data_6"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.2862182,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_7",
+    "result": "logged",
+    "details": {
+      "test": "data_7"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.2867033,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_8",
+    "result": "logged",
+    "details": {
+      "test": "data_8"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332490.2871954,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_9",
+    "result": "logged",
+    "details": {
+      "test": "data_9"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.3403432,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user_456",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "duration": 5.2,
+      "provider": "openai"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.347243,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 0
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.3481917,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 1
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.3492215,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 2
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.3498914,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 3
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.350544,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 4
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.375264,
+    "event_type": "consent_update",
+    "user_id": "test_user_789",
+    "session_id": "unknown",
+    "action": "grant_consent",
+    "resource": "consent_VOICE_DATA_PROCESSING",
+    "result": "success",
+    "details": {
+      "consent_type": "VOICE_DATA_PROCESSING",
+      "granted": true,
+      "timestamp": 1759332607.3750765
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.3760214,
+    "event_type": "consent_update",
+    "user_id": "test_user_789",
+    "session_id": "unknown",
+    "action": "revoke_consent",
+    "resource": "consent_VOICE_DATA_PROCESSING",
+    "result": "success",
+    "details": {
+      "consent_type": "VOICE_DATA_PROCESSING",
+      "granted": false,
+      "timestamp": 1759332607.375888
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.5302866,
+    "event_type": "retention_policy",
+    "user_id": "system",
+    "session_id": "unknown",
+    "action": "apply_retention_policy",
+    "resource": "data_cleanup",
+    "result": "success",
+    "details": {
+      "removed_count": 0
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.5380313,
+    "event_type": "consent_update",
+    "user_id": "test_user_123",
+    "session_id": "unknown",
+    "action": "grant_consent",
+    "resource": "consent_VOICE_DATA_PROCESSING",
+    "result": "success",
+    "details": {
+      "consent_type": "VOICE_DATA_PROCESSING",
+      "granted": true,
+      "timestamp": 1759332607.5376947
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.60039,
+    "event_type": "access_granted",
+    "user_id": "test_user_123",
+    "session_id": "unknown",
+    "action": "grant_access",
+    "resource": "voice_session_456",
+    "result": "success",
+    "details": {
+      "permission": "read"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.6011055,
+    "event_type": "access_revoked",
+    "user_id": "test_user_123",
+    "session_id": "unknown",
+    "action": "revoke_access",
+    "resource": "voice_session_456",
+    "result": "success",
+    "details": {
+      "permission": "read"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.6055834,
+    "event_type": "security_scan",
+    "user_id": "system",
+    "session_id": "unknown",
+    "action": "perform_security_scan",
+    "resource": "security_assessment",
+    "result": "success",
+    "details": {
+      "security_score": 75
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.610587,
+    "event_type": "security_incident",
+    "user_id": "malicious_user",
+    "session_id": "unknown",
+    "action": "report_incident",
+    "resource": "security_incident",
+    "result": "reported",
+    "details": {
+      "incident_id": "7548fef0-4ea5-4a13-ac19-2290c3d1160d",
+      "incident_type": "UNAUTHORIZED_ACCESS"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.6159189,
+    "event_type": "security_scan",
+    "user_id": "system",
+    "session_id": "unknown",
+    "action": "perform_security_scan",
+    "resource": "security_assessment",
+    "result": "success",
+    "details": {
+      "security_score": 75
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.6167543,
+    "event_type": "compliance_report",
+    "user_id": "system",
+    "session_id": "unknown",
+    "action": "generate_report",
+    "resource": "compliance",
+    "result": "success",
+    "details": {},
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.6967626,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "session_0",
+    "result": "logged",
+    "details": {
+      "iteration": 0
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.6975951,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "session_1",
+    "result": "logged",
+    "details": {
+      "iteration": 1
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.6985018,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "session_2",
+    "result": "logged",
+    "details": {
+      "iteration": 2
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.699282,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "session_3",
+    "result": "logged",
+    "details": {
+      "iteration": 3
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.700038,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "session_4",
+    "result": "logged",
+    "details": {
+      "iteration": 4
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.700928,
+    "event_type": "security_scan",
+    "user_id": "system",
+    "session_id": "unknown",
+    "action": "perform_security_scan",
+    "resource": "security_assessment",
+    "result": "success",
+    "details": {
+      "security_score": 90
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.7053246,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_0",
+    "result": "logged",
+    "details": {
+      "test": "data_0"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.7062273,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_1",
+    "result": "logged",
+    "details": {
+      "test": "data_1"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.7070963,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_2",
+    "result": "logged",
+    "details": {
+      "test": "data_2"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.7080479,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_3",
+    "result": "logged",
+    "details": {
+      "test": "data_3"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.7091491,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_4",
+    "result": "logged",
+    "details": {
+      "test": "data_4"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.710822,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_5",
+    "result": "logged",
+    "details": {
+      "test": "data_5"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.712268,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_6",
+    "result": "logged",
+    "details": {
+      "test": "data_6"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.7137063,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_7",
+    "result": "logged",
+    "details": {
+      "test": "data_7"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.7149613,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_8",
+    "result": "logged",
+    "details": {
+      "test": "data_8"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332607.7158852,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_9",
+    "result": "logged",
+    "details": {
+      "test": "data_9"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.5503342,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user_456",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "duration": 5.2,
+      "provider": "openai"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.5584671,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 0
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.5599253,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 1
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.561351,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 2
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.5623899,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 3
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.5634286,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 4
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.5892541,
+    "event_type": "consent_update",
+    "user_id": "test_user_789",
+    "session_id": "unknown",
+    "action": "grant_consent",
+    "resource": "consent_VOICE_DATA_PROCESSING",
+    "result": "success",
+    "details": {
+      "consent_type": "VOICE_DATA_PROCESSING",
+      "granted": true,
+      "timestamp": 1759332711.5889835
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.5910678,
+    "event_type": "consent_update",
+    "user_id": "test_user_789",
+    "session_id": "unknown",
+    "action": "revoke_consent",
+    "resource": "consent_VOICE_DATA_PROCESSING",
+    "result": "success",
+    "details": {
+      "consent_type": "VOICE_DATA_PROCESSING",
+      "granted": false,
+      "timestamp": 1759332711.59089
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.5982594,
+    "event_type": "data_encryption",
+    "user_id": "test_user_123",
+    "session_id": "unknown",
+    "action": "encrypt_data",
+    "resource": "user_data",
+    "result": "success_mock",
+    "details": {
+      "data_size": 20,
+      "mock": true
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.6103168,
+    "event_type": "data_encryption",
+    "user_id": "test_user_456",
+    "session_id": "unknown",
+    "action": "encrypt_data",
+    "resource": "user_data",
+    "result": "success_mock",
+    "details": {
+      "data_size": 70,
+      "mock": true
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.6231878,
+    "event_type": "retention_policy",
+    "user_id": "system",
+    "session_id": "unknown",
+    "action": "apply_retention_policy",
+    "resource": "data_cleanup",
+    "result": "success",
+    "details": {
+      "removed_count": 3
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.628126,
+    "event_type": "consent_update",
+    "user_id": "test_user_123",
+    "session_id": "unknown",
+    "action": "grant_consent",
+    "resource": "consent_VOICE_DATA_PROCESSING",
+    "result": "success",
+    "details": {
+      "consent_type": "VOICE_DATA_PROCESSING",
+      "granted": true,
+      "timestamp": 1759332711.6279833
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.6300695,
+    "event_type": "data_encryption",
+    "user_id": "test_user_123",
+    "session_id": "unknown",
+    "action": "encrypt_data",
+    "resource": "user_data",
+    "result": "success_mock",
+    "details": {
+      "data_size": 14,
+      "mock": true
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.6350358,
+    "event_type": "access_granted",
+    "user_id": "test_user_123",
+    "session_id": "unknown",
+    "action": "grant_access",
+    "resource": "voice_session_456",
+    "result": "success",
+    "details": {
+      "permission": "read"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.6361678,
+    "event_type": "access_revoked",
+    "user_id": "test_user_123",
+    "session_id": "unknown",
+    "action": "revoke_access",
+    "resource": "voice_session_456",
+    "result": "success",
+    "details": {
+      "permission": "read"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.6404321,
+    "event_type": "security_scan",
+    "user_id": "system",
+    "session_id": "unknown",
+    "action": "perform_security_scan",
+    "resource": "security_assessment",
+    "result": "success",
+    "details": {
+      "security_score": 75
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.6463754,
+    "event_type": "security_incident",
+    "user_id": "malicious_user",
+    "session_id": "unknown",
+    "action": "report_incident",
+    "resource": "security_incident",
+    "result": "reported",
+    "details": {
+      "incident_id": "d611304e-7820-4d40-b422-ed5c9f3ab229",
+      "incident_type": "UNAUTHORIZED_ACCESS"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.6524572,
+    "event_type": "security_scan",
+    "user_id": "system",
+    "session_id": "unknown",
+    "action": "perform_security_scan",
+    "resource": "security_assessment",
+    "result": "success",
+    "details": {
+      "security_score": 75
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.6540117,
+    "event_type": "compliance_report",
+    "user_id": "system",
+    "session_id": "unknown",
+    "action": "generate_report",
+    "resource": "compliance",
+    "result": "success",
+    "details": {},
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.6606643,
+    "event_type": "data_encryption",
+    "user_id": "backup_user",
+    "session_id": "unknown",
+    "action": "encrypt_data",
+    "resource": "user_data",
+    "result": "success_mock",
+    "details": {
+      "data_size": 112,
+      "mock": true
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.6627412,
+    "event_type": "data_backup",
+    "user_id": "test_user_123",
+    "session_id": "unknown",
+    "action": "backup_data",
+    "resource": "secure_backup",
+    "result": "success",
+    "details": {
+      "backup_id": "3dce1708-a961-4665-b786-747d6f6a2725"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.7034557,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "session_0",
+    "result": "logged",
+    "details": {
+      "iteration": 0
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.704818,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "session_1",
+    "result": "logged",
+    "details": {
+      "iteration": 1
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.706031,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "session_2",
+    "result": "logged",
+    "details": {
+      "iteration": 2
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.7073047,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "session_3",
+    "result": "logged",
+    "details": {
+      "iteration": 3
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.7084913,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "session_4",
+    "result": "logged",
+    "details": {
+      "iteration": 4
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.709653,
+    "event_type": "security_scan",
+    "user_id": "system",
+    "session_id": "unknown",
+    "action": "perform_security_scan",
+    "resource": "security_assessment",
+    "result": "success",
+    "details": {
+      "security_score": 90
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.7143004,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_0",
+    "result": "logged",
+    "details": {
+      "test": "data_0"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.715588,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_1",
+    "result": "logged",
+    "details": {
+      "test": "data_1"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.716868,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_2",
+    "result": "logged",
+    "details": {
+      "test": "data_2"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.7181225,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_3",
+    "result": "logged",
+    "details": {
+      "test": "data_3"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.7194984,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_4",
+    "result": "logged",
+    "details": {
+      "test": "data_4"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.7209172,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_5",
+    "result": "logged",
+    "details": {
+      "test": "data_5"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.7222798,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_6",
+    "result": "logged",
+    "details": {
+      "test": "data_6"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.723588,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_7",
+    "result": "logged",
+    "details": {
+      "test": "data_7"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.7248435,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_8",
+    "result": "logged",
+    "details": {
+      "test": "data_8"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332711.7261353,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_9",
+    "result": "logged",
+    "details": {
+      "test": "data_9"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.370333,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user_456",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "duration": 5.2,
+      "provider": "openai"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.3763347,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 0
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.3776922,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 1
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.3790085,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 2
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.3804047,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 3
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.381717,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 4
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.4071007,
+    "event_type": "consent_update",
+    "user_id": "test_user_789",
+    "session_id": "unknown",
+    "action": "grant_consent",
+    "resource": "consent_VOICE_DATA_PROCESSING",
+    "result": "success",
+    "details": {
+      "consent_type": "VOICE_DATA_PROCESSING",
+      "granted": true,
+      "timestamp": 1759332774.4069242
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.408684,
+    "event_type": "consent_update",
+    "user_id": "test_user_789",
+    "session_id": "unknown",
+    "action": "revoke_consent",
+    "resource": "consent_VOICE_DATA_PROCESSING",
+    "result": "success",
+    "details": {
+      "consent_type": "VOICE_DATA_PROCESSING",
+      "granted": false,
+      "timestamp": 1759332774.4085505
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.4153328,
+    "event_type": "data_encryption",
+    "user_id": "test_user_123",
+    "session_id": "unknown",
+    "action": "encrypt_data",
+    "resource": "user_data",
+    "result": "success_mock",
+    "details": {
+      "data_size": 20,
+      "mock": true
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.4277055,
+    "event_type": "data_encryption",
+    "user_id": "test_user_456",
+    "session_id": "unknown",
+    "action": "encrypt_data",
+    "resource": "user_data",
+    "result": "success_mock",
+    "details": {
+      "data_size": 70,
+      "mock": true
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.440973,
+    "event_type": "retention_policy",
+    "user_id": "system",
+    "session_id": "unknown",
+    "action": "apply_retention_policy",
+    "resource": "data_cleanup",
+    "result": "success",
+    "details": {
+      "removed_count": 3
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.4462833,
+    "event_type": "consent_update",
+    "user_id": "test_user_123",
+    "session_id": "unknown",
+    "action": "grant_consent",
+    "resource": "consent_VOICE_DATA_PROCESSING",
+    "result": "success",
+    "details": {
+      "consent_type": "VOICE_DATA_PROCESSING",
+      "granted": true,
+      "timestamp": 1759332774.4461377
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.4488013,
+    "event_type": "data_encryption",
+    "user_id": "test_user_123",
+    "session_id": "unknown",
+    "action": "encrypt_data",
+    "resource": "user_data",
+    "result": "success_mock",
+    "details": {
+      "data_size": 14,
+      "mock": true
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.4539607,
+    "event_type": "access_granted",
+    "user_id": "test_user_123",
+    "session_id": "unknown",
+    "action": "grant_access",
+    "resource": "voice_session_456",
+    "result": "success",
+    "details": {
+      "permission": "read"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.4557173,
+    "event_type": "access_revoked",
+    "user_id": "test_user_123",
+    "session_id": "unknown",
+    "action": "revoke_access",
+    "resource": "voice_session_456",
+    "result": "success",
+    "details": {
+      "permission": "read"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.460261,
+    "event_type": "security_scan",
+    "user_id": "system",
+    "session_id": "unknown",
+    "action": "perform_security_scan",
+    "resource": "security_assessment",
+    "result": "success",
+    "details": {
+      "security_score": 75
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.4658015,
+    "event_type": "security_incident",
+    "user_id": "malicious_user",
+    "session_id": "unknown",
+    "action": "report_incident",
+    "resource": "security_incident",
+    "result": "reported",
+    "details": {
+      "incident_id": "2a642346-8841-43a0-b440-c0c135127a54",
+      "incident_type": "UNAUTHORIZED_ACCESS"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.4720037,
+    "event_type": "security_scan",
+    "user_id": "system",
+    "session_id": "unknown",
+    "action": "perform_security_scan",
+    "resource": "security_assessment",
+    "result": "success",
+    "details": {
+      "security_score": 75
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.4736462,
+    "event_type": "compliance_report",
+    "user_id": "system",
+    "session_id": "unknown",
+    "action": "generate_report",
+    "resource": "compliance",
+    "result": "success",
+    "details": {},
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.479669,
+    "event_type": "data_encryption",
+    "user_id": "backup_user",
+    "session_id": "unknown",
+    "action": "encrypt_data",
+    "resource": "user_data",
+    "result": "success_mock",
+    "details": {
+      "data_size": 112,
+      "mock": true
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.481599,
+    "event_type": "data_backup",
+    "user_id": "test_user_123",
+    "session_id": "unknown",
+    "action": "backup_data",
+    "resource": "secure_backup",
+    "result": "success",
+    "details": {
+      "backup_id": "6e521d82-263e-4bb4-bf15-ff3653797342"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.5144906,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "session_0",
+    "result": "logged",
+    "details": {
+      "iteration": 0
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.516347,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "session_1",
+    "result": "logged",
+    "details": {
+      "iteration": 1
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.5178757,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "session_2",
+    "result": "logged",
+    "details": {
+      "iteration": 2
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.5194206,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "session_3",
+    "result": "logged",
+    "details": {
+      "iteration": 3
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.521038,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "session_4",
+    "result": "logged",
+    "details": {
+      "iteration": 4
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.5226638,
+    "event_type": "security_scan",
+    "user_id": "system",
+    "session_id": "unknown",
+    "action": "perform_security_scan",
+    "resource": "security_assessment",
+    "result": "success",
+    "details": {
+      "security_score": 90
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.5278795,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_0",
+    "result": "logged",
+    "details": {
+      "test": "data_0"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.5295873,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_1",
+    "result": "logged",
+    "details": {
+      "test": "data_1"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.5312688,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_2",
+    "result": "logged",
+    "details": {
+      "test": "data_2"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.5329792,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_3",
+    "result": "logged",
+    "details": {
+      "test": "data_3"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.5346215,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_4",
+    "result": "logged",
+    "details": {
+      "test": "data_4"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.5363464,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_5",
+    "result": "logged",
+    "details": {
+      "test": "data_5"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.5380332,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_6",
+    "result": "logged",
+    "details": {
+      "test": "data_6"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.53971,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_7",
+    "result": "logged",
+    "details": {
+      "test": "data_7"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.5414693,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_8",
+    "result": "logged",
+    "details": {
+      "test": "data_8"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759332774.5433705,
+    "event_type": "TEST_EVENT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_9",
+    "result": "logged",
+    "details": {
+      "test": "data_9"
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759333005.9085262,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 0
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759333005.9105241,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 1
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759333005.9123702,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 2
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759333005.9143608,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 3
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759333005.9165132,
+    "event_type": "VOICE_INPUT",
+    "user_id": "test_user",
+    "session_id": "unknown",
+    "action": "audit_log",
+    "resource": "test_session_123",
+    "result": "logged",
+    "details": {
+      "iteration": 4
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759333009.4497051,
+    "event_type": "data_encryption",
+    "user_id": "test_user_123",
+    "session_id": "unknown",
+    "action": "encrypt_data",
+    "resource": "user_data",
+    "result": "success_mock",
+    "details": {
+      "data_size": 20,
+      "mock": true
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759333009.451811,
+    "event_type": "data_decryption",
+    "user_id": "test_user_123",
+    "session_id": "unknown",
+    "action": "decrypt_data",
+    "resource": "user_data",
+    "result": "success_mock",
+    "details": {
+      "data_size": 22,
+      "mock": true
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759333009.454378,
+    "event_type": "data_decryption",
+    "user_id": "different_user",
+    "session_id": "unknown",
+    "action": "decrypt_data",
+    "resource": "user_data",
+    "result": "success_mock",
+    "details": {
+      "data_size": 22,
+      "mock": true
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759333140.261136,
+    "event_type": "data_encryption",
+    "user_id": "test_user_123",
+    "session_id": "unknown",
+    "action": "encrypt_data",
+    "resource": "user_data",
+    "result": "success_mock",
+    "details": {
+      "data_size": 20,
+      "mock": true
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759333140.263291,
+    "event_type": "data_decryption",
+    "user_id": "test_user_123",
+    "session_id": "unknown",
+    "action": "decrypt_data",
+    "resource": "user_data",
+    "result": "success_mock",
+    "details": {
+      "data_size": 22,
+      "mock": true
+    },
+    "ip_address": "",
+    "user_agent": ""
+  },
+  {
+    "timestamp": 1759333201.1721663,
+    "event_type": "audio_encryption",
+    "user_id": "test_user_456",
+    "session_id": "unknown",
+    "action": "encrypt_audio_data",
+    "resource": "audio_data",
+    "result": "success_mock",
+    "details": {
+      "mock": true
+    },
+    "ip_address": "",
+    "user_agent": ""
+  }
+]

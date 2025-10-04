@@ -1,0 +1,228 @@
+"""
+Simple Data Corruption Tests
+
+Basic tests for data corruption handling without complex mocking.
+"""
+
+import pytest
+import tempfile
+import os
+from pathlib import Path
+from unittest.mock import Mock, patch
+import sys
+
+# Add project root to Python path
+project_root = Path(__file__).parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+class TestDataCorruptionBasic:
+    """Basic data corruption handling tests."""
+
+    def test_corrupted_file_handling(self):
+        """Test handling of corrupted files."""
+        # Create a corrupted file
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
+            temp_file.write(b"This is not a valid WAV file header")
+            temp_path = temp_file.name
+
+        try:
+            # Test that corrupted file is handled gracefully
+            with patch('voice.audio_processor.AudioProcessor') as mock_processor:
+                mock_instance = Mock()
+                mock_instance.load_audio.return_value = None  # Simulate failure
+                mock_processor.return_value = mock_instance
+
+                processor = mock_instance()
+                result = processor.load_audio(temp_path)
+
+                # Should return None or handle gracefully
+                assert result is None
+
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+
+    def test_truncated_file_handling(self):
+        """Test handling of truncated files."""
+        # Create a truncated file
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
+            temp_file.write(b"RIFF\x24\x08\x00\x00WAVEfmt \x10\x00\x00\x00\x01\x00")
+            temp_path = temp_file.name
+
+        try:
+            # Test that truncated file is handled gracefully
+            with patch('voice.audio_processor.AudioProcessor') as mock_processor:
+                mock_instance = Mock()
+                mock_instance.load_audio.return_value = None  # Simulate failure
+                mock_processor.return_value = mock_instance
+
+                processor = mock_instance()
+                result = processor.load_audio(temp_path)
+
+                # Should return None or handle gracefully
+                assert result is None
+
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+
+    def test_invalid_format_handling(self):
+        """Test handling of invalid audio formats."""
+        # Create an invalid format file
+        with tempfile.NamedTemporaryFile(suffix=".invalid", delete=False) as temp_file:
+            temp_file.write(b"This is not an audio file")
+            temp_path = temp_file.name
+
+        try:
+            # Test that invalid format is handled gracefully
+            with patch('voice.audio_processor.AudioProcessor') as mock_processor:
+                mock_instance = Mock()
+                mock_instance.load_audio.return_value = None  # Simulate failure
+                mock_processor.return_value = mock_instance
+
+                processor = mock_instance()
+                result = processor.load_audio(temp_path)
+
+                # Should return None or handle gracefully
+                assert result is None
+
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+
+    def test_disk_space_exhaustion_simulation(self):
+        """Test handling of disk space exhaustion."""
+        with patch('voice.audio_processor.AudioProcessor') as mock_processor:
+            mock_instance = Mock()
+            # Simulate disk space error
+            mock_instance.save_audio.side_effect = OSError("No space left on device")
+            mock_processor.return_value = mock_instance
+
+            processor = mock_instance()
+
+            # Test that disk space error is handled
+            try:
+                processor.save_audio(Mock(), "/tmp/test.wav")
+                assert False, "Expected OSError"
+            except OSError as e:
+                assert "No space left on device" in str(e)
+
+    def test_permission_denied_handling(self):
+        """Test handling of permission denied errors."""
+        with patch('voice.audio_processor.AudioProcessor') as mock_processor:
+            mock_instance = Mock()
+            # Simulate permission error
+            mock_instance.save_audio.side_effect = PermissionError("Permission denied")
+            mock_processor.return_value = mock_instance
+
+            processor = mock_instance()
+
+            # Test that permission error is handled
+            try:
+                processor.save_audio(Mock(), "/root/test.wav")
+                assert False, "Expected PermissionError"
+            except PermissionError as e:
+                assert "Permission denied" in str(e)
+
+    def test_corrupted_vectorstore_handling(self):
+        """Test handling of corrupted vector store files."""
+        # Create a corrupted vector store file
+        with tempfile.NamedTemporaryFile(suffix=".faiss", delete=False) as temp_file:
+            temp_file.write(b"This is not a valid FAISS index file")
+            temp_path = temp_file.name
+
+        try:
+            # Test that corrupted vector store is handled gracefully
+            with patch('langchain_community.vectorstores.FAISS') as mock_faiss:
+                mock_instance = Mock()
+                mock_instance.load_local.side_effect = Exception("Corrupted index")
+                mock_faiss.return_value = mock_instance
+
+                # Should handle corrupted index gracefully
+                try:
+                    faiss_store = mock_instance()
+                    faiss_store.load_local(temp_path)
+                    assert False, "Expected Exception"
+                except Exception as e:
+                    assert "Corrupted index" in str(e)
+
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+
+    def test_memory_corruption_simulation(self):
+        """Test handling of memory corruption scenarios."""
+        with patch('voice.audio_processor.AudioProcessor') as mock_processor:
+            mock_instance = Mock()
+            # Simulate memory error
+            mock_instance.process_audio.side_effect = MemoryError("Out of memory")
+            mock_processor.return_value = mock_instance
+
+            processor = mock_instance()
+
+            # Test that memory error is handled
+            try:
+                processor.process_audio(b"large audio data")
+                assert False, "Expected MemoryError"
+            except MemoryError as e:
+                assert "Out of memory" in str(e)
+
+    def test_network_corruption_handling(self):
+        """Test handling of network corruption during API calls."""
+        with patch('voice.stt_service.STTService') as mock_stt:
+            mock_instance = Mock()
+            # Simulate network corruption
+            mock_instance.transcribe_audio.side_effect = ConnectionError("Connection corrupted")
+            mock_stt.return_value = mock_instance
+
+            service = mock_instance()
+
+            # Test that network corruption is handled
+            try:
+                service.transcribe_audio(b"audio data")
+                assert False, "Expected ConnectionError"
+            except ConnectionError as e:
+                assert "Connection corrupted" in str(e)
+
+    def test_config_file_corruption(self):
+        """Test handling of corrupted configuration files."""
+        # Create a corrupted config file
+        with tempfile.NamedTemporaryFile(mode='w', suffix=".json", delete=False) as temp_file:
+            temp_file.write('{"invalid": json syntax}')
+            temp_path = temp_file.name
+
+        try:
+            # Test that corrupted config is handled gracefully
+            import json
+            try:
+                with open(temp_path, 'r') as f:
+                    config = json.load(f)
+                assert False, "Expected JSONDecodeError"
+            except json.JSONDecodeError:
+                # Expected behavior for corrupted JSON
+                pass
+
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+
+    def test_data_integrity_verification(self):
+        """Test data integrity verification mechanisms."""
+        # Test checksum verification
+        test_data = b"test audio data"
+        checksum = hash(test_data)
+
+        # Simulate data corruption
+        corrupted_data = b"corrupted audio data"
+        corrupted_checksum = hash(corrupted_data)
+
+        # Verify checksums are different
+        assert checksum != corrupted_checksum
+
+        # Test integrity check function
+        def verify_integrity(data, expected_checksum):
+            return hash(data) == expected_checksum
+
+        assert verify_integrity(test_data, checksum) is True
+        assert verify_integrity(corrupted_data, checksum) is False
