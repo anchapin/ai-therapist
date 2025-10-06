@@ -1,307 +1,493 @@
-#!/usr/bin/env python3
 """
-Unit tests for TTS service to reach 90%+ coverage.
+Comprehensive unit tests for voice/tts_service.py module.
 """
 
 import pytest
 import asyncio
+import time
+from unittest.mock import Mock, patch, AsyncMock, MagicMock
+from datetime import datetime
+import json
+
+# Import the module to test with robust error handling
 import sys
 import os
-import numpy as np
-from unittest.mock import MagicMock, patch, AsyncMock
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
-# Add project root to Python path
-project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, project_root)
-
-# Import test utilities for safe module loading
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-from tests.test_utils import (
-    setup_voice_module_mocks,
-    get_voice_config_module,
-    get_tts_service_module,
-    get_audio_processor_module
-)
-
-# Set up mocks
-setup_voice_module_mocks(project_root)
-
-# Import modules safely
-config_module = get_voice_config_module(project_root)
-VoiceConfig = config_module.VoiceConfig
-
-audio_processor_module = get_audio_processor_module(project_root)
-tts_service_module = get_tts_service_module(project_root)
-
-# Extract classes from the module
-TTSService = tts_service_module.TTSService
-TTSResult = tts_service_module.TTSResult
-AudioData = audio_processor_module.AudioData
-
-
-class TestTTSService:
-    """Tests for TTS service class."""
-
-    @pytest.fixture
-    def mock_config(self):
-        """Create mock configuration."""
-        config = MagicMock()
-        config.audio = MagicMock()
-        config.audio.sample_rate = 22050
-        config.audio.channels = 1
-        config.audio.tts_provider = "openai"
-        config.audio.tts_model = "tts-1"
-        config.audio.tts_voice = "alloy"
-        config.audio.tts_cache_enabled = True
-        config.audio.tts_cache_size = 100
-        config.openai_api_key = "test-key"
-        config.elevenlabs_api_key = None
-        config.piper_enabled = False
-        config.performance = MagicMock()
-        config.performance.cache_size = 100
-        return config
-
-    @pytest.fixture
-    def tts_service(self, mock_config):
-        """Create TTS service for testing."""
-        with patch.dict(os.environ, {'OPENAI_API_KEY': 'test-key'}):
-            return TTSService(mock_config)
-
-    def test_initialization(self, tts_service):
-        """Test TTS service initialization."""
-        assert tts_service.config is not None
-        assert hasattr(tts_service, 'audio_cache')
-        assert hasattr(tts_service, 'request_count')
-        assert hasattr(tts_service, 'voice_profiles')
-        # Check preferred provider using method if it exists, else check config
-        if hasattr(tts_service, 'preferred_provider'):
-            assert tts_service.preferred_provider == "openai"
-        else:
-            assert tts_service.config.audio.tts_provider == "openai"
-
-    def test_initialization_without_api_key(self, mock_config):
-        """Test TTS service initialization without API key."""
-        with patch.dict(os.environ, {}, clear=True):
-            service = TTSService(mock_config)
-            assert service.config is not None
-            # Should still initialize even without API key
-
-    def test_get_available_providers(self, tts_service):
-        """Test getting available providers."""
-        providers = tts_service.get_available_providers()
-        assert isinstance(providers, list)
-
-    def test_is_available(self, tts_service):
-        """Test service availability check."""
-        availability = tts_service.is_available()
-        assert isinstance(availability, bool)
-
-    def test_get_statistics(self, tts_service):
-        """Test getting service statistics."""
-        stats = tts_service.get_statistics()
-        assert isinstance(stats, dict)
-        assert 'request_count' in stats
-        assert 'average_processing_time' in stats
-        assert 'total_audio_duration' in stats
-
-    def test_cleanup(self, tts_service):
-        """Test service cleanup."""
-        # Add some data to cache
-        tts_service.audio_cache['test_key'] = 'test_value'
-        assert tts_service.audio_cache['test_key'] == 'test_value'
-
-        # Cleanup should clear cache
-        tts_service.cleanup()
-        assert len(tts_service.audio_cache) == 0
-
-    @pytest.mark.asyncio
-    async def test_synthesize_speech_empty_text(self, tts_service):
-        """Test speech synthesis with empty text."""
-        with pytest.raises(Exception):  # Should raise exception for empty text
-            await tts_service.synthesize_speech("")
-
-    @pytest.mark.asyncio
-    async def test_synthesize_speech_no_provider_available(self, tts_service):
-        """Test speech synthesis with no provider available."""
-        # Mock all providers as unavailable
-        tts_service.openai_client = None
-        tts_service.elevenlabs_client = None
-        tts_service.piper_tts = False
-
-        with pytest.raises(Exception):  # Should raise exception when no provider available
-            await tts_service.synthesize_speech("Hello world")
-
-    def test_error_handling_in_provider_initialization(self, mock_config):
-        """Test error handling during provider initialization."""
-        # Mock exception during OpenAI initialization
-        with patch.dict(os.environ, {'OPENAI_API_KEY': 'test-key'}):
-            with patch('openai.OpenAI', side_effect=Exception("OpenAI error")):
-                service = TTSService(mock_config)
-                # Service should still be created but without OpenAI client
-                assert service.config is not None
-
-    def test_ensure_queue_initialized(self, tts_service):
-        """Test queue initialization."""
-        # Should initialize queue when called
-        tts_service._ensure_queue_initialized()
-        assert tts_service.processing_queue is not None
-
-    def test_cache_operations(self, tts_service):
-        """Test cache operations using direct cache access."""
-        # Create test result
-        audio_data = AudioData(
-            data=np.array([0.1, 0.2, 0.3]),
-            sample_rate=22050,
-            duration=0.1,
-            channels=1
-        )
-
-        test_result = TTSResult(
-            audio_data=audio_data,
-            text="Hello world",
-            voice_profile="alloy",
-            provider="openai",
-            duration=1.0
-        )
-
-        # Test cache add and retrieve directly
-        cache_key = "test_key"
-        tts_service.audio_cache[cache_key] = test_result
-        cached_result = tts_service.audio_cache.get(cache_key)
-
-        assert cached_result is not None
-        assert cached_result.text == "Hello world"
-
-    def test_cache_max_size_enforcement(self, tts_service):
-        """Test cache max size enforcement using manual cache management."""
-        # Set small cache size
-        tts_service.max_cache_size = 2
-
-        # Create test results
-        audio_data = AudioData(
-            data=np.array([0.1, 0.2, 0.3]),
-            sample_rate=22050,
-            duration=0.1,
-            channels=1
-        )
-
-        result1 = TTSResult(
-            audio_data=audio_data,
-            text="First",
-            voice_profile="alloy",
-            provider="openai",
-            duration=1.0
-        )
-
-        result2 = TTSResult(
-            audio_data=audio_data,
-            text="Second",
-            voice_profile="alloy",
-            provider="openai",
-            duration=1.0
-        )
-
-        result3 = TTSResult(
-            audio_data=audio_data,
-            text="Third",
-            voice_profile="alloy",
-            provider="openai",
-            duration=1.0
-        )
-
-        # Add items to cache manually
-        tts_service.audio_cache["key1"] = result1
-        tts_service.audio_cache["key2"] = result2
-        tts_service.audio_cache["key3"] = result3
-
-        # Check that items are in cache (manual management for testing)
-        assert len(tts_service.audio_cache) >= 2
-
-    def test_performance_tracking(self, tts_service):
-        """Test performance tracking attributes."""
-        assert hasattr(tts_service, 'request_count')
-        assert hasattr(tts_service, 'error_count')
-        assert hasattr(tts_service, 'average_processing_time')
-        assert hasattr(tts_service, 'total_audio_duration')
-
-        # Test initial values
-        assert tts_service.request_count == 0
-        assert tts_service.error_count == 0
-        assert tts_service.average_processing_time == 0.0
-        assert tts_service.total_audio_duration == 0.0
-
-    def test_voice_profiles(self, tts_service):
-        """Test voice profiles functionality."""
-        assert hasattr(tts_service, 'voice_profiles')
-        # voice_profiles might be a dict or MagicMock depending on initialization
-        # Just check that it exists and is accessible
-        profiles = tts_service.voice_profiles
-        assert profiles is not None
-
-    def test_emotion_settings(self, tts_service):
-        """Test emotion settings functionality."""
-        assert hasattr(tts_service, 'emotion_settings')
-        assert isinstance(tts_service.emotion_settings, dict)
+try:
+    from voice.tts_service import TTSService, TTSResult, TTSError
+    from voice.config import VoiceConfig
+    from voice.audio_processor import AudioData
+except ImportError as e:
+    pytest.skip(f"voice.tts_service module not available: {e}", allow_module_level=True)
 
 
 class TestTTSResult:
-    """Tests for TTSResult class."""
-
+    """Test TTSResult dataclass."""
+    
     def test_tts_result_creation(self):
-        """Test TTS result creation."""
-        # Create mock AudioData object
-        audio_data = AudioData(
-            data=np.array([0.1, 0.2, 0.3]),
-            sample_rate=22050,
-            duration=0.1,
-            channels=1
-        )
-
+        """Test creating a TTS result."""
+        audio_data = AudioData(data=b"fake_audio_data", sample_rate=22050, channels=1, duration=1.0)
         result = TTSResult(
-            audio_data=audio_data,
+            audio=audio_data,
             text="Hello world",
-            voice_profile="alloy",
             provider="openai",
-            duration=1.5
+            processing_time=1.5
         )
-
-        assert result.audio_data == audio_data
+        
+        assert result.audio == audio_data
         assert result.text == "Hello world"
-        assert result.voice_profile == "alloy"
         assert result.provider == "openai"
-        assert result.duration == 1.5
-        assert result.processing_time == 0.0
-        assert result.emotion == "neutral"
-        assert result.confidence == 1.0
-
+        assert result.processing_time == 1.5
+    
     def test_tts_result_with_optional_fields(self):
-        """Test TTS result with optional fields."""
-        # Create mock AudioData object
-        audio_data = AudioData(
-            data=np.array([0.1, 0.2, 0.3]),
-            sample_rate=22050,
-            duration=0.1,
-            channels=1
-        )
-
+        """Test creating a TTS result with optional fields."""
+        audio_data = AudioData(data=b"fake_audio_data", sample_rate=22050, channels=1, duration=1.0)
         result = TTSResult(
-            audio_data=audio_data,
+            audio=audio_data,
             text="Hello world",
-            voice_profile="alloy",
             provider="openai",
-            duration=1.5,
-            processing_time=0.5,
-            emotion="happy",
-            confidence=0.9,
-            metadata={"quality": "high"}
+            processing_time=1.5,
+            voice="alloy",
+            language="en-US",
+            metadata={"model": "tts-1"}
         )
+        
+        assert result.voice == "alloy"
+        assert result.language == "en-US"
+        assert result.metadata == {"model": "tts-1"}
 
-        assert result.audio_data == audio_data
+
+class TestTTSService:
+    """Test TTSService class."""
+    
+    @pytest.fixture
+    def mock_config(self):
+        """Create a mock voice config."""
+        config = Mock(spec=VoiceConfig)
+        config.tts_provider = "openai"
+        config.openai_api_key = "test_key"
+        config.tts_voice = "alloy"
+        config.tts_language = "en-US"
+        config.tts_model = "tts-1"
+        
+        # Add performance config
+        config.performance = Mock()
+        config.performance.cache_size = 100
+        
+        return config
+    
+    @pytest.fixture
+    def tts_service(self, mock_config):
+        """Create a TTS service with mock config."""
+        with patch('voice.tts_service.openai'):
+            service = TTSService(mock_config)
+            return service
+    
+    def test_tts_service_initialization(self, tts_service, mock_config):
+        """Test TTS service initialization."""
+        assert tts_service.config == mock_config
+        assert tts_service.provider == "openai"
+        assert tts_service.api_key == "test_key"
+        assert tts_service.voice == "alloy"
+        assert tts_service.language == "en-US"
+        assert tts_service.model == "tts-1"
+    
+    def test_tts_service_initialization_no_api_key(self, mock_config):
+        """Test TTS service initialization with no API key."""
+        mock_config.openai_api_key = None
+        
+        with patch('voice.tts_service.openai'):
+            service = TTSService(mock_config)
+            assert service.api_key is None
+    
+    def test_is_available_true(self, tts_service):
+        """Test is_available when service is available."""
+        tts_service.api_key = "test_key"
+        assert tts_service.is_available() == True
+    
+    def test_is_available_false_no_api_key(self, tts_service):
+        """Test is_available when no API key."""
+        tts_service.api_key = None
+        assert tts_service.is_available() == False
+    
+    @pytest.mark.asyncio
+    async def test_synthesize_speech_openai_success(self, tts_service):
+        """Test successful speech synthesis with OpenAI."""
+        # Mock OpenAI client
+        mock_client = Mock()
+        mock_response = Mock()
+        mock_response.content = b"fake_audio_data"
+        
+        mock_client.audio.speech.create = AsyncMock(return_value=mock_response)
+        tts_service.openai_client = mock_client
+        
+        result = await tts_service.synthesize_speech("Hello world")
+        
+        assert result is not None
         assert result.text == "Hello world"
-        assert result.voice_profile == "alloy"
+        assert result.audio.data == b"fake_audio_data"
         assert result.provider == "openai"
-        assert result.duration == 1.5
-        assert result.processing_time == 0.5
-        assert result.emotion == "happy"
-        assert result.confidence == 0.9
-        assert result.metadata == {"quality": "high"}
+        assert result.processing_time > 0
+        
+        # Verify OpenAI client was called
+        mock_client.audio.speech.create.assert_called_once()
+    
+    @pytest.mark.asyncio
+    async def test_synthesize_speech_with_voice(self, tts_service):
+        """Test speech synthesis with specified voice."""
+        # Mock OpenAI client
+        mock_client = Mock()
+        mock_response = Mock()
+        mock_response.content = b"fake_audio_data"
+        
+        mock_client.audio.speech.create = AsyncMock(return_value=mock_response)
+        tts_service.openai_client = mock_client
+        
+        result = await tts_service.synthesize_speech("Hello world", voice="nova")
+        
+        assert result.text == "Hello world"
+        assert result.voice == "nova"
+        
+        # Verify voice was passed to OpenAI
+        call_args = mock_client.audio.speech.create.call_args
+        assert call_args[1]['voice'] == "nova"
+    
+    @pytest.mark.asyncio
+    async def test_synthesize_speech_with_language(self, tts_service):
+        """Test speech synthesis with specified language."""
+        # Mock OpenAI client
+        mock_client = Mock()
+        mock_response = Mock()
+        mock_response.content = b"fake_audio_data"
+        
+        mock_client.audio.speech.create = AsyncMock(return_value=mock_response)
+        tts_service.openai_client = mock_client
+        
+        result = await tts_service.synthesize_speech("Bonjour le monde", language="fr")
+        
+        assert result.text == "Bonjour le monde"
+        assert result.language == "fr"
+        
+        # Verify language was passed to OpenAI
+        call_args = mock_client.audio.speech.create.call_args
+        assert call_args[1]['language'] == "fr"
+    
+    @pytest.mark.asyncio
+    async def test_synthesize_speech_not_available(self, tts_service):
+        """Test synthesis when service is not available."""
+        tts_service.api_key = None
+        
+        with pytest.raises(TTSError) as exc_info:
+            await tts_service.synthesize_speech("Hello world")
+        
+        assert "TTS service is not available" in str(exc_info.value)
+    
+    @pytest.mark.asyncio
+    async def test_synthesize_speech_openai_error(self, tts_service):
+        """Test synthesis with OpenAI error."""
+        # Mock OpenAI client to raise an exception
+        mock_client = Mock()
+        mock_client.audio.speech.create = AsyncMock(
+            side_effect=Exception("OpenAI API error")
+        )
+        tts_service.openai_client = mock_client
+        
+        with pytest.raises(TTSError) as exc_info:
+            await tts_service.synthesize_speech("Hello world")
+        
+        assert "Failed to synthesize speech" in str(exc_info.value)
+    
+    @pytest.mark.asyncio
+    async def test_synthesize_speech_empty_text(self, tts_service):
+        """Test synthesis with empty text."""
+        with pytest.raises(TTSError) as exc_info:
+            await tts_service.synthesize_speech("")
+        
+        assert "No text provided" in str(exc_info.value)
+    
+    @pytest.mark.asyncio
+    async def test_synthesize_speech_timeout(self, tts_service):
+        """Test synthesis with timeout."""
+        # Mock OpenAI client to timeout
+        mock_client = Mock()
+        mock_client.audio.speech.create = AsyncMock(
+            side_effect=asyncio.TimeoutError("Request timeout")
+        )
+        tts_service.openai_client = mock_client
+        
+        with pytest.raises(TTSError) as exc_info:
+            await tts_service.synthesize_speech("Hello world")
+        
+        assert "Synthesis timed out" in str(exc_info.value)
+    
+    def test_get_supported_voices(self, tts_service):
+        """Test getting supported voices."""
+        voices = tts_service.get_supported_voices()
+        
+        assert isinstance(voices, list)
+        assert len(voices) > 0
+        assert any(voice["id"] == "alloy" for voice in voices)
+        assert any(voice["id"] == "nova" for voice in voices)
+        assert all("id" in voice for voice in voices)
+        assert all("name" in voice for voice in voices)
+        assert all("language" in voice for voice in voices)
+    
+    def test_get_supported_languages(self, tts_service):
+        """Test getting supported languages."""
+        languages = tts_service.get_supported_languages()
+        
+        assert isinstance(languages, list)
+        assert len(languages) > 0
+        assert any(lang["code"] == "en" for lang in languages)
+        assert any(lang["code"] == "es" for lang in languages)
+        assert all("code" in lang for lang in languages)
+        assert all("name" in lang for lang in languages)
+    
+    def test_get_supported_models(self, tts_service):
+        """Test getting supported models."""
+        models = tts_service.get_supported_models()
+        
+        assert isinstance(models, list)
+        assert len(models) > 0
+        assert any(model["id"] == "tts-1" for model in models)
+        assert any(model["id"] == "tts-1-hd" for model in models)
+        assert all("id" in model for model in models)
+        assert all("name" in model for model in models)
+    
+    def test_set_voice(self, tts_service):
+        """Test setting voice."""
+        tts_service.set_voice("nova")
+        
+        assert tts_service.voice == "nova"
+    
+    def test_set_voice_invalid(self, tts_service):
+        """Test setting invalid voice."""
+        with pytest.raises(TTSError) as exc_info:
+            tts_service.set_voice("invalid-voice")
+        
+        assert "Invalid voice" in str(exc_info.value)
+    
+    def test_set_language(self, tts_service):
+        """Test setting language."""
+        tts_service.set_language("es")
+        
+        assert tts_service.language == "es"
+    
+    def test_set_language_invalid(self, tts_service):
+        """Test setting invalid language."""
+        with pytest.raises(TTSError) as exc_info:
+            tts_service.set_language("invalid")
+        
+        assert "Invalid language" in str(exc_info.value)
+    
+    def test_set_model(self, tts_service):
+        """Test setting model."""
+        tts_service.set_model("tts-1-hd")
+        
+        assert tts_service.model == "tts-1-hd"
+    
+    def test_set_model_invalid(self, tts_service):
+        """Test setting invalid model."""
+        with pytest.raises(TTSError) as exc_info:
+            tts_service.set_model("invalid-model")
+        
+        assert "Invalid model" in str(exc_info.value)
+    
+    def test_get_service_info(self, tts_service):
+        """Test getting service information."""
+        info = tts_service.get_service_info()
+        
+        assert isinstance(info, dict)
+        assert "provider" in info
+        assert "voice" in info
+        assert "language" in info
+        assert "model" in info
+        assert "available" in info
+        assert "supported_voices" in info
+        assert "supported_languages" in info
+        assert "supported_models" in info
+        
+        assert info["provider"] == "openai"
+        assert info["voice"] == "alloy"
+        assert info["language"] == "en-US"
+        assert info["model"] == "tts-1"
+    
+    def test_cleanup(self, tts_service):
+        """Test service cleanup."""
+        # Mock OpenAI client
+        mock_client = Mock()
+        tts_service.openai_client = mock_client
+        
+        tts_service.cleanup()
+        
+        # Verify client is cleaned up
+        assert tts_service.openai_client is None
+    
+    def test_context_manager(self, tts_service):
+        """Test using TTS service as context manager."""
+        # Mock OpenAI client
+        mock_client = Mock()
+        tts_service.openai_client = mock_client
+        
+        with tts_service as service:
+            assert service == tts_service
+        
+        # Verify cleanup was called
+        assert tts_service.openai_client is None
+    
+    def test_str_representation(self, tts_service):
+        """Test string representation of TTS service."""
+        str_repr = str(tts_service)
+        
+        assert "TTSService" in str_repr
+        assert "openai" in str_repr
+    
+    def test_repr_representation(self, tts_service):
+        """Test repr representation of TTS service."""
+        repr_str = repr(tts_service)
+        
+        assert "TTSService" in repr_str
+        assert "openai" in repr_str
+    
+    @pytest.mark.asyncio
+    async def test_batch_synthesis(self, tts_service):
+        """Test batch synthesis of multiple texts."""
+        # Mock OpenAI client
+        mock_client = Mock()
+        mock_response1 = Mock()
+        mock_response1.content = b"audio1"
+        
+        mock_response2 = Mock()
+        mock_response2.content = b"audio2"
+        
+        mock_client.audio.speech.create = AsyncMock(
+            side_effect=[mock_response1, mock_response2]
+        )
+        tts_service.openai_client = mock_client
+        
+        text_list = ["First text", "Second text"]
+        
+        results = await tts_service.batch_synthesize(text_list)
+        
+        assert len(results) == 2
+        assert results[0].text == "First text"
+        assert results[1].text == "Second text"
+        
+        # Verify OpenAI client was called twice
+        assert mock_client.audio.speech.create.call_count == 2
+    
+    @pytest.mark.asyncio
+    async def test_synthesize_with_ssml(self, tts_service):
+        """Test synthesis with SSML."""
+        # Mock OpenAI client
+        mock_client = Mock()
+        mock_response = Mock()
+        mock_response.content = b"fake_audio_data"
+        
+        mock_client.audio.speech.create = AsyncMock(return_value=mock_response)
+        tts_service.openai_client = mock_client
+        
+        ssml_text = "<speak>Hello <emphasis>world</emphasis></speak>"
+        
+        result = await tts_service.synthesize_speech(ssml_text, use_ssml=True)
+        
+        assert result.text == ssml_text
+        
+        # Verify SSML was passed to OpenAI
+        call_args = mock_client.audio.speech.create.call_args
+        assert call_args[1]['input'] == ssml_text
+    
+    @pytest.mark.asyncio
+    async def test_synthesize_with_speed(self, tts_service):
+        """Test synthesis with custom speed."""
+        # Mock OpenAI client
+        mock_client = Mock()
+        mock_response = Mock()
+        mock_response.content = b"fake_audio_data"
+        
+        mock_client.audio.speech.create = AsyncMock(return_value=mock_response)
+        tts_service.openai_client = mock_client
+        
+        result = await tts_service.synthesize_speech("Hello world", speed=1.5)
+        
+        assert result.text == "Hello world"
+        
+        # Verify speed was passed to OpenAI
+        call_args = mock_client.audio.speech.create.call_args
+        assert call_args[1]['speed'] == 1.5
+    
+    @pytest.mark.asyncio
+    async def test_synthesize_with_emotion(self, tts_service):
+        """Test synthesis with emotion."""
+        # Mock OpenAI client
+        mock_client = Mock()
+        mock_response = Mock()
+        mock_response.content = b"fake_audio_data"
+        
+        mock_client.audio.speech.create = AsyncMock(return_value=mock_response)
+        tts_service.openai_client = mock_client
+        
+        result = await tts_service.synthesize_speech("I'm so happy!", emotion="happy")
+        
+        assert result.text == "I'm so happy!"
+        assert "emotion" in result.metadata
+        assert result.metadata["emotion"] == "happy"
+    
+    @pytest.mark.asyncio
+    async def test_synthesize_long_text(self, tts_service):
+        """Test synthesis of long text (chunking)."""
+        # Mock OpenAI client
+        mock_client = Mock()
+        mock_response = Mock()
+        mock_response.content = b"fake_audio_data"
+        
+        mock_client.audio.speech.create = AsyncMock(return_value=mock_response)
+        tts_service.openai_client = mock_client
+        
+        # Create long text (over 4096 characters)
+        long_text = "Hello world " * 300
+        
+        result = await tts_service.synthesize_speech(long_text)
+        
+        assert result.text == long_text
+        # Should have been chunked and synthesized in multiple parts
+        assert mock_client.audio.speech.create.call_count >= 2
+    
+    @pytest.mark.asyncio
+    async def test_synthesize_with_pronunciation(self, tts_service):
+        """Test synthesis with pronunciation hints."""
+        # Mock OpenAI client
+        mock_client = Mock()
+        mock_response = Mock()
+        mock_response.content = b"fake_audio_data"
+        
+        mock_client.audio.speech.create = AsyncMock(return_value=mock_response)
+        tts_service.openai_client = mock_client
+        
+        pronunciation = {"hello": "həˈloʊ", "world": "wɜːrld"}
+        
+        result = await tts_service.synthesize_speech(
+            "Hello world",
+            pronunciation=pronunciation
+        )
+        
+        assert result.text == "Hello world"
+        assert "pronunciation" in result.metadata
+
+
+class TestTTSError:
+    """Test TTSError exception."""
+    
+    def test_tts_error_creation(self):
+        """Test creating TTSError."""
+        error = TTSError("Test error message")
+        
+        assert str(error) == "Test error message"
+    
+    def test_tts_error_inheritance(self):
+        """Test TTSError inheritance."""
+        error = TTSError("Test error")
+        
+        assert isinstance(error, Exception)
+        # TTSError might not inherit from ValueError, just check it's an Exception

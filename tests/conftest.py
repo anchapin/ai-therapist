@@ -75,12 +75,12 @@ class TestEnvironmentManager:
         for var in test_env_vars:
             self.original_env[var] = os.getenv(var, '')
 
-        # Create test environment file
+        # Create test environment file with MOCK configuration
         test_env_content = {
-            'OPENAI_API_KEY': 'sk-test-openai-api-key-for-testing-purposes-only-not-functional',
-            'ELEVENLABS_API_KEY': 'sk-test-elevenlabs-api-key-for-testing-purposes-only-not-functional',
-            'ELEVENLABS_VOICE_ID': 'test_voice_id_for_testing',
-            'GOOGLE_CLOUD_PROJECT_ID': 'test-project-id-for-testing',
+            'OPENAI_API_KEY': 'mock_openai_key_for_testing',
+            'ELEVENLABS_API_KEY': 'mock_elevenlabs_key_for_testing',
+            'ELEVENLABS_VOICE_ID': 'mock_voice_id_for_testing',
+            'GOOGLE_CLOUD_PROJECT_ID': 'mock-project-id-for-testing',
             'GOOGLE_CLOUD_CREDENTIALS_PATH': str(self.credentials_dir / 'google-cloud-credentials.json'),
             'VOICE_PROFILE_PATH': str(self.voice_profiles_dir),
             'VOICE_LOG_LEVEL': 'DEBUG',
@@ -91,7 +91,14 @@ class TestEnvironmentManager:
             'OLLAMA_MODEL': 'llama3.2:latest',
             'OLLAMA_EMBEDDING_MODEL': 'nomic-embed-text:latest',
             'KNOWLEDGE_PATH': str(self.temp_dir / 'test_knowledge'),
-            'VECTORSTORE_PATH': str(self.vectorstore_dir)
+            'VECTORSTORE_PATH': str(self.vectorstore_dir),
+            # Force mock mode for all voice services
+            'VOICE_MOCK_MODE': 'true',
+            'VOICE_FORCE_MOCK_SERVICES': 'true',
+            'STT_PROVIDER': 'mock',
+            'TTS_PROVIDER': 'mock',
+            'MOCK_AUDIO_INPUT': 'true',
+            'DISABLE_REAL_API_CALLS': 'true'
         }
 
         with open(self.test_env_file, 'w') as f:
@@ -437,3 +444,50 @@ def performance_voice_config():
     config.performance.parallel_processing = True
     config.performance.max_concurrent_requests = 3
     return config
+
+
+@pytest.fixture(autouse=True)
+def force_mock_configuration(isolated_test_env):
+    """Force all tests to use mock configurations instead of real APIs."""
+    # Apply mock environment variables
+    os.environ.update({
+        'VOICE_MOCK_MODE': 'true',
+        'VOICE_FORCE_MOCK_SERVICES': 'true',
+        'STT_PROVIDER': 'mock',
+        'TTS_PROVIDER': 'mock',
+        'MOCK_AUDIO_INPUT': 'true',
+        'DISABLE_REAL_API_CALLS': 'true',
+        'OPENAI_API_KEY': 'mock_openai_key_for_testing',
+        'ELEVENLABS_API_KEY': 'mock_elevenlabs_key_for_testing',
+        'ELEVENLABS_VOICE_ID': 'mock_voice_id_for_testing',
+        'GOOGLE_CLOUD_PROJECT_ID': 'mock-project-id-for-testing'
+    })
+    
+    # Mock sounddevice and other audio dependencies
+    sys.modules['sounddevice'] = MagicMock()
+    sys.modules['sounddevice'].default = MagicMock()
+    sys.modules['sounddevice'].rec = MagicMock(return_value=np.array([0.1, 0.2, 0.3]))
+    sys.modules['sounddevice'].play = MagicMock()
+    sys.modules['sounddevice'].query_devices = MagicMock(return_value=[])
+    sys.modules['sounddevice'].default.device = (0, 0)
+    
+    # Mock pyaudio
+    pyaudio_mock = MagicMock()
+    pyaudio_mock.PyAudio.return_value = MagicMock()
+    pyaudio_mock.PyAudio.return_value.get_device_info_by_index.return_value = {
+        'name': 'Mock Device',
+        'maxInputChannels': 1,
+        'maxOutputChannels': 2
+    }
+    sys.modules['pyaudio'] = pyaudio_mock
+    
+    yield
+    
+    # Cleanup is handled by the isolated_test_env fixture
+
+
+@pytest.fixture
+def mock_voice_config_from_file():
+    """Load mock configuration from voice/mock_config.py."""
+    from voice.mock_config import create_mock_voice_config
+    return create_mock_voice_config()

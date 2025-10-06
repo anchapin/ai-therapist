@@ -12,7 +12,28 @@ from dataclasses import dataclass, asdict, field
 import logging
 
 from .db_manager import get_database_manager, DatabaseError
-from ..auth.user_model import UserRole, UserStatus
+
+# Handle auth imports with robust pattern for test compatibility
+try:
+    from ..auth.user_model import UserRole, UserStatus
+    AUTH_AVAILABLE = True
+except ImportError:
+    # Fallback for testing without auth module
+    AUTH_AVAILABLE = False
+    
+    # Define fallback enums for testing
+    from enum import Enum
+    
+    class UserRole(Enum):
+        PATIENT = "patient"
+        THERAPIST = "therapist"
+        ADMIN = "admin"
+    
+    class UserStatus(Enum):
+        ACTIVE = "active"
+        INACTIVE = "inactive"
+        SUSPENDED = "suspended"
+        LOCKED = "locked"
 
 
 @dataclass

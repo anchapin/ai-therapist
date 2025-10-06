@@ -73,7 +73,7 @@ class SessionManager:
         self.config = config or {}
         self.max_sessions_per_user = self.config.get('max_sessions_per_user', 5)
         self.session_timeout_minutes = self.config.get('session_timeout_minutes', 30)
-        self.sessions: Dict[str, Dict[str, Any]] = {}
+        self.sessions: Dict[str, Session] = {}
         self.user_sessions: Dict[str, Set[str]] = {}
         self.lock = threading.Lock()
     
@@ -155,7 +155,7 @@ class SessionManager:
             expired_sessions = []
             
             for session_id, session in self.sessions.items():
-                if session['active'] and current_time - session['last_accessed'] > timedelta(minutes=self.session_timeout_minutes):
+                if session.active and current_time - session.last_accessed > timedelta(minutes=self.session_timeout_minutes):
                     expired_sessions.append(session_id)
             
             for session_id in expired_sessions:
@@ -280,7 +280,7 @@ class EnhancedAccessManager:
 
         # Default role extraction from user_id pattern
         for role in SecurityLevel:
-            if user_id.startswith(role.value):
+            if user_id.startswith(str(role.value)):
                 return role
 
         return SecurityLevel.GUEST
@@ -604,6 +604,6 @@ _voice_security_instance = None
 def get_voice_security_instance(config: Optional[SecurityConfig] = None) -> VoiceSecurity:
     """Get or create voice security instance."""
     global _voice_security_instance
-    if _voice_security_instance is None:
+    if _voice_security_instance is None or config is not None:
         _voice_security_instance = VoiceSecurity(config)
     return _voice_security_instance

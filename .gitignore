@@ -243,3 +243,14 @@ scripts/
 
 # Test environment directory
 test-env/
+
+# Database files (SQLite)
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Comprehensive test reports
+COMPREHENSIVE_*_TEST_REPORT.md
+TEST_VALIDATION_REPORT.md
+FINAL_*_REPORT.md

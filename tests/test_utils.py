@@ -94,7 +94,13 @@ def setup_voice_module_mocks(project_root: str, mock_voice_module: bool = True) 
         'pydub',
         'silero_vad',
         'ffmpeg',
-        'sounddevice'
+        'sounddevice',
+        'sounddevice.default',
+        'sounddevice.rec',
+        'sounddevice.play',
+        'sounddevice.query_devices',
+        'sounddevice.check_input_settings',
+        'sounddevice.check_output_settings'
     ]
 
     # Create basic mocks
@@ -127,6 +133,31 @@ def setup_voice_module_mocks(project_root: str, mock_voice_module: bool = True) 
         'confidence': 0.95
     }
     sys.modules['openai'] = openai_mock
+
+    # Mock sounddevice with proper functionality
+    sounddevice_mock = MagicMock()
+    sounddevice_mock.default = MagicMock()
+    sounddevice_mock.default.device = (0, 0)
+    sounddevice_mock.rec = MagicMock(return_value=numpy.array([0.1, 0.2, 0.3]))
+    sounddevice_mock.play = MagicMock()
+    sounddevice_mock.query_devices = MagicMock(return_value=[
+        {'name': 'Mock Input', 'max_input_channels': 2, 'max_output_channels': 0},
+        {'name': 'Mock Output', 'max_input_channels': 0, 'max_output_channels': 2}
+    ])
+    sounddevice_mock.check_input_settings = MagicMock(return_value=True)
+    sounddevice_mock.check_output_settings = MagicMock(return_value=True)
+    sys.modules['sounddevice'] = sounddevice_mock
+
+    # Mock pyaudio with proper functionality
+    pyaudio_mock = MagicMock()
+    pyaudio_instance = MagicMock()
+    pyaudio_instance.get_device_info_by_index.return_value = {
+        'name': 'Mock Device',
+        'maxInputChannels': 1,
+        'maxOutputChannels': 2
+    }
+    pyaudio_mock.PyAudio.return_value = pyaudio_instance
+    sys.modules['pyaudio'] = pyaudio_mock
 
     # Create a voice module with proper __path__ to support relative imports (only if requested)
     if mock_voice_module:
