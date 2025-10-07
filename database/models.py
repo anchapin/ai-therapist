@@ -709,3 +709,464 @@ class ConsentRepository:
         except Exception as e:
             self.logger.error(f"Failed to check consent for user {user_id}: {e}")
             return False
+
+
+@dataclass
+class Conversation(BaseModel):
+    """Conversation model for therapy sessions."""
+    
+    conversation_id: str
+    user_id: str
+    title: str
+    created_at: datetime
+    updated_at: datetime
+    is_active: bool = True
+    session_type: str = "text"  # 'text', 'voice', 'mixed'
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    @classmethod
+    def create(cls, user_id: str, title: str = "New Conversation", session_type: str = "text") -> 'Conversation':
+        """Create a new conversation."""
+        now = datetime.now()
+        conversation_id = f"conv_{now.strftime('%Y%m%d_%H%M%S')}_{hash(user_id + str(now)) % 1000000:06d}"
+        
+        return cls(
+            conversation_id=conversation_id,
+            user_id=user_id,
+            title=title,
+            created_at=now,
+            updated_at=now,
+            is_active=True,
+            session_type=session_type
+        )
+
+
+@dataclass
+class Message(BaseModel):
+    """Message model for conversation messages."""
+    
+    message_id: str
+    conversation_id: str
+    sender: str  # 'user', 'assistant', 'system'
+    content: str
+    timestamp: datetime
+    message_type: str = "text"  # 'text', 'voice', 'system'
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    @classmethod
+    def create(cls, conversation_id: str, sender: str, content: str, message_type: str = "text") -> 'Message':
+        """Create a new message."""
+        now = datetime.now()
+        message_id = f"msg_{now.strftime('%Y%m%d_%H%M%S')}_{hash(conversation_id + str(now)) % 1000000:06d}"
+        
+        return cls(
+            message_id=message_id,
+            conversation_id=conversation_id,
+            sender=sender,
+            content=content,
+            timestamp=now,
+            message_type=message_type
+        )
+
+
+@dataclass
+class VoiceSession(BaseModel):
+    """Voice session model for voice therapy sessions."""
+    
+    session_id: str
+    user_id: str
+    conversation_id: Optional[str]
+    started_at: datetime
+    ended_at: Optional[datetime]
+    duration_seconds: Optional[int]
+    audio_quality_score: Optional[float]
+    transcription_complete: bool = False
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    @classmethod
+    def create(cls, user_id: str, conversation_id: str = None) -> 'VoiceSession':
+        """Create a new voice session."""
+        now = datetime.now()
+        session_id = f"voice_sess_{now.strftime('%Y%m%d_%H%M%S')}_{hash(user_id + str(now)) % 1000000:06d}"
+        
+        return cls(
+            session_id=session_id,
+            user_id=user_id,
+            conversation_id=conversation_id,
+            started_at=now
+        )
+
+
+@dataclass
+class SecurityAudit(BaseModel):
+    """Security audit log model."""
+    
+    audit_id: str
+    timestamp: datetime
+    event_type: str
+    user_id: Optional[str]
+    ip_address: Optional[str]
+    details: Dict[str, Any] = field(default_factory=dict)
+    severity: str = "INFO"
+    
+    @classmethod
+    def create(cls, event_type: str, user_id: str = None, ip_address: str = None, details: Dict[str, Any] = None) -> 'SecurityAudit':
+        """Create a new security audit entry."""
+        now = datetime.now()
+        audit_id = f"audit_{now.strftime('%Y%m%d_%H%M%S')}_{hash(str(details) + str(now)) % 1000000:06d}"
+        
+        return cls(
+            audit_id=audit_id,
+            timestamp=now,
+            event_type=event_type,
+            user_id=user_id,
+            ip_address=ip_address,
+            details=details or {}
+        )
+
+
+@dataclass
+class PerformanceMetrics(BaseModel):
+    """Performance metrics model."""
+    
+    metric_id: str
+    timestamp: datetime
+    metric_type: str
+    value: float
+    unit: str
+    metadata: Dict[str, Any] = field(default_factory=dict)
+    
+    @classmethod
+    def create(cls, metric_type: str, value: float, unit: str, metadata: Dict[str, Any] = None) -> 'PerformanceMetrics':
+        """Create a new performance metric."""
+        now = datetime.now()
+        metric_id = f"metric_{now.strftime('%Y%m%d_%H%M%S')}_{hash(metric_type + str(now)) % 1000000:06d}"
+        
+        return cls(
+            metric_id=metric_id,
+            timestamp=now,
+            metric_type=metric_type,
+            value=value,
+            unit=unit,
+            metadata=metadata or {}
+        )
+
+
+@dataclass
+class SystemConfig(BaseModel):
+    """System configuration model."""
+    
+    config_id: str
+    key: str
+    value: str
+    description: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+    is_active: bool = True
+    
+    @classmethod
+    def create(cls, key: str, value: str, description: str = None) -> 'SystemConfig':
+        """Create a new system config entry."""
+        now = datetime.now()
+        config_id = f"config_{now.strftime('%Y%m%d_%H%M%S')}_{hash(key + str(now)) % 1000000:06d}"
+        
+        return cls(
+            config_id=config_id,
+            key=key,
+            value=value,
+            description=description,
+            created_at=now,
+            updated_at=now
+        )
+
+
+class ConversationRepository:
+    """Repository for Conversation model operations."""
+    
+    def __init__(self):
+        self.db = get_database_manager()
+        self.logger = logging.getLogger(__name__)
+    
+    def save(self, conversation: Conversation) -> bool:
+        """Save conversation to database."""
+        try:
+            with self.db.transaction() as conn:
+                conn.execute('''
+                    INSERT OR REPLACE INTO conversations
+                    (conversation_id, user_id, title, created_at, updated_at, is_active, session_type, metadata)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    conversation.conversation_id, conversation.user_id, conversation.title,
+                    conversation.created_at.isoformat(), conversation.updated_at.isoformat(),
+                    conversation.is_active, conversation.session_type, json.dumps(conversation.metadata)
+                ))
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to save conversation {conversation.conversation_id}: {e}")
+            return False
+    
+    def find_by_id(self, conversation_id: str) -> Optional[Conversation]:
+        """Find conversation by ID."""
+        try:
+            result = self.db.execute_query(
+                "SELECT * FROM conversations WHERE conversation_id = ?",
+                (conversation_id,),
+                fetch=True
+            )
+            
+            if result:
+                data = result[0]
+                data['metadata'] = json.loads(data['metadata'] or '{}')
+                return Conversation.from_dict(data)
+            return None
+        except Exception as e:
+            self.logger.error(f"Failed to find conversation {conversation_id}: {e}")
+            return None
+    
+    def find_by_user_id(self, user_id: str, active_only: bool = True, limit: int = 50) -> List[Conversation]:
+        """Find conversations by user ID."""
+        try:
+            if active_only:
+                result = self.db.execute_query(
+                    "SELECT * FROM conversations WHERE user_id = ? AND is_active = 1 ORDER BY updated_at DESC LIMIT ?",
+                    (user_id, limit),
+                    fetch=True
+                )
+            else:
+                result = self.db.execute_query(
+                    "SELECT * FROM conversations WHERE user_id = ? ORDER BY updated_at DESC LIMIT ?",
+                    (user_id, limit),
+                    fetch=True
+                )
+            
+            conversations = []
+            for data in result:
+                data['metadata'] = json.loads(data['metadata'] or '{}')
+                conversations.append(Conversation.from_dict(data))
+            
+            return conversations
+        except Exception as e:
+            self.logger.error(f"Failed to find conversations for user {user_id}: {e}")
+            return []
+
+
+class MessageRepository:
+    """Repository for Message model operations."""
+    
+    def __init__(self):
+        self.db = get_database_manager()
+        self.logger = logging.getLogger(__name__)
+    
+    def save(self, message: Message) -> bool:
+        """Save message to database."""
+        try:
+            with self.db.transaction() as conn:
+                conn.execute('''
+                    INSERT INTO messages
+                    (message_id, conversation_id, sender, content, timestamp, message_type, metadata)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    message.message_id, message.conversation_id, message.sender,
+                    message.content, message.timestamp.isoformat(), message.message_type,
+                    json.dumps(message.metadata)
+                ))
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to save message {message.message_id}: {e}")
+            return False
+    
+    def find_by_conversation_id(self, conversation_id: str, limit: int = 100) -> List[Message]:
+        """Find messages by conversation ID."""
+        try:
+            result = self.db.execute_query(
+                "SELECT * FROM messages WHERE conversation_id = ? ORDER BY timestamp ASC LIMIT ?",
+                (conversation_id, limit),
+                fetch=True
+            )
+            
+            messages = []
+            for data in result:
+                data['metadata'] = json.loads(data['metadata'] or '{}')
+                messages.append(Message.from_dict(data))
+            
+            return messages
+        except Exception as e:
+            self.logger.error(f"Failed to find messages for conversation {conversation_id}: {e}")
+            return []
+
+
+class VoiceSessionRepository:
+    """Repository for VoiceSession model operations."""
+    
+    def __init__(self):
+        self.db = get_database_manager()
+        self.logger = logging.getLogger(__name__)
+    
+    def save(self, voice_session: VoiceSession) -> bool:
+        """Save voice session to database."""
+        try:
+            with self.db.transaction() as conn:
+                conn.execute('''
+                    INSERT OR REPLACE INTO voice_sessions
+                    (session_id, user_id, conversation_id, started_at, ended_at, duration_seconds, 
+                     audio_quality_score, transcription_complete, metadata)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    voice_session.session_id, voice_session.user_id, voice_session.conversation_id,
+                    voice_session.started_at.isoformat(),
+                    voice_session.ended_at.isoformat() if voice_session.ended_at else None,
+                    voice_session.duration_seconds, voice_session.audio_quality_score,
+                    voice_session.transcription_complete, json.dumps(voice_session.metadata)
+                ))
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to save voice session {voice_session.session_id}: {e}")
+            return False
+    
+    def find_by_user_id(self, user_id: str, limit: int = 50) -> List[VoiceSession]:
+        """Find voice sessions by user ID."""
+        try:
+            result = self.db.execute_query(
+                "SELECT * FROM voice_sessions WHERE user_id = ? ORDER BY started_at DESC LIMIT ?",
+                (user_id, limit),
+                fetch=True
+            )
+            
+            voice_sessions = []
+            for data in result:
+                data['metadata'] = json.loads(data['metadata'] or '{}')
+                voice_sessions.append(VoiceSession.from_dict(data))
+            
+            return voice_sessions
+        except Exception as e:
+            self.logger.error(f"Failed to find voice sessions for user {user_id}: {e}")
+            return []
+
+
+class SecurityAuditRepository:
+    """Repository for SecurityAudit model operations."""
+    
+    def __init__(self):
+        self.db = get_database_manager()
+        self.logger = logging.getLogger(__name__)
+    
+    def save(self, audit: SecurityAudit) -> bool:
+        """Save security audit to database."""
+        try:
+            with self.db.transaction() as conn:
+                conn.execute('''
+                    INSERT INTO security_audits
+                    (audit_id, timestamp, event_type, user_id, ip_address, details, severity)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    audit.audit_id, audit.timestamp.isoformat(), audit.event_type,
+                    audit.user_id, audit.ip_address, json.dumps(audit.details), audit.severity
+                ))
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to save security audit {audit.audit_id}: {e}")
+            return False
+    
+    def find_by_user_id(self, user_id: str, limit: int = 100) -> List[SecurityAudit]:
+        """Find security audits by user ID."""
+        try:
+            result = self.db.execute_query(
+                "SELECT * FROM security_audits WHERE user_id = ? ORDER BY timestamp DESC LIMIT ?",
+                (user_id, limit),
+                fetch=True
+            )
+            
+            audits = []
+            for data in result:
+                data['details'] = json.loads(data['details'] or '{}')
+                audits.append(SecurityAudit.from_dict(data))
+            
+            return audits
+        except Exception as e:
+            self.logger.error(f"Failed to find security audits for user {user_id}: {e}")
+            return []
+
+
+class PerformanceMetricsRepository:
+    """Repository for PerformanceMetrics model operations."""
+    
+    def __init__(self):
+        self.db = get_database_manager()
+        self.logger = logging.getLogger(__name__)
+    
+    def save(self, metric: PerformanceMetrics) -> bool:
+        """Save performance metric to database."""
+        try:
+            with self.db.transaction() as conn:
+                conn.execute('''
+                    INSERT INTO performance_metrics
+                    (metric_id, timestamp, metric_type, value, unit, metadata)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (
+                    metric.metric_id, metric.timestamp.isoformat(), metric.metric_type,
+                    metric.value, metric.unit, json.dumps(metric.metadata)
+                ))
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to save performance metric {metric.metric_id}: {e}")
+            return False
+    
+    def find_by_type(self, metric_type: str, limit: int = 100) -> List[PerformanceMetrics]:
+        """Find performance metrics by type."""
+        try:
+            result = self.db.execute_query(
+                "SELECT * FROM performance_metrics WHERE metric_type = ? ORDER BY timestamp DESC LIMIT ?",
+                (metric_type, limit),
+                fetch=True
+            )
+            
+            metrics = []
+            for data in result:
+                data['metadata'] = json.loads(data['metadata'] or '{}')
+                metrics.append(PerformanceMetrics.from_dict(data))
+            
+            return metrics
+        except Exception as e:
+            self.logger.error(f"Failed to find performance metrics for type {metric_type}: {e}")
+            return []
+
+
+class SystemConfigRepository:
+    """Repository for SystemConfig model operations."""
+    
+    def __init__(self):
+        self.db = get_database_manager()
+        self.logger = logging.getLogger(__name__)
+    
+    def save(self, config: SystemConfig) -> bool:
+        """Save system config to database."""
+        try:
+            with self.db.transaction() as conn:
+                conn.execute('''
+                    INSERT OR REPLACE INTO system_config
+                    (config_id, key, value, description, created_at, updated_at, is_active)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    config.config_id, config.key, config.value, config.description,
+                    config.created_at.isoformat(), config.updated_at.isoformat(), config.is_active
+                ))
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to save system config {config.config_id}: {e}")
+            return False
+    
+    def find_by_key(self, key: str) -> Optional[SystemConfig]:
+        """Find system config by key."""
+        try:
+            result = self.db.execute_query(
+                "SELECT * FROM system_config WHERE key = ? AND is_active = 1",
+                (key,),
+                fetch=True
+            )
+            
+            if result:
+                return SystemConfig.from_dict(result[0])
+            return None
+        except Exception as e:
+            self.logger.error(f"Failed to find system config for key {key}: {e}")
+            return None
