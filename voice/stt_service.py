@@ -133,6 +133,10 @@ class STTResult:
             error=kwargs.get('error', None)
         )
 
+class STTError(Exception):
+    """Custom exception for STT service errors."""
+    pass
+
 class STTService:
     """Speech-to-Text service supporting multiple providers."""
 
@@ -149,10 +153,16 @@ class STTService:
         # Properties expected by tests
         self.confidence_threshold = 0.7  # Default confidence threshold
         self.primary_provider = config.get_preferred_stt_service()
+        self.provider = self.primary_provider  # Backward compatibility for tests
         self.providers = self.get_available_providers()
         self.therapy_keywords_enabled = True  # Default enabled
         self.crisis_detection_enabled = True  # Default enabled
         self.custom_vocabulary = []
+        
+        # Additional backward compatibility properties for tests
+        self.api_key = None  # Will be set by tests if needed
+        self.language = "en-US"
+        self.model = "whisper-1"
 
         # Performance and caching
         self.request_count = 0

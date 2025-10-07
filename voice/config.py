@@ -582,12 +582,14 @@ class VoiceConfig:
         
         if mock_mode or force_mock_services or stt_provider_env == "mock":
             return "mock"
+        elif self.is_whisper_configured():  # Prioritize local Whisper
+            return "whisper"
         elif self.is_openai_whisper_configured():
             return "openai"
         elif self.is_google_speech_configured():
             return "google"
-        elif self.is_whisper_configured():
-            return "whisper"
+        else:
+            return "mock"
         else:
             return "mock"  # Default to mock in testing
 
