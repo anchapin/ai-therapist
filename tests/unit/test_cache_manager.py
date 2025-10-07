@@ -292,7 +292,7 @@ class TestCacheManager:
 
     def test_cache_manager_lru_eviction(self):
         """Test LRU eviction when cache is full."""
-        manager = CacheManager(max_cache_size=3)
+        manager = CacheManager(config={'max_cache_size': 3})
 
         # Fill cache to capacity
         manager.set("key1", "value1")
@@ -315,7 +315,7 @@ class TestCacheManager:
 
     def test_cache_manager_memory_eviction(self):
         """Test eviction based on memory limits."""
-        manager = CacheManager(max_memory_mb=0.001)  # Very small limit
+        manager = CacheManager(config={'max_memory_mb': 0.001})  # Very small limit
 
         # Add large values that exceed memory limit
         large_value = "x" * 10000
@@ -331,10 +331,10 @@ class TestCacheManager:
         if not COMPRESSION_AVAILABLE:
             pytest.skip("Compression not available")
 
-        manager = CacheManager(
-            enable_compression=True,
-            compression_threshold_bytes=100
-        )
+        manager = CacheManager(config={
+            'enable_compression': True,
+            'compression_threshold_bytes': 100
+        })
 
         # Add compressible value
         large_value = "x" * 1000
@@ -418,7 +418,7 @@ class TestCacheManager:
 
     def test_cache_manager_callback_triggers(self):
         """Test that callbacks are triggered appropriately."""
-        manager = CacheManager(max_cache_size=2)
+        manager = CacheManager(config={'max_cache_size': 2})
 
         # Register callbacks
         eviction_callback = Mock()
@@ -447,7 +447,7 @@ class TestCacheManager:
 
     def test_cache_manager_start_stop(self):
         """Test starting and stopping cache manager."""
-        manager = CacheManager(cleanup_interval=0.1, stats_interval=0.1)
+        manager = CacheManager(config={'cleanup_interval': 0.1, 'stats_interval': 0.1})
 
         # Start
         manager.start()
@@ -643,7 +643,7 @@ class TestCacheManager:
 
     def test_cache_manager_evict_to_make_room(self):
         """Test eviction to make room for new entry."""
-        manager = CacheManager(max_memory_mb=0.001)  # Very small limit
+        manager = CacheManager(config={'max_memory_mb': 0.001})  # Very small limit
 
         # Fill cache with large entries
         large_value = "x" * 10000
@@ -680,7 +680,7 @@ class TestCacheManager:
 
     def test_cache_manager_thread_interruptible(self):
         """Test that background threads can be interrupted."""
-        manager = CacheManager(cleanup_interval=1.0, stats_interval=1.0)
+        manager = CacheManager(config={'cleanup_interval': 1.0, 'stats_interval': 1.0})
 
         start_time = time.time()
         manager.start()
@@ -700,12 +700,12 @@ class TestCacheManagerIntegration:
 
     def test_full_cache_lifecycle(self):
         """Test a full cache lifecycle."""
-        manager = CacheManager(
-            max_cache_size=10,
-            max_memory_mb=1,
-            cleanup_interval=0.1,
-            stats_interval=0.1
-        )
+        manager = CacheManager(config={
+            'max_cache_size': 10,
+            'max_memory_mb': 1,
+            'cleanup_interval': 0.1,
+            'stats_interval': 0.1
+        })
 
         # Add callbacks
         events = []
@@ -761,10 +761,10 @@ class TestCacheManagerIntegration:
         if not COMPRESSION_AVAILABLE:
             pytest.skip("Compression not available")
 
-        manager = CacheManager(
-            enable_compression=True,
-            compression_threshold_bytes=100
-        )
+        manager = CacheManager(config={
+            'enable_compression': True,
+            'compression_threshold_bytes': 100
+        })
 
         # Add compressible data
         large_data = {
@@ -813,7 +813,7 @@ class TestCacheManagerIntegration:
 
     def test_ttl_cleanup_integration(self):
         """Test TTL cleanup in background."""
-        manager = CacheManager(cleanup_interval=0.1)
+        manager = CacheManager(config={'cleanup_interval': 0.1})
 
         # Add entries with short TTL
         for i in range(10):
@@ -865,7 +865,7 @@ class TestCacheManagerIntegration:
 
     def test_performance_with_large_dataset(self):
         """Test performance with large dataset."""
-        manager = CacheManager(max_cache_size=1000)
+        manager = CacheManager(config={'max_cache_size': 1000})
 
         # Add large dataset
         start_time = time.time()
