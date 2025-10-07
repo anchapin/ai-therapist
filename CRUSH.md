@@ -19,6 +19,13 @@ python -m pytest tests/unit/test_audio_processor.py::TestAudioProcessor::test_in
 
 # Run with coverage
 python -m pytest tests/unit/ --cov=voice --cov-report=term-missing --cov-fail-under=90
+
+# Isolated Auth Tests (Thread-safe)
+python3 -m pytest tests/auth/test_auth_service_isolated.py -v
+python3 -m pytest tests/auth/test_user_model_isolated.py -v
+
+# UI Tests (Streamlit)
+python3 -m pytest tests/ui/test_auth_middleware_improved.py -v
 ```
 
 ### Application Commands
