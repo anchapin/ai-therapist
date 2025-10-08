@@ -1,8 +1,46 @@
-# 🧠 AI Therapist
+# 🧠 AI Therapist with Voice Interaction
 
-The AI Therapist is a conversational AI application designed to provide compassionate and supportive mental health assistance. It leverages a Retrieval-Augmented Generation (RAG) architecture, using local language models via Ollama and a curated knowledge base of therapeutic materials. The application is built with Streamlit, LangChain, and FAISS.
+The AI Therapist is a comprehensive conversational AI application designed to provide compassionate and supportive mental health assistance with **full voice interaction capabilities**. It leverages a Retrieval-Augmented Generation (RAG) architecture, using local language models via Ollama and a curated knowledge base of therapeutic materials.
 
-## 🧪 Testing Infrastructure
+## 🎯 Quick Start
+
+**5-Minute Voice Setup:**
+```bash
+# 1. Clone and setup
+git clone <repository-url>
+cd ai-therapist
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+
+# 2. Configure (edit .env with your OpenAI API key)
+cp template.env .env
+# Edit .env: OPENAI_API_KEY=your_key_here
+
+# 3. Run and start talking!
+streamlit run app.py
+```
+
+## 📋 Table of Contents
+
+- [🧪 Testing Infrastructure](#-testing-infrastructure)
+- [✨ Features](#-features) 
+- [🏗️ Architecture Overview](#architecture-overview)
+- [🚀 Setup and Installation](#-setup-and-installation)
+  - [Prerequisites](#1-prerequisites)
+  - [Installation](#2-clone-the-repository)
+  - [Virtual Environment](#3-set-up-a-virtual-environment)
+  - [Dependencies](#4-install-dependencies)
+  - [Environment Configuration](#5-configure-environment-variables)
+  - [🎤 Voice Features Setup](#6-voice-features-setup-optional-but-recommended)
+  - [Knowledge Base](#7-prepare-the-knowledge-base)
+- [💻 Usage](#-usage)
+  - [Running the App](#running-the-ai-therapist-app)
+  - [Command-Line Tools](#using-the-command-line-scripts)
+  - [🎤 Voice Features Guide](#-voice-features-complete-guide)
+- [🧪 Testing Infrastructure](#-testing-infrastructure-highlights)
+- [⚠️ Disclaimer](#disclaimer)
+
+---
 
 This project features a **world-class testing infrastructure** with **92% test success rate** and **comprehensive standardized fixtures**:
 
@@ -64,10 +102,12 @@ For detailed testing guidelines, see [CRUSH.md](CRUSH.md#testing-guidelines).
 ## Features
 
 - **Local & Private**: Runs entirely on your local machine using Ollama, ensuring your conversations remain private and confidential.
+- **🎤 Voice Interaction**: Full voice conversation capabilities with multiple provider support and automatic fallbacks
 - **Evidence-Based**: Responses are grounded in a knowledge base of therapeutic documents (e.g., articles on anxiety, CBT worksheets).
 - **Conversational Memory**: Remembers the context of your conversation for a more natural and coherent interaction.
 - **Source-Citing**: Can cite the source documents it used to generate a response.
 - **Easy to Use**: Simple, intuitive chat interface powered by Streamlit.
+- **🔒 HIPAA-Compliant**: Voice data encryption, privacy controls, and consent management.
 
 ## Architecture Overview
 
@@ -125,12 +165,172 @@ Create a `.env` file by copying the template:
 cp template.env .env
 ```
 
-Review the `.env` file. The default paths are usually sufficient:
-- `KNOWLEDGE_PATH`: Path to the directory with knowledge files (default: `./knowledge`).
-- `VECTORSTORE_PATH`: Path to the directory where the FAISS index will be stored (default: `./vectorstore`).
-- `OPENAI_API_KEY`: Required only if you intend to use the `build_vectorstore.py` script.
+**Required for basic functionality:**
+- `KNOWLEDGE_PATH`: Path to the directory with knowledge files (default: `./knowledge`)
+- `VECTORSTORE_PATH`: Path to the directory where the FAISS index will be stored (default: `./vectorstore`)
+- `OPENAI_API_KEY`: Required for voice features and optional for building vector store
 
-### 6. Prepare the Knowledge Base
+**Voice Features Configuration:**
+The app will work with just `OPENAI_API_KEY`, but for the best experience, configure the optional services below.
+
+### 6. Voice Features Setup (Optional but Recommended)
+
+The AI Therapist includes comprehensive voice capabilities with multiple providers. Here's how to configure them:
+
+#### 🎤 **Voice Features Overview**
+- **Speech-to-Text (STT)**: Converts your voice to text
+- **Text-to-Speech (TTS)**: Converts AI responses to natural speech
+- **Smart Fallbacks**: Automatic provider switching if one fails
+
+#### 🔑 **Option 1: OpenAI (Easiest - Already Configured)**
+```bash
+# Already set in your .env
+OPENAI_API_KEY=your_openai_api_key_here
+```
+- ✅ **STT**: OpenAI Whisper API (high accuracy)
+- ✅ **TTS**: OpenAI TTS (natural "alloy" voice)
+- ✅ **Works immediately** with your existing API key
+
+#### 🌐 **Option 2: Google Cloud Speech-to-Text (Premium STT)**
+
+**Step 1: Create Google Cloud Project**
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or use existing one
+3. Enable the [Speech-to-Text API](https://console.cloud.google.com/apis/library/speech.googleapis.com)
+
+**Step 2: Create Service Account**
+1. Go to [Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts)
+2. Click "Create Service Account"
+3. Name it something like `ai-therapist-service`
+4. Grant it the role: "Cloud Speech-to-Text API User"
+5. Click "Done"
+
+**Step 3: Download Credentials**
+1. Select your service account from the list
+2. Go to the "Keys" tab
+3. Click "Add Key" → "Create new key"
+4. Choose **JSON** format and download the file
+5. Save it as `google-cloud-credentials.json` in a `credentials/` folder:
+   ```bash
+   mkdir -p credentials
+   # Move your downloaded JSON file here:
+   mv ~/Downloads/your-key-file.json credentials/google-cloud-credentials.json
+   ```
+
+**Step 4: Update .env**
+```bash
+# Already configured, just verify:
+GOOGLE_CLOUD_PROJECT_ID=your_project_id_here
+GOOGLE_CLOUD_CREDENTIALS_PATH=./credentials/google-cloud-credentials.json
+```
+
+#### 🗣️ **Option 3: ElevenLabs (Premium TTS Voices)**
+
+**Step 1: Get ElevenLabs API Key**
+1. Sign up at [ElevenLabs](https://elevenlabs.io/)
+2. Go to your profile → "API Key"
+3. Copy your API key
+
+**Step 2: Choose a Voice**
+1. Browse voices at [ElevenLabs Voice Library](https://elevenlabs.io/voice-library)
+2. Note the voice ID (e.g., `EXAVITQu4vr4xnSDxMaL` for "Sarah")
+
+**Step 3: Update .env**
+```bash
+ELEVENLABS_API_KEY=sk_your_elevenlabs_key_here
+ELEVENLABS_VOICE_ID=EXAVITQu4vr4xnSDxMaL  # Sarah's voice
+```
+
+**Step 4: Test Your Configuration**
+```bash
+python3 -c "
+import requests
+response = requests.get('https://api.elevenlabs.io/v1/voices', 
+                       headers={'xi-api-key': 'sk_your_key_here'})
+if response.status_code == 200:
+    print('✅ ElevenLabs working! Available voices:')
+    for voice in response.json()['voices'][:5]:
+        print(f'  - {voice[\"name\"]} ({voice[\"voice_id\"]})')
+"
+```
+
+#### 🔧 **Option 4: Piper TTS (Offline Local Processing)**
+
+**Installation:**
+```bash
+# Install Piper TTS
+pip install piper-tts --break-system-packages
+
+# Verify installation
+python3 -c "import piper; print('✅ Piper TTS installed successfully')"
+```
+
+**Configuration:**
+Your `.env` is already configured for Piper with default settings:
+```bash
+PIPER_TTS_MODEL_PATH=./models/piper/voices/en_US-lessac-medium.onnx
+PIPER_TTS_SPEAKER_ID=0
+```
+
+#### 🧪 **Test Your Voice Configuration**
+
+Run our comprehensive voice test:
+```bash
+python3 -c "
+import sys
+sys.path.append('.')
+from dotenv import load_dotenv
+load_dotenv()
+
+# Quick configuration check
+import os
+print('🎤 Voice Configuration Check:')
+print(f'✅ OpenAI API: {\"Configured\" if os.getenv(\"OPENAI_API_KEY\") else \"Missing\"}')
+
+# Test ElevenLabs
+if os.getenv('ELEVENLABS_API_KEY'):
+    import requests
+    resp = requests.get('https://api.elevenlabs.io/v1/voices', 
+                       headers={'xi-api-key': os.getenv('ELEVENLABS_API_KEY')})
+    print(f'✅ ElevenLabs API: {\"Working\" if resp.status_code == 200 else \"Failed\"}')
+
+# Test Google Cloud
+import os
+if os.path.exists(os.getenv('GOOGLE_CLOUD_CREDENTIALS_PATH', '')):
+    print('✅ Google Cloud: Credentials file exists')
+else:
+    print('⚠️ Google Cloud: No credentials file')
+
+# Test Piper
+import shutil
+print(f'✅ Piper TTS: {\"Installed\" if shutil.which(\"piper\") else \"Not found\"}')
+"
+```
+
+#### 📊 **Voice Priority System**
+
+The app automatically selects the best available provider:
+
+1. **Speech-to-Text Priority:**
+   1. OpenAI Whisper (best accuracy)
+   2. Google Cloud Speech (excellent quality)
+   3. Local Whisper (offline fallback)
+
+2. **Text-to-Speech Priority:**
+   1. OpenAI TTS (balanced quality)
+   2. ElevenLabs (premium voices)
+   3. Piper TTS (offline processing)
+
+#### 🎛️ **Using Voice Features**
+
+Once configured:
+1. Run `streamlit run app.py`
+2. Grant microphone permissions when prompted
+3. Click the voice consent form (required for privacy)
+4. Use the 🎤 microphone button to talk
+5. Adjust voice settings in the Voice Settings panel
+
+### 7. Prepare the Knowledge Base
 
 The application will automatically try to download knowledge files on first run. However, you can also do this manually beforehand.
 
@@ -138,6 +338,53 @@ The application will automatically try to download knowledge files on first run.
 python download_knowledge.py
 ```
 This script reads `knowledge_files.txt` and downloads the specified documents into the `knowledge/` directory. You can also add your own PDF or TXT files to this directory.
+
+## 🎤 Voice Features Quick Start
+
+Want to get voice working immediately? Follow this quick guide:
+
+### ⚡ **Fastest Setup (5 minutes)**
+```bash
+# 1. Make sure you have OpenAI API key in .env
+OPENAI_API_KEY=your_openai_api_key_here
+
+# 2. Install Piper for offline voice (optional)
+pip install piper-tts --break-system-packages
+
+# 3. Run the app
+streamlit run app.py
+
+# 4. Click "I Agree" on the voice consent form
+# 5. Start talking with the 🎤 button!
+```
+
+### 🔧 **Full Setup (15 minutes)**
+Follow the complete "Voice Features Setup" section above for premium voices with Google Cloud and ElevenLabs.
+
+### 🎛️ **Voice Settings**
+Once running, you can:
+- Switch between different voice profiles
+- Adjust speech speed, pitch, and volume
+- Enable/disable voice commands
+- Set privacy preferences
+
+### 🚨 **Troubleshooting Voice Issues**
+```bash
+# Test your voice configuration
+python3 -c "
+import sys
+sys.path.append('.')
+from voice.voice_service import VoiceService
+from voice.config import VoiceConfig
+from voice.security import VoiceSecurity
+from dotenv import load_dotenv
+load_dotenv()
+
+config = VoiceConfig()
+service = VoiceService(config, VoiceSecurity(config))
+print('Voice services available:', service.is_available())
+"
+```
 
 ## Usage
 
@@ -149,12 +396,29 @@ To start the main application, run the following command:
 streamlit run app.py
 ```
 
-The first time you run the app, it will:
-1. Check for knowledge files and download them if missing.
-2. Process the documents and create a new FAISS vector store using the Ollama `nomic-embed-text` model. This may take a few moments.
-3. Subsequent launches will be much faster as the app will load the pre-existing vector store.
+**First Run Experience:**
+1. **Initial Setup**: The app will automatically download knowledge files and build the vector store (may take 2-3 minutes)
+2. **Voice Consent**: You'll see a consent form for voice features - click "I Agree" to enable voice interaction
+3. **Microphone Access**: Grant microphone permissions when prompted
+4. **Ready to Chat**: Start typing or use the 🎤 voice button to talk!
 
-The interface includes a sidebar with options to **Clear Conversation** or **Rebuild Knowledge Base** from scratch.
+**Voice Interaction:**
+- Click and hold the 🎤 button to speak
+- Release to send your message
+- The AI will respond with both text and voice
+- Use voice commands like "Help", "Emergency", or "Start meditation"
+
+**Voice Settings:**
+- Expand the "⚙️ Voice Settings" panel to:
+  - Switch between different voice providers
+  - Adjust speech speed, pitch, and volume
+  - Enable/disable voice commands
+  - Set privacy preferences
+
+**Keyboard Shortcuts:**
+- `SPACE`: Push-to-talk voice recording
+- `CTRL + SPACE`: Toggle voice recording  
+- `ESC`: Stop recording/playback
 
 ### Using the Command-Line Scripts
 
@@ -183,6 +447,116 @@ The interface includes a sidebar with options to **Clear Conversation** or **Reb
   python build_vectorstore.py
   ```
   Note: The main application `app.py` is hardcoded to use Ollama embeddings. This script is provided as an alternative for building the vector store.
+
+- **Test Voice Configuration**:
+  Verify your voice setup is working correctly:
+  ```bash
+  python3 -c "
+  from voice.voice_service import VoiceService
+  from voice.config import VoiceConfig  
+  from voice.security import VoiceSecurity
+  from dotenv import load_dotenv
+  load_dotenv()
+  
+  config = VoiceConfig()
+  service = VoiceService(config, VoiceSecurity(config))
+  print('🎤 Voice Service Available:', service.is_available())
+  print('📊 STT Providers:', {
+    'OpenAI': config.is_openai_whisper_configured(),
+    'Google': config.is_google_speech_configured(), 
+    'Local': config.is_whisper_configured()
+  })
+  print('🔊 TTS Providers:', {
+    'OpenAI': config.is_openai_tts_configured(),
+    'ElevenLabs': config.is_elevenlabs_configured(),
+    'Piper': config.is_piper_configured()
+  })
+  "
+  ```
+
+## 🎤 Voice Features Complete Guide
+
+### Voice Providers Comparison
+
+| Provider | Quality | Speed | Cost | Privacy | Use Case |
+|----------|---------|-------|------|---------|----------|
+| **OpenAI Whisper** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐ | 💰💰 | 🔒 | Primary STT |
+| **Google Cloud** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | 💰💰 | 🔒 | Premium STT |
+| **Local Whisper** | ⭐⭐⭐ | ⭐⭐ | 💰 | 🏠 | Offline STT |
+| **OpenAI TTS** | ⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | 💰💰 | 🔒 | Primary TTS |
+| **ElevenLabs** | ⭐⭐⭐⭐⭐ | ⭐⭐⭐ | 💰💰💰 | 🔒 | Premium TTS |
+| **Piper** | ⭐⭐⭐ | ⭐⭐⭐⭐ | 💰 | 🏠 | Offline TTS |
+
+### Voice Commands
+
+The AI Therapist supports hands-free voice commands:
+
+- **"Help"**: Show available voice commands
+- **"Emergency"**: Get immediate crisis resources
+- **"Start meditation"**: Begin guided breathing exercise  
+- **"Clear conversation"**: Reset chat history
+- **"Pause/Resume"**: Control conversation flow
+- **"Settings"**: Open voice configuration
+
+### Privacy & Security
+
+Your voice data is protected with enterprise-grade security:
+
+- 🔒 **End-to-end encryption** for all voice data
+- 🗑️ **Automatic deletion** of recordings after processing
+- 📝 **Consent management** - you control what's stored
+- 🛡️ **HIPAA compliance** features for sensitive conversations
+- 👤 **Anonymization** of voice recordings for privacy
+
+### Troubleshooting Voice Issues
+
+**Microphone not working?**
+```bash
+# Check microphone permissions in your browser/system
+# Test with: python3 -c "import sounddevice as sd; print(sd.query_devices())"
+pip install sounddevice --break-system-packages
+```
+
+**Voice not responding?**
+- Check your internet connection (for cloud services)
+- Verify API keys in `.env` file
+- Try switching voice providers in settings
+
+**Google Cloud not working?**
+- Verify service account has "Speech-to-Text API User" role
+- Check that credentials file path is correct
+- Ensure API is enabled in your Google Cloud project
+
+**ElevenLabs not working?**
+- Verify your API key is valid and has credits
+- Check if voice ID exists in their voice library
+- Test with the API test command in the setup section
+
+### Advanced Voice Configuration
+
+**Custom Voice Profiles:**
+Create custom voice profiles by editing `voice_profiles/` directory:
+
+```json
+{
+  "name": "Therapist Voice",
+  "description": "Calm and supportive voice",
+  "voice_id": "EXAVITQu4vr4xnSDxMaL",
+  "language": "en-US",
+  "gender": "female",
+  "pitch": 1.0,
+  "speed": 0.9,
+  "emotion": "calm"
+}
+```
+
+**Performance Optimization:**
+```bash
+# Enable voice caching in .env:
+VOICE_CACHE_ENABLED=true
+VOICE_CACHE_SIZE=100
+VOICE_STREAMING_ENABLED=true
+```
 
 ## 🧪 Testing Infrastructure Highlights
 

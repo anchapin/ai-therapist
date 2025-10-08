@@ -224,7 +224,17 @@ class AuthMiddleware:
             # User info
             st.caption(f"Role: {user.role.value.title()}")
             if user.last_login:
-                st.caption(f"Last login: {user.last_login.strftime('%Y-%m-%d %H:%M')}")
+                # Handle both datetime objects and ISO strings
+                if isinstance(user.last_login, str):
+                    # Parse ISO string if needed
+                    try:
+                        from datetime import datetime
+                        last_login = datetime.fromisoformat(user.last_login.replace('Z', '+00:00'))
+                        st.caption(f"Last login: {last_login.strftime('%Y-%m-%d %H:%M')}")
+                    except:
+                        st.caption(f"Last login: {user.last_login}")
+                else:
+                    st.caption(f"Last login: {user.last_login.strftime('%Y-%m-%d %H:%M')}")
 
             # Menu options
             if st.button("⚙️ Profile Settings"):

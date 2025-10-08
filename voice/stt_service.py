@@ -224,13 +224,14 @@ class STTService:
             from google.cloud import speech
             from google.oauth2 import service_account
 
-            # Load credentials
-            if self.config.google_cloud_credentials_path:
+            # Load credentials only if path exists
+            if self.config.google_cloud_credentials_path and os.path.exists(self.config.google_cloud_credentials_path):
                 credentials = service_account.Credentials.from_service_account_file(
                     self.config.google_cloud_credentials_path
                 )
             else:
                 credentials = None
+                self.logger.warning("Google Cloud credentials not found - using default credentials")
 
             # Create client
             self.google_speech_client = speech.SpeechClient(credentials=credentials)

@@ -54,12 +54,22 @@ class BaseModel:
         """Create model instance from dictionary."""
         # Convert ISO strings back to datetime objects
         for key, value in data.items():
-            if key.endswith('_at') or key.endswith('_until') or key.endswith('_expires'):
+            if (key.endswith('_at') or key.endswith('_until') or key.endswith('_expires') or 
+                key == 'last_login'):
                 if isinstance(value, str) and value:
                     try:
                         data[key] = datetime.fromisoformat(value.replace('Z', '+00:00'))
                     except ValueError:
-                        pass  # Keep as string if parsing fails
+                        try:
+                            # Try parsing without timezone info
+                            data[key] = datetime.fromisoformat(value)
+                        except ValueError:
+                            # Try with strftime format
+                            try:
+                                data[key] = datetime.strptime(value, "%Y-%m-%dT%H:%M:%S.%f")
+                            except ValueError:
+                                # Keep as string if parsing fails
+                                pass
         return cls(**data)
 
 

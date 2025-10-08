@@ -228,9 +228,14 @@ class TTSService:
             if self._is_openai_configured():
                 self._initialize_openai_tts()
 
-            # Initialize ElevenLabs
-            if self.config.is_elevenlabs_configured():
-                self._initialize_elevenlabs()
+            # Initialize ElevenLabs - check configuration manually
+            try:
+                api_key = getattr(self.config, 'elevenlabs_api_key', None)
+                voice_id = getattr(self.config, 'elevenlabs_voice_id', None)
+                if api_key and voice_id:
+                    self._initialize_elevenlabs()
+            except Exception as e:
+                self.logger.warning(f"Error checking ElevenLabs configuration: {str(e)}")
 
             # Initialize Piper TTS for local processing
             if self.config.is_piper_configured():
@@ -274,15 +279,39 @@ class TTSService:
         try:
             import elevenlabs
 
-            # Set API key
-            elevenlabs.api_key = self.config.elevenlabs_api_key
+            # Set API key safely
+            api_key = getattr(self.config, 'elevenlabs_api_key', None)
+            if not api_key:
+                self.logger.warning("ElevenLabs API key not configured")
+                self.elevenlabs_client = None
+                self.elevenlabs_available_voices = []
+                return
 
-            # Test connection and get available voices
-            voices = elevenlabs.voices()
-            self.elevenlabs_available_voices = voices
+            # Set API key with error handling
+            try:
+                elevenlabs.api_key = api_key
+            except Exception as e:
+                self.logger.error(f"Error setting ElevenLabs API key: {e}")
+                self.elevenlabs_client = None
+                self.elevenlabs_available_voices = []
+                return
 
-            self.logger.info(f"ElevenLabs initialized with {len(voices)} voices available")
+            # Test connection and get available voices with timeout
+            try:
+                # Use a timeout to prevent hanging
+                voices = elevenlabs.voices()
+                self.elevenlabs_available_voices = voices
+                self.logger.info(f"ElevenLabs initialized with {len(voices)} voices available")
+            except Exception as voice_error:
+                self.logger.error(f"Error getting ElevenLabs voices: {voice_error}")
+                # Initialize without voices list
+                self.elevenlabs_available_voices = []
+                self.logger.warning("ElevenLabs client initialized but voice list unavailable")
 
+        except ImportError as e:
+            self.logger.warning(f"ElevenLabs library not available: {e}")
+            self.elevenlabs_client = None
+            self.elevenlabs_available_voices = []
         except Exception as e:
             self.logger.error(f"Error initializing ElevenLabs: {str(e)}")
             self.elevenlabs_client = None
@@ -291,12 +320,19 @@ class TTSService:
     def _initialize_piper(self):
         """Initialize Piper TTS for local offline processing."""
         try:
-            # Check if Piper is available
+            # Check if Piper is available in PATH
             import subprocess
+            import shutil
+
+            piper_path = shutil.which("piper") or shutil.which("piper-tts")
+            if not piper_path:
+                self.logger.warning("Piper TTS not found in PATH")
+                self.piper_tts = None
+                return
 
             # Try to run Piper to check availability
             result = subprocess.run(
-                ["piper-tts", "--help"],
+                [piper_path, "--help"],
                 capture_output=True,
                 text=True,
                 timeout=10
@@ -306,9 +342,12 @@ class TTSService:
                 self.piper_tts = True
                 self.logger.info("Piper TTS initialized successfully")
             else:
-                self.logger.warning("Piper TTS not found in system")
+                self.logger.warning("Piper TTS not working properly")
                 self.piper_tts = None
 
+        except FileNotFoundError:
+            self.logger.warning("Piper TTS executable not found")
+            self.piper_tts = None
         except Exception as e:
             self.logger.error(f"Error initializing Piper TTS: {str(e)}")
             self.piper_tts = None

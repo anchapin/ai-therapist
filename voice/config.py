@@ -320,7 +320,12 @@ class VoiceConfig:
         self.elevenlabs_voice_similarity_boost = float(os.getenv("ELEVENLABS_VOICE_SIMILARITY_BOOST", "0.8"))
 
         # Google Cloud configuration
-        self.google_cloud_credentials_path = os.getenv("GOOGLE_CLOUD_CREDENTIALS_PATH")
+        google_credentials_path = os.getenv("GOOGLE_CLOUD_CREDENTIALS_PATH")
+        if google_credentials_path:
+            self.google_cloud_credentials_path = google_credentials_path
+        else:
+            # Set default path but don't fail if it doesn't exist
+            self.google_cloud_credentials_path = "./credentials/google-cloud-credentials.json"
         self.google_cloud_project_id = os.getenv("GOOGLE_CLOUD_PROJECT_ID")
         self.google_speech_language_code = os.getenv("GOOGLE_SPEECH_LANGUAGE_CODE", "en-US")
         self.google_speech_model = os.getenv("GOOGLE_SPEECH_MODEL", "latest_long")
@@ -551,7 +556,10 @@ class VoiceConfig:
 
     def is_elevenlabs_configured(self) -> bool:
         """Check if ElevenLabs is properly configured."""
-        return bool(self.elevenlabs_api_key and self.elevenlabs_voice_id)
+        try:
+            return bool(self.elevenlabs_api_key and self.elevenlabs_voice_id)
+        except AttributeError:
+            return False
 
     def is_openai_whisper_configured(self) -> bool:
         """Check if OpenAI Whisper API is properly configured."""

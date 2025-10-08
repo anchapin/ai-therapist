@@ -449,7 +449,7 @@ class UserModel:
             return None
 
         # Check account status
-        if db_user.status != UserStatus.ACTIVE:
+        if db_user.status.value != UserStatus.ACTIVE.value:
             return None
 
         # Check if account is locked

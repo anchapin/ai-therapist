@@ -156,11 +156,12 @@ class VoiceService:
         self.tts_service = TTSService(config)
         self.command_processor = VoiceCommandProcessor(config)
 
-        # Database repositories
-        self.session_repo = SessionRepository()
-        self.voice_data_repo = VoiceDataRepository()
-        self.audit_repo = AuditLogRepository()
-        self.consent_repo = ConsentRepository()
+        # Database repositories - initialize lazily to avoid threading issues
+        self.session_repo = None
+        self.voice_data_repo = None
+        self.audit_repo = None
+        self.consent_repo = None
+        self._db_initialized = False
 
         # Session management (keep in-memory for active sessions, persist to database)
         self.sessions: Dict[str, VoiceSession] = {}
@@ -199,6 +200,10 @@ class VoiceService:
         """Check if voice service is initialized."""
         return self.is_running
 
+    def is_available(self) -> bool:
+        """Check if voice service is available and ready to use."""
+        return self.is_running and self._check_service_availability()
+
     def initialize(self) -> bool:
         """Initialize the voice service."""
         try:
@@ -211,6 +216,9 @@ class VoiceService:
             if hasattr(self.security, 'initialize') and not self.security.initialize():
                 self.logger.error("Security initialization failed")
                 return False
+
+            # Initialize database repositories in the main thread
+            self._initialize_database_repositories()
 
             # Start voice service thread
             self.is_running = True
@@ -227,6 +235,23 @@ class VoiceService:
             self.logger.error(f"Error initializing voice service: {str(e)}")
             self.is_running = False
             return False
+
+    def _initialize_database_repositories(self):
+        """Initialize database repositories in a thread-safe manner."""
+        if self._db_initialized:
+            return
+
+        try:
+            self.session_repo = SessionRepository()
+            self.voice_data_repo = VoiceDataRepository()
+            self.audit_repo = AuditLogRepository()
+            self.consent_repo = ConsentRepository()
+            self._db_initialized = True
+            self.logger.info("Database repositories initialized successfully")
+        except Exception as e:
+            self.logger.error(f"Failed to initialize database repositories: {e}")
+            # Continue without database - will use in-memory fallback
+            self._db_initialized = False
 
     def _check_service_availability(self) -> bool:
         """Check if required services are available."""

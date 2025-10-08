@@ -59,6 +59,13 @@ def build_vectorstore():
         print(f"\nProcessing {pdf_file}...")
         
         try:
+            # Check if file is actually a PDF (not HTML)
+            with open(pdf_path, 'rb') as f:
+                header = f.read(4)
+                if header != b'%PDF':
+                    print(f"  Skipping {pdf_file}: Not a valid PDF file")
+                    continue
+            
             # Load PDF
             loader = PyPDFLoader(pdf_path)
             documents = loader.load()

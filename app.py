@@ -431,7 +431,7 @@ def load_vectorstore():
             embeddings = CachedOllamaEmbeddings(model="nomic-embed-text:latest")
             # Validate vector store integrity before loading
             if validate_vectorstore_integrity(save_path):
-                vectorstore = FAISS.load_local(save_path, embeddings)
+                vectorstore = FAISS.load_local(save_path, embeddings, allow_dangerous_deserialization=True)
                 st.success("Loaded existing vector store")
                 return vectorstore
             else:
@@ -535,14 +535,25 @@ def create_vectorstore(knowledge_path, vectorstore_path):
             # Process PDF files
             for pdf_file in pdf_files:
                 pdf_path = os.path.join(knowledge_path, pdf_file)
-                loader = PyPDFLoader(pdf_path)
-                documents = loader.load()
+                try:
+                    # Check if file is actually a PDF (not HTML)
+                    with open(pdf_path, 'rb') as f:
+                        header = f.read(4)
+                        if header != b'%PDF':
+                            st.warning(f"Skipping {pdf_file}: Not a valid PDF file")
+                            continue
+                    
+                    loader = PyPDFLoader(pdf_path)
+                    documents = loader.load()
 
-                # Add metadata
-                for doc in documents:
-                    doc.metadata['source'] = pdf_file
+                    # Add metadata
+                    for doc in documents:
+                        doc.metadata['source'] = pdf_file
 
-                all_documents.extend(documents)
+                    all_documents.extend(documents)
+                except Exception as e:
+                    st.warning(f"Error processing {pdf_file}: {str(e)}")
+                    continue
 
             # Process TXT files
             for txt_file in txt_files:
@@ -906,7 +917,7 @@ def show_voice_features():
         # Show consent form if required
         if st.session_state.voice_config.security.consent_required:
             if not st.session_state.voice_consent_given:
-                if st.session_state.voice_ui.render_consent_form():
+                if st.session_state.voice_ui._render_consent_form():
                     st.success("Voice consent granted. You can now use voice features.")
                     st.rerun()
                 return
@@ -930,6 +941,18 @@ def show_voice_features():
 def main():
     """Sets up and runs the AI Therapist Streamlit application.
 
+    This main function orchestrates the entire application flow:
+    1.  Configures the Streamlit page.
+    2.  Initializes the session state.
+    3.  Applies custom CSS for styling.
+    4.  Loads or creates the vector store and conversation chain.
+    5.  Displays the chat history.
+    6.  Handles new user input and displays the AI's response.
+    7.  Renders a sidebar with app information and control buttons.
+    """
+    # Initialize session state
+    initialize_session_state()
+
     # Initialize authentication service and middleware
     if st.session_state.auth_service is None:
         st.session_state.auth_service = AuthService()
@@ -940,23 +963,12 @@ def main():
     if not st.session_state.auth_middleware.is_authenticated():
         st.session_state.auth_middleware.show_login_form()
         return
-    This main function orchestrates the entire application flow:
-    1.  Configures the Streamlit page.
-    2.  Initializes the session state.
-    3.  Applies custom CSS for styling.
-    4.  Loads or creates the vector store and conversation chain.
-    5.  Displays the chat history.
-    6.  Handles new user input and displays the AI's response.
-    7.  Renders a sidebar with app information and control buttons.
-    """
+
     st.set_page_config(
         page_title="AI Therapist",
         page_icon="🧠",
         layout="centered"
     )
-
-    # Initialize session state
-    initialize_session_state()
 
     # Initialize voice features
     if not st.session_state.voice_enabled and st.session_state.voice_config is None:

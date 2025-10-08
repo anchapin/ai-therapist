@@ -39,7 +39,7 @@ class MigrationManager:
     def _initialize_migrations_table(self):
         """Initialize the migrations tracking table."""
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = sqlite3.connect(self.db_path, check_same_thread=False)
             conn.execute('''
                 CREATE TABLE IF NOT EXISTS schema_migrations (
                     version TEXT PRIMARY KEY,
@@ -58,7 +58,7 @@ class MigrationManager:
     def get_applied_migrations(self) -> List[Dict[str, str]]:
         """Get list of applied migrations."""
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = sqlite3.connect(self.db_path, check_same_thread=False)
             cursor = conn.execute("SELECT * FROM schema_migrations ORDER BY version")
             migrations = []
             for row in cursor.fetchall():
@@ -107,7 +107,7 @@ class MigrationManager:
             checksum = self.calculate_checksum(sql_content)
 
             # Apply migration
-            conn = sqlite3.connect(self.db_path)
+            conn = sqlite3.connect(self.db_path, check_same_thread=False)
             conn.execute("BEGIN")
 
             try:
@@ -140,7 +140,7 @@ class MigrationManager:
     def rollback_migration(self, version: str) -> bool:
         """Rollback a specific migration."""
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = sqlite3.connect(self.db_path, check_same_thread=False)
             conn.execute("BEGIN")
 
             try:

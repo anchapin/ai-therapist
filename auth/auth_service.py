@@ -120,9 +120,8 @@ class AuthService:
             user = self.user_model.create_user(email, password, full_name, role)
 
             print(f"User registered successfully: {email}")
-            # Filter user data for response
-            filtered_user = self._filter_user_for_response(user, requesting_user_role='admin')
-            return AuthResult(success=True, user=filtered_user)
+            # Don't filter user data for response - use the full UserProfile object
+            return AuthResult(success=True, user=user)
 
         except ValueError as e:
             return AuthResult(success=False, error_message=str(e))
@@ -140,7 +139,7 @@ class AuthService:
                 return AuthResult(success=False, error_message="Invalid credentials")
 
             # Check account status
-            if user.status != UserStatus.ACTIVE:
+            if user.status.value != UserStatus.ACTIVE.value:
                 return AuthResult(success=False, error_message="Account is not active")
 
             # Check if account is locked
@@ -156,9 +155,8 @@ class AuthService:
             token = self._generate_jwt_token(user, session)
 
             print(f"User logged in successfully: {email}")
-            # Filter user data for response
-            filtered_user = self._filter_user_for_response(user, requesting_user_role='patient')
-            return AuthResult(success=True, user=filtered_user, token=token, session=session)
+            # Don't filter user data for token generation - use the full UserProfile object
+            return AuthResult(success=True, user=user, token=token, session=session)
 
         except Exception as e:
             print(f"Login error: {e}")
@@ -181,7 +179,7 @@ class AuthService:
                 return None
 
             user = self.user_model.get_user(user_id)
-            if not user or user.status != UserStatus.ACTIVE:
+            if not user or user.status.value != UserStatus.ACTIVE.value:
                 return None
 
             # Check session

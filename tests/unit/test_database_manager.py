@@ -79,7 +79,7 @@ class TestDatabaseConnectionPool:
     
     def test_return_connection_not_in_pool(self, connection_pool):
         """Test returning a connection not in the pool."""
-        external_conn = sqlite3.connect(":memory:")
+        external_conn = sqlite3.connect(":memory:", check_same_thread=False)
         
         # Should not raise error, just ignore
         connection_pool.return_connection(external_conn)

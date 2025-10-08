@@ -46,7 +46,8 @@ class DatabaseConnectionPool:
                 conn = sqlite3.connect(
                     self.db_path,
                     timeout=self.timeout,
-                    isolation_level=None  # Enable autocommit mode
+                    isolation_level=None,  # Enable autocommit mode
+                    check_same_thread=False  # Allow sharing across threads
                 )
                 conn.row_factory = sqlite3.Row  # Enable column access by name
                 conn.execute("PRAGMA foreign_keys = ON")  # Enable foreign key constraints
