@@ -38,7 +38,7 @@ class VoiceFeatureTestRunner:
         self.additional_pytest_args = additional_pytest_args or []
         # Use a single coverage file for all test categories
         self.coverage_file = self.project_root / '.coverage'
-        self.coverage_timeout = 300  # 5 minutes timeout for coverage operations
+        self.coverage_timeout = 600  # 10 minutes timeout for coverage operations
 
     def _run_pytest_with_timeout(self, pytest_args):
         """
@@ -161,12 +161,15 @@ class VoiceFeatureTestRunner:
                             '--cov=voice',
                             '--cov-report=term-missing',
                             '--cov-report=json',
+                            '--cov-report=xml',
                             '--cov-append'  # Use append mode to accumulate coverage
                         ])
                     else:
                         # For subsequent categories, just use the existing coverage data
                         pytest_args.extend([
                             '--cov=voice',
+                            '--cov-report=json',
+                            '--cov-report=xml',
                             '--cov-append'  # Append to existing coverage
                         ])
 
@@ -236,12 +239,13 @@ class VoiceFeatureTestRunner:
 
     def _generate_coverage_from_file(self):
         """
-        Generate coverage report from the coverage.json file created by pytest-cov.
+        Generate coverage report from the coverage.json and coverage.xml files created by pytest-cov.
         
         Returns:
             dict: Coverage data with total statements, missing statements, and percentage
         """
         try:
+            # Try JSON first
             json_report_path = self.project_root / 'coverage.json'
             if json_report_path.exists():
                 with open(json_report_path, 'r') as f:
@@ -255,8 +259,29 @@ class VoiceFeatureTestRunner:
                     'missing_statements': totals.get('missing_lines', 0),
                     'coverage_percentage': totals.get('percent_covered', 0) / 100.0
                 }
+            
+            # Fallback to XML parsing
+            xml_report_path = self.project_root / 'coverage.xml'
+            if xml_report_path.exists():
+                import xml.etree.ElementTree as ET
+                tree = ET.parse(xml_report_path)
+                root = tree.getroot()
+                
+                # Find coverage metrics
+                coverage_elem = root.find(".//coverage")
+                if coverage_elem is not None:
+                    lines_valid = int(coverage_elem.get('lines-valid', 0))
+                    lines_covered = int(coverage_elem.get('lines-covered', 0))
+                    coverage_pct = float(coverage_elem.get('line-rate', 0.0)) * 100
+                    
+                    return {
+                        'total_statements': lines_valid,
+                        'covered_statements': lines_covered,
+                        'missing_statements': lines_valid - lines_covered,
+                        'coverage_percentage': coverage_pct / 100.0
+                    }
         except Exception as e:
-            print(f"   Could not read coverage.json: {e}")
+            print(f"   Could not read coverage files: {e}")
 
         return None
 

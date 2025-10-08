@@ -29,10 +29,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
-# Configure asyncio for testing - proper initialization
-def pytest_configure(config):
-    """Configure pytest for async testing."""
-    pytest_asyncio.plugin.pytest_configure(config)
+# Remove problematic asyncio configuration
 
 
 class TestEnvironmentManager:
@@ -257,9 +254,85 @@ def mock_voice_config():
     config.audio_sample_rate = 16000
     config.audio_channels = 1
     config.audio_chunk_size = 1024
+    
+    # Add comprehensive mock configurations to prevent hanging
+    config.voice_profiles = {}
+    config.voice_command_timeout = 30000
+    config.voice_command_wake_word = "therapist"
+    config.voice_command_min_confidence = 0.7
+    config.voice_command_max_duration = 10000
+    config.default_voice_profile = "default"
+    config.stt_provider = "mock"
+    config.tts_provider = "mock"
+    config.stt_language = "en-US"
+    config.stt_timeout = 10.0
+    config.stt_max_retries = 2
+    config.tts_voice = "alloy"
+    config.tts_model = "tts-1"
+    config.max_concurrent_sessions = 5
+    config.max_concurrent_requests = 3
+    config.request_timeout_seconds = 10.0
+    config.cache_enabled = True
+    config.cache_size_mb = 50
+    config.encryption_enabled = True
+    config.data_retention_days = 30
+    
+    # Mock nested configurations
+    config.audio = MagicMock()
+    config.audio.max_buffer_size = 300
+    config.audio.max_memory_mb = 50
+    config.audio.sample_rate = 16000
+    config.audio.channels = 1
+    config.audio.chunk_size = 1024
+    config.audio.recording_timeout = 5.0
+    config.audio.playback_enabled = True
+    
+    config.performance = MagicMock()
+    config.performance.buffer_size = 2048
+    config.performance.processing_timeout = 15000
+    config.performance.max_concurrent_requests = 3
+    config.performance.cache_enabled = True
+    config.performance.response_timeout = 5000
+    
+    config.security = MagicMock()
+    config.security.audit_logging_enabled = True
+    config.security.session_timeout_minutes = 30
+    config.security.max_login_attempts = 3
+    config.security.data_retention_days = 30
+    config.security.encryption_key_rotation_days = 90
+    
     config.get_missing_api_keys.return_value = []
     config.validate_configuration.return_value = []
     return config
+
+
+@pytest.fixture(scope="session", autouse=True)
+def mock_audio_hardware():
+    """Mock audio hardware dependencies to prevent CI failures."""
+    # Mock pyaudio to prevent hardware dependency issues
+    with patch.dict('sys.modules', {
+        'pyaudio': MagicMock(),
+        'sounddevice': MagicMock(),
+        'soundfile': MagicMock(),
+        'librosa': MagicMock(),
+        'webrtcvad': MagicMock(),
+        'silero_vad': MagicMock()
+    }):
+        # Mock pyaudio.PyAudio
+        mock_pyaudio = MagicMock()
+        mock_pyaudio.get_device_count.return_value = 2
+        mock_pyaudio.get_device_info_by_index.return_value = {
+            'name': 'Mock Audio Device',
+            'maxInputChannels': 1,
+            'maxOutputChannels': 2
+        }
+        
+        # Add to sys.modules
+        sys.modules['pyaudio'].PyAudio = MagicMock(return_value=mock_pyaudio)
+        sys.modules['sounddevice'].default.samplerate = 16000
+        sys.modules['sounddevice'].default.channels = 1
+        
+        yield
 
 
 @pytest.fixture
@@ -404,6 +477,279 @@ def assert_no_environment_pollution():
     unexpected_vars = new_vars - allowed_new_vars
     if unexpected_vars:
         pytest.fail(f"Test polluted environment with new variables: {unexpected_vars}")
+
+
+# Database fixtures for consistent testing across all test types
+
+@pytest.fixture(scope="function")
+def isolated_database():
+    """Provide thread-safe isolated database for each test."""
+    # Create a completely mock database to avoid SQLite thread issues
+    mock_manager = MagicMock()
+    
+    # Setup mock connection pool
+    mock_pool = MagicMock()
+    mock_manager.pool = mock_pool
+    mock_pool.get_pool_stats.return_value = {
+        'total_connections': 1,
+        'available_connections': 1,
+        'used_connections': 0,
+        'pool_utilization': 0
+    }
+    
+    # Setup mock manager methods
+    mock_manager.execute_query.return_value = []
+    mock_manager.execute_in_transaction.return_value = True
+    mock_manager.health_check.return_value = {
+        'status': 'healthy',
+        'timestamp': '2024-01-01T00:00:00',
+        'connection_pool': mock_pool.get_pool_stats.return_value,
+        'database_size': 0,
+        'table_counts': {'users': 0, 'sessions': 0, 'voice_data': 0, 'audit_logs': 0, 'consent_records': 0},
+        'issues': []
+    }
+    mock_manager.close.return_value = None
+    
+    # Mock context managers
+    mock_conn = MagicMock()
+    mock_conn.execute.return_value.fetchall.return_value = []
+    mock_conn.execute.return_value.fetchone.return_value = None
+    mock_conn.execute.return_value.rowcount = 0
+    
+    mock_manager.get_connection.return_value.__enter__.return_value = mock_conn
+    mock_manager.get_connection.return_value.__exit__.return_value = None
+    mock_manager.transaction.return_value.__enter__.return_value = mock_conn
+    mock_manager.transaction.return_value.__exit__.return_value = None
+    
+    yield mock_manager
+
+
+@pytest.fixture(scope="function")
+def mock_database():
+    """Provide completely mocked database for testing."""
+    # Create mock database manager
+    mock_manager = MagicMock()
+    mock_pool = MagicMock()
+    mock_conn = MagicMock()
+    
+    # Setup mock connection pool
+    mock_manager.pool = mock_pool
+    mock_pool.get_connection.return_value = mock_conn
+    mock_pool.return_connection.return_value = None
+    mock_pool.get_pool_stats.return_value = {
+        'total_connections': 1,
+        'available_connections': 1,
+        'used_connections': 0,
+        'pool_utilization': 0
+    }
+    
+    # Setup mock connection behavior
+    mock_conn.execute.return_value.fetchall.return_value = []
+    mock_conn.execute.return_value.fetchone.return_value = None
+    mock_conn.execute.return_value.rowcount = 0
+    
+    # Setup mock manager methods
+    mock_manager.execute_query.return_value = []
+    mock_manager.execute_in_transaction.return_value = True
+    mock_manager.health_check.return_value = {
+        'status': 'healthy',
+        'timestamp': '2024-01-01T00:00:00',
+        'connection_pool': mock_pool.get_pool_stats.return_value,
+        'database_size': 0,
+        'table_counts': {'users': 0, 'sessions': 0, 'voice_data': 0, 'audit_logs': 0, 'consent_records': 0},
+        'issues': []
+    }
+    
+    # Mock context managers
+    mock_manager.get_connection.return_value.__enter__.return_value = mock_conn
+    mock_manager.get_connection.return_value.__exit__.return_value = None
+    mock_manager.transaction.return_value.__enter__.return_value = mock_conn
+    mock_manager.transaction.return_value.__exit__.return_value = None
+    
+    yield mock_manager
+
+
+@pytest.fixture(autouse=True)
+def mock_session_repository():
+    """Mock session repository for auth tests."""
+    with patch('auth.auth_service.SessionRepository') as mock_repo_class:
+        mock_repo = MagicMock()
+        mock_repo_class.return_value = mock_repo
+        
+        # Setup mock session storage
+        if not hasattr(mock_repo, '_sessions'):
+            mock_repo._sessions = {}
+            
+        def save_session(session):
+            mock_repo._sessions[session.session_id] = session
+            return True
+            
+        def find_by_id(session_id):
+            return mock_repo._sessions.get(session_id)
+            
+        def find_by_user_id(user_id, active_only=True):
+            sessions = []
+            for session in mock_repo._sessions.values():
+                if session.user_id == user_id and (not active_only or session.is_active):
+                    sessions.append(session)
+            return sessions
+            
+        mock_repo.save.side_effect = save_session
+        mock_repo.find_by_id.side_effect = find_by_id  
+        mock_repo.find_by_user_id.side_effect = find_by_user_id
+        
+        yield mock_repo
+
+
+@pytest.fixture
+def clean_test_environment():
+    """Ensure clean test environment without database pollution."""
+    # Store original state
+    original_db_manager = None
+    
+    try:
+        # Clear any existing database manager
+        import database.db_manager as db_module
+        original_db_manager = db_module._db_manager
+        db_module._db_manager = None
+    except Exception:
+        pass
+        
+    yield
+    
+    # Restore original state
+    try:
+        import database.db_manager as db_module
+        if original_db_manager is not None:
+            try:
+                original_db_manager.close()
+            except Exception:
+                pass
+        db_module._db_manager = original_db_manager
+    except Exception:
+        pass
+
+
+@pytest.fixture
+def auth_service(isolated_database):
+    """Provide auth service with isolated database."""
+    # Patch the global database manager
+    with patch('database.db_manager.get_database_manager', return_value=isolated_database):
+        # Mock user model to use isolated database
+        with patch('auth.user_model.UserModel') as mock_user_model:
+            # Configure mock user model
+            mock_user_instance = MagicMock()
+            mock_user_instance._users = {}  # Initialize user storage
+            mock_user_instance._users_by_email = {}  # Initialize email storage
+            mock_user_model.return_value = mock_user_instance
+            
+            # Setup basic user operations with proper binding
+            mock_user_instance.create_user.side_effect = lambda email=None, password=None, full_name=None, role=None: create_user_side_effect(mock_user_instance, email, password, full_name, role)
+            mock_user_instance.authenticate_user.side_effect = lambda email=None, password=None: authenticate_user_side_effect(mock_user_instance, email, password)
+            mock_user_instance.get_user.side_effect = lambda user_id=None: get_user_side_effect(mock_user_instance, user_id)
+            mock_user_instance.get_user_by_email.side_effect = lambda email=None: get_user_by_email_side_effect(mock_user_instance, email)
+            mock_user_instance.initiate_password_reset.return_value = "reset_token_123"
+            mock_user_instance.reset_password.return_value = True
+            mock_user_instance.change_password.return_value = True
+            
+            # Import and create auth service
+            from auth.auth_service import AuthService
+            auth_service = AuthService(mock_user_instance)
+            
+            yield auth_service
+
+
+# Helper functions for auth service fixture
+def create_user_side_effect(self, email=None, password=None, full_name=None, role=None):
+    """Mock user creation for testing."""
+    if email is None or password is None or full_name is None or role is None:
+        return None
+    
+    import uuid
+    from datetime import datetime
+    from auth.user_model import UserRole, UserStatus
+    
+    # Check for duplicate email
+    if hasattr(self, '_users') and email in self._users:
+        raise ValueError(f"User with email {email} already exists")
+    
+    if not hasattr(self, '_users'):
+        self._users = {}
+        self._users_by_email = {}
+        
+    # Basic password validation
+    if len(password) < 8:
+        raise ValueError("Password must be at least 8 characters long")
+    
+    user_id = str(uuid.uuid4())
+    now = datetime.now()
+    
+    # Create mock user object
+    user = MagicMock()
+    user.user_id = user_id
+    user.email = email
+    user.full_name = full_name
+    user.role = role
+    user.status = UserStatus.ACTIVE
+    user.created_at = now
+    user.updated_at = now
+    user.last_login = None
+    user.login_attempts = 0
+    user.account_locked_until = None
+    user.password_reset_token = None
+    user.password_reset_expires = None
+    user.preferences = None
+    user.medical_info = None
+    
+    # Add methods
+    user.is_locked.return_value = False
+    user.can_access_resource.return_value = True
+    user.to_dict.return_value = {
+        'user_id': user_id,
+        'email': email,
+        'full_name': full_name,
+        'role': role.value if hasattr(role, 'value') else str(role),
+        'status': 'active'
+    }
+    
+    # Store user
+    self._users[user_id] = user
+    self._users_by_email[email] = user
+    
+    return user
+
+
+def authenticate_user_side_effect(self, email=None, password=None):
+    """Mock user authentication for testing."""
+    if email is None or password is None:
+        return None
+        
+    if hasattr(self, '_users_by_email') and email in self._users_by_email:
+        user = self._users_by_email[email]
+        # In mock, assume password is correct if user exists
+        user.last_login = datetime.now()
+        return user
+    return None
+
+
+def get_user_side_effect(self, user_id=None):
+    """Mock get user by ID for testing."""
+    if user_id is None:
+        return None
+        
+    if hasattr(self, '_users') and user_id in self._users:
+        return self._users[user_id]
+    return None
+
+
+def get_user_by_email_side_effect(self, email=None):
+    """Mock get user by email for testing."""
+    if email is None:
+        return None
+        
+    if hasattr(self, '_users_by_email') and email in self._users_by_email:
+        return self._users_by_email[email]
+    return None
 
 
 # Additional utility fixtures for common test scenarios

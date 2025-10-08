@@ -228,11 +228,12 @@ class TestUserRepository:
             mock_db_manager = Mock()
             mock_get_db.return_value = mock_db_manager
             repo = UserRepository()
+            repo.db = mock_db_manager  # Ensure db reference is set
             return repo
     
     def test_create_user(self, user_repo):
         """Test creating a user."""
-        user_repo.db.execute_query.return_value = None
+        user_repo.db.execute_update.return_value = 1
         
         user_data = {
             'email': 'test@example.com',
@@ -244,7 +245,7 @@ class TestUserRepository:
         user_id = user_repo.create(user_data)
         
         assert user_id == 1
-        mock_db_manager.execute_update.assert_called_once()
+        user_repo.db.execute_update.assert_called_once()
     
     def test_get_user_by_id(self, user_repo):
         """Test getting a user by ID."""
