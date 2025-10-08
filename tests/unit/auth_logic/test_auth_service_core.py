@@ -20,18 +20,19 @@ class TestAuthServiceCore:
 
     def test_initialization_with_defaults(self):
         """Test AuthService initialization with default configuration."""
-        with patch('auth.auth_service.UserModel') as mock_user_model:
-            mock_user_instance = MagicMock()
-            mock_user_model.return_value = mock_user_instance
-            
-            auth_service = AuthService()
-            
-            assert auth_service.jwt_secret == "ai-therapist-jwt-secret-change-in-production"
-            assert auth_service.jwt_algorithm == "HS256"
-            assert auth_service.jwt_expiration_hours == 24
-            assert auth_service.session_timeout_minutes == 30
-            assert auth_service.max_concurrent_sessions == 5
-            assert auth_service.user_model == mock_user_instance
+        with patch.dict('os.environ', {}, clear=True):
+            with patch('auth.auth_service.UserModel') as mock_user_model:
+                mock_user_instance = MagicMock()
+                mock_user_model.return_value = mock_user_instance
+                
+                auth_service = AuthService()
+                
+                assert auth_service.jwt_secret == "ai-therapist-jwt-secret-change-in-production"
+                assert auth_service.jwt_algorithm == "HS256"
+                assert auth_service.jwt_expiration_hours == 24
+                assert auth_service.session_timeout_minutes == 30
+                assert auth_service.max_concurrent_sessions == 5
+                assert auth_service.user_model == mock_user_instance
 
     def test_initialization_with_custom_values(self):
         """Test AuthService initialization with custom configuration."""
@@ -52,111 +53,139 @@ class TestAuthServiceCore:
                 assert auth_service.session_timeout_minutes == 60
                 assert auth_service.max_concurrent_sessions == 3
 
-    def test_user_registration_success(self, auth_service):
+    def test_user_registration_success(self):
         """Test successful user registration."""
-        # Mock user creation
-        mock_user = MagicMock()
-        mock_user.user_id = "user_123"
-        mock_user.email = "test@example.com"
-        mock_user.full_name = "Test User"
-        mock_user.role = UserRole.PATIENT
-        mock_user.status = UserStatus.ACTIVE
-        
-        auth_service.user_model.create_user.return_value = mock_user
-        
-        # Register user
-        result = auth_service.register_user(
-            email="test@example.com",
-            password="SecurePass123",
-            full_name="Test User",
-            role=UserRole.PATIENT
-        )
-        
-        # Verify result
-        assert result.success is True
-        assert result.user == mock_user
-        assert result.error_message is None
-        
-        # Verify user model was called correctly
-        auth_service.user_model.create_user.assert_called_once_with(
-            "test@example.com", "SecurePass123", "Test User", UserRole.PATIENT
-        )
+        with patch.dict('os.environ', {}, clear=True):
+            with patch('auth.auth_service.UserModel') as mock_user_model:
+                mock_user_instance = MagicMock()
+                mock_user_model.return_value = mock_user_instance
+                
+                auth_service = AuthService()
+                
+                # Mock user creation
+                mock_user = MagicMock()
+                mock_user.user_id = "user_123"
+                mock_user.email = "test@example.com"
+                mock_user.full_name = "Test User"
+                mock_user.role = UserRole.PATIENT
+                mock_user.status = UserStatus.ACTIVE
+                
+                mock_user_instance.create_user.return_value = mock_user
+                
+                # Register user
+                result = auth_service.register_user(
+                    email="test@example.com",
+                    password="SecurePass123",
+                    full_name="Test User",
+                    role=UserRole.PATIENT
+                )
+                
+                # Verify result
+                assert result.success is True
+                assert result.user == mock_user
+                assert result.error_message is None
+                
+                # Verify user model was called correctly
+                mock_user_instance.create_user.assert_called_once_with(
+                    "test@example.com", "SecurePass123", "Test User", UserRole.PATIENT
+                )
 
-    def test_user_registration_validation_error(self, auth_service):
+    def test_user_registration_validation_error(self):
         """Test user registration with validation error."""
-        # Mock user model to raise validation error
-        auth_service.user_model.create_user.side_effect = ValueError("Email already exists")
-        
-        result = auth_service.register_user(
-            email="existing@example.com",
-            password="SecurePass123",
-            full_name="Existing User"
-        )
-        
-        assert result.success is False
-        assert result.error_message == "Email already exists"
-        assert result.user is None
+        with patch.dict('os.environ', {}, clear=True):
+            with patch('auth.auth_service.UserModel') as mock_user_model:
+                mock_user_instance = MagicMock()
+                mock_user_model.return_value = mock_user_instance
+                
+                auth_service = AuthService()
+                
+                # Mock user model to raise validation error
+                mock_user_instance.create_user.side_effect = ValueError("Email already exists")
+                
+                result = auth_service.register_user(
+                    email="existing@example.com",
+                    password="SecurePass123",
+                    full_name="Existing User"
+                )
+                
+                assert result.success is False
+                assert result.error_message == "Email already exists"
+                assert result.user is None
 
-    def test_user_registration_system_error(self, auth_service):
+    def test_user_registration_system_error(self):
         """Test user registration with system error."""
-        # Mock user model to raise system error
-        auth_service.user_model.create_user.side_effect = Exception("Database error")
-        
-        result = auth_service.register_user(
-            email="test@example.com",
-            password="SecurePass123",
-            full_name="Test User"
-        )
-        
-        assert result.success is False
-        assert result.error_message == "Registration failed"
-        assert result.user is None
+        with patch.dict('os.environ', {}, clear=True):
+            with patch('auth.auth_service.UserModel') as mock_user_model:
+                mock_user_instance = MagicMock()
+                mock_user_model.return_value = mock_user_instance
+                
+                auth_service = AuthService()
+                
+                # Mock user model to raise system error
+                mock_user_instance.create_user.side_effect = Exception("Database error")
+                
+                result = auth_service.register_user(
+                    email="test@example.com",
+                    password="SecurePass123",
+                    full_name="Test User"
+                )
+                
+                assert result.success is False
+                assert result.error_message == "Registration failed"
+                assert result.user is None
 
-    def test_user_login_success(self, auth_service):
+    def test_user_login_success(self):
         """Test successful user login."""
-        # Mock user authentication
-        mock_user = MagicMock()
-        mock_user.user_id = "user_123"
-        mock_user.email = "test@example.com"
-        mock_user.status = UserStatus.ACTIVE
-        mock_user.is_locked.return_value = False
-        
-        auth_service.user_model.authenticate_user.return_value = mock_user
-        
-        # Mock session creation
-        with patch.object(auth_service, '_create_session') as mock_create_session:
-            mock_session = AuthSession(
-                session_id="session_123",
-                user_id="user_123",
-                created_at=datetime.now(),
-                expires_at=datetime.now() + timedelta(minutes=30)
-            )
-            mock_create_session.return_value = mock_session
-            
-            # Perform login
-            result = auth_service.login_user(
-                email="test@example.com",
-                password="SecurePass123",
-                ip_address="127.0.0.1",
-                user_agent="test-agent"
-            )
-            
-            # Verify result
-            assert result.success is True
-            assert result.user == mock_user
-            assert result.session == mock_session
-            assert result.token is not None
-            assert result.error_message is None
-            
-            # Verify authentication was called
-            auth_service.user_model.authenticate_user.assert_called_once_with(
-                "test@example.com", "SecurePass123"
-            )
-            
-            # Verify session was created
-            mock_create_session.assert_called_once_with(
-                "user_123", "127.0.0.1", "test-agent"
-            )
+        with patch.dict('os.environ', {}, clear=True):
+            with patch('auth.auth_service.UserModel') as mock_user_model:
+                mock_user_instance = MagicMock()
+                mock_user_model.return_value = mock_user_instance
+                
+                auth_service = AuthService()
+                
+                # Mock user authentication
+                mock_user = MagicMock()
+                mock_user.user_id = "user_123"
+                mock_user.email = "test@example.com"
+                mock_user.status = UserStatus.ACTIVE
+                mock_user.is_locked.return_value = False
+                
+                mock_user_instance.authenticate_user.return_value = mock_user
+                
+                # Mock session creation
+                with patch.object(auth_service, '_create_session') as mock_create_session:
+                    mock_session = AuthSession(
+                        session_id="session_123",
+                        user_id="user_123",
+                        created_at=datetime.now(),
+                        expires_at=datetime.now() + timedelta(minutes=30)
+                    )
+                    mock_create_session.return_value = mock_session
+                    
+                    # Perform login
+                    result = auth_service.login_user(
+                        email="test@example.com",
+                        password="SecurePass123",
+                        ip_address="127.0.0.1",
+                        user_agent="test-agent"
+                    )
+                    
+                    # Verify result
+                    assert result.success is True
+                    assert result.user == mock_user
+                    assert result.session == mock_session
+                    assert result.token is not None
+                    assert result.error_message is None
+                    
+                    # Verify authentication was called
+                    mock_user_instance.authenticate_user.assert_called_once_with(
+                        "test@example.com", "SecurePass123"
+                    )
+                    
+                    # Verify session was created
+                    mock_create_session.assert_called_once_with(
+                        "user_123", "127.0.0.1", "test-agent"
+                    )
 
     def test_user_login_invalid_credentials(self, auth_service):
         """Test user login with invalid credentials."""
