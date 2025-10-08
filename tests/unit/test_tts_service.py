@@ -29,13 +29,13 @@ class TestTTSResult:
         """Test creating a TTS result."""
         audio_data = AudioData(data=b"fake_audio_data", sample_rate=22050, channels=1, duration=1.0)
         result = TTSResult(
-            audio=audio_data,
+            audio_data=audio_data,
             text="Hello world",
             provider="openai",
             processing_time=1.5
         )
         
-        assert result.audio == audio_data
+        assert result.audio_data == audio_data
         assert result.text == "Hello world"
         assert result.provider == "openai"
         assert result.processing_time == 1.5
@@ -44,17 +44,17 @@ class TestTTSResult:
         """Test creating a TTS result with optional fields."""
         audio_data = AudioData(data=b"fake_audio_data", sample_rate=22050, channels=1, duration=1.0)
         result = TTSResult(
-            audio=audio_data,
+            audio_data=audio_data,
             text="Hello world",
             provider="openai",
             processing_time=1.5,
-            voice="alloy",
-            language="en-US",
+            voice_profile="alloy",
+            emotion="calm",
             metadata={"model": "tts-1"}
         )
         
-        assert result.voice == "alloy"
-        assert result.language == "en-US"
+        assert result.voice_profile == "alloy"
+        assert result.emotion == "calm"
         assert result.metadata == {"model": "tts-1"}
 
 
@@ -74,6 +74,15 @@ class TestTTSService:
         # Add performance config
         config.performance = Mock()
         config.performance.cache_size = 100
+        
+        # Add missing attributes
+        config.get_preferred_tts_service.return_value = "openai"
+        config.is_elevenlabs_configured.return_value = False
+        config.is_piper_configured.return_value = False
+        config.is_openai_tts_configured.return_value = True
+        config.voice_profiles = []
+        config.security = Mock()
+        config.security.encryption_enabled = False
         
         return config
     

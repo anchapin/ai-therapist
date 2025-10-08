@@ -179,6 +179,17 @@ class TTSService:
         self.voice_model_cache = {}
         self.max_cache_size = config.performance.cache_size
 
+        # Properties expected by tests
+        self.primary_provider = config.get_preferred_tts_service()
+        self.provider = self.primary_provider  # Backward compatibility for tests
+        self.providers = self.get_available_providers()
+        
+        # Additional backward compatibility properties for tests
+        self.api_key = config.openai_api_key if hasattr(config, 'openai_api_key') else None
+        self.voice = config.tts_voice if hasattr(config, 'tts_voice') else "alloy"
+        self.language = config.tts_language if hasattr(config, 'tts_language') else "en-US"
+        self.model = config.tts_model if hasattr(config, 'tts_model') else "tts-1"
+
         # Initialize services
         self._initialize_services()
 
@@ -1340,6 +1351,135 @@ class TTSService:
                 )
             except Exception as e:
                 self.logger.warning(f"Failed to preload response: {str(e)}")
+
+    def get_available_providers(self) -> List[str]:
+        """Get list of available TTS providers."""
+        providers = []
+        if self.openai_client:
+            providers.append("openai")
+        if self.elevenlabs_client:
+            providers.append("elevenlabs")
+        if self.piper_tts:
+            providers.append("piper")
+        return providers
+
+    def is_available(self) -> bool:
+        """Check if any TTS service is available."""
+        return bool(self.openai_client or self.elevenlabs_client or self.piper_tts)
+
+    def get_supported_voices(self) -> List[Dict[str, str]]:
+        """Get list of supported voices."""
+        voices = []
+        if self.openai_client:
+            voices.extend([
+                {"id": "alloy", "name": "Alloy", "language": "en-US"},
+                {"id": "echo", "name": "Echo", "language": "en-US"},
+                {"id": "fable", "name": "Fable", "language": "en-US"},
+                {"id": "onyx", "name": "Onyx", "language": "en-US"},
+                {"id": "nova", "name": "Nova", "language": "en-US"},
+                {"id": "shimmer", "name": "Shimmer", "language": "en-US"}
+            ])
+        if self.elevenlabs_client:
+            voices.extend([
+                {"id": "rachel", "name": "Rachel", "language": "en-US"},
+                {"id": "drew", "name": "Drew", "language": "en-US"},
+                {"id": "clyde", "name": "Clyde", "language": "en-US"},
+                {"id": "domy", "name": "Domy", "language": "en-US"},
+                {"id": "dave", "name": "Dave", "language": "en-US"},
+                {"id": "fin", "name": "Fin", "language": "en-US"},
+                {"id": "bella", "name": "Bella", "language": "en-US"},
+                {"id": "antoni", "name": "Antoni", "language": "en-US"},
+                {"id": "elli", "name": "Elli", "language": "en-US"},
+                {"id": "josh", "name": "Josh", "language": "en-US"}
+            ])
+        if self.piper_tts:
+            voices.extend([
+                {"id": "default_male", "name": "Default Male", "language": "en-US"},
+                {"id": "default_female", "name": "Default Female", "language": "en-US"}
+            ])
+        return voices
+
+    def get_supported_languages(self) -> List[Dict[str, str]]:
+        """Get list of supported languages."""
+        return [
+            {"code": "en-US", "name": "English (US)"},
+            {"code": "en-GB", "name": "English (UK)"},
+            {"code": "es-ES", "name": "Spanish"},
+            {"code": "fr-FR", "name": "French"},
+            {"code": "de-DE", "name": "German"},
+            {"code": "it-IT", "name": "Italian"},
+            {"code": "pt-BR", "name": "Portuguese"},
+            {"code": "ja-JP", "name": "Japanese"},
+            {"code": "ko-KR", "name": "Korean"},
+            {"code": "zh-CN", "name": "Chinese"}
+        ]
+
+    def get_supported_models(self) -> List[Dict[str, str]]:
+        """Get list of supported models."""
+        models = []
+        if self.openai_client:
+            models.extend([
+                {"id": "tts-1", "name": "OpenAI TTS-1"},
+                {"id": "tts-1-hd", "name": "OpenAI TTS-1 HD"}
+            ])
+        return models
+
+    def set_voice(self, voice: str) -> None:
+        """Set the default voice."""
+        if voice in self.get_supported_voices():
+            self.voice = voice
+        else:
+            raise TTSError(f"Invalid voice: {voice}")
+
+    def set_language(self, language: str) -> None:
+        """Set the default language."""
+        if language in self.get_supported_languages():
+            self.language = language
+        else:
+            raise TTSError(f"Invalid language: {language}")
+
+    def set_model(self, model: str) -> None:
+        """Set the default model."""
+        if model in self.get_supported_models():
+            self.model = model
+        else:
+            raise TTSError(f"Invalid model: {model}")
+
+    def get_service_info(self) -> Dict[str, Any]:
+        """Get service information."""
+        return {
+            "provider": self.primary_provider,
+            "model": self.model,
+            "voice": self.voice,
+            "language": self.language,
+            "available_providers": self.providers,
+            "is_available": self.is_available(),
+            "available": self.is_available(),  # Backward compatibility
+            "request_count": self.request_count,
+            "error_count": self.error_count,
+            "average_processing_time": self.average_processing_time,
+            "supported_voices": self.get_supported_voices(),
+            "supported_languages": self.get_supported_languages(),
+            "supported_models": self.get_supported_models()
+        }
+
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit."""
+        self.cleanup()
+
+    def __str__(self) -> str:
+        """String representation."""
+        return f"TTSService(provider={self.primary_provider}, model={self.model})"
+
+    def __repr__(self) -> str:
+        """Detailed string representation."""
+        return (f"TTSService(provider={self.primary_provider}, model={self.model}, "
+                f"voice={self.voice}, language={self.language}, "
+                f"available={self.is_available()})")
 
     def cleanup(self):
         """Clean up TTS service resources."""

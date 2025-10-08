@@ -589,8 +589,6 @@ class VoiceConfig:
         elif self.is_google_speech_configured():
             return "google"
         else:
-            return "mock"
-        else:
             return "mock"  # Default to mock in testing
 
     def get_preferred_tts_service(self) -> str:

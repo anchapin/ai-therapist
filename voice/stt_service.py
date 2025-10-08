@@ -269,7 +269,7 @@ class STTService:
             providers.append("whisper")
         return providers
 
-    async def transcribe_audio(self, audio_data, provider: Optional[str] = None) -> STTResult:
+    async def transcribe_audio(self, audio_data, provider: Optional[str] = None, language: Optional[str] = None, **kwargs) -> STTResult:
         """Transcribe audio data to text with fallback mechanisms."""
         if not self.is_available():
             raise RuntimeError("No STT service available")
@@ -381,16 +381,25 @@ class STTService:
                         )
                     )
 
-                # Extract text and metadata
-                text = response.get("text", "")
-                language = response.get("language", self.config.whisper_language)
+                # Extract text and metadata - handle both dict and object responses
+                if isinstance(response, dict):
+                    text = response.get("text", "")
+                    language = response.get("language", self.config.whisper_language)
+                    duration = response.get("duration", audio_data.duration)
+                    segments = response.get("segments", [])
+                else:
+                    # Handle Mock object response
+                    text = getattr(response, "text", "")
+                    language = getattr(response, "language", self.config.whisper_language)
+                    duration = getattr(response, "duration", audio_data.duration)
+                    segments = getattr(response, "segments", [])
 
                 # Extract word timestamps
                 word_timestamps = None
-                if "segments" in response:
+                if segments:
                     word_timestamps = []
-                    for segment in response["segments"]:
-                        if "words" in segment:
+                    for segment in segments:
+                        if isinstance(segment, dict) and "words" in segment:
                             for word_info in segment["words"]:
                                 word_timestamps.append({
                                     'word': word_info.get("word", ""),
@@ -402,7 +411,7 @@ class STTService:
                     text=text,
                     confidence=0.95,  # OpenAI Whisper typically high confidence
                     language=language,
-                    duration=audio_data.duration,
+                    duration=duration,
                     provider="openai",
                     alternatives=[],
                     word_timestamps=word_timestamps,
@@ -967,9 +976,103 @@ class STTService:
         except Exception as e:
             self.logger.error(f"Error cleaning up STT service: {str(e)}")
 
-    def get_preferred_provider(self) -> str:
-        """Get the preferred STT provider."""
-        return self.primary_provider
+    def get_supported_languages(self) -> List[Dict[str, str]]:
+        """Get list of supported languages."""
+        return [
+            {"code": "en", "name": "English"},
+            {"code": "es", "name": "Spanish"},
+            {"code": "fr", "name": "French"},
+            {"code": "de", "name": "German"},
+            {"code": "it", "name": "Italian"},
+            {"code": "pt", "name": "Portuguese"},
+            {"code": "zh", "name": "Chinese"},
+            {"code": "ja", "name": "Japanese"},
+            {"code": "ko", "name": "Korean"},
+            {"code": "ru", "name": "Russian"}
+        ]
+
+    def get_supported_models(self) -> List[Dict[str, str]]:
+        """Get list of supported models."""
+        models = []
+        if self.openai_client:
+            models.append({"id": "whisper-1", "name": "OpenAI Whisper"})
+        if self.whisper_model:
+            models.extend([
+                {"id": "base", "name": "Whisper Base"},
+                {"id": "small", "name": "Whisper Small"},
+                {"id": "medium", "name": "Whisper Medium"},
+                {"id": "large", "name": "Whisper Large"}
+            ])
+        return models
+
+    def set_language(self, language: str) -> None:
+        """Set the default language for transcription."""
+        supported_langs = [lang["code"] for lang in self.get_supported_languages()]
+        if language in supported_langs:
+            self.language = language
+        else:
+            raise STTError(f"Invalid language: {language}")
+
+    def set_model(self, model: str) -> None:
+        """Set the default model for transcription."""
+        supported_models = [model["id"] for model in self.get_supported_models()]
+        if model in supported_models:
+            self.model = model
+        else:
+            raise STTError(f"Invalid model: {model}")
+
+    def get_service_info(self) -> Dict[str, Any]:
+        """Get service information."""
+        return {
+            "provider": self.primary_provider,
+            "model": self.model,
+            "language": self.language,
+            "available_providers": self.providers,
+            "is_available": self.is_available(),
+            "available": self.is_available(),  # Backward compatibility
+            "request_count": self.request_count,
+            "error_count": self.error_count,
+            "average_processing_time": self.average_processing_time,
+            "supported_languages": self.get_supported_languages(),
+            "supported_models": self.get_supported_models()
+        }
+
+    async def batch_transcribe(self, audio_list: List[AudioData], **kwargs) -> List[STTResult]:
+        """Transcribe multiple audio files in batch."""
+        results = []
+        for audio_data in audio_list:
+            try:
+                result = await self.transcribe_audio(audio_data, **kwargs)
+                results.append(result)
+            except Exception as e:
+                # Create error result for failed transcription
+                error_result = STTResult(
+                    text="",
+                    confidence=0.0,
+                    language=self.language,
+                    duration=audio_data.duration if audio_data else 0.0,
+                    provider="error",
+                    error=str(e)
+                )
+                results.append(error_result)
+        return results
+
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit."""
+        self.cleanup()
+
+    def __str__(self) -> str:
+        """String representation."""
+        return f"STTService(provider={self.primary_provider}, model={self.model})"
+
+    def __repr__(self) -> str:
+        """Detailed string representation."""
+        return (f"STTService(provider={self.primary_provider}, model={self.model}, "
+                f"language={self.language}, available={self.is_available()})")
 
     def get_therapy_keywords(self) -> List[str]:
         """Get the list of therapy keywords."""
