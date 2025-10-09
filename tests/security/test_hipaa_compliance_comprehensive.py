@@ -141,7 +141,8 @@ class TestHIPAACompliance:
         assert "[PERSON" in sanitized or "[NAME" in sanitized
         assert "[DOB" in sanitized or "[DATE" in sanitized
     
-    def test_encryption_at_rest(self, test_db_manager):
+    @pytest.mark.asyncio
+    async def test_encryption_at_rest(self, test_db_manager):
         """Test data encryption at rest."""
         sensitive_data = "Patient PHI: SSN 123-45-6789"
         

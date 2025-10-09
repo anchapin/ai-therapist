@@ -465,7 +465,7 @@ class TestAuthServiceSessionManagement:
             existing_sessions.append(session)
         
         # Mock repo to return existing sessions
-        mock_repo.find_by_user_id.return_value = existing_sessions
+        mock_repo.find_by_user_id = Mock(return_value=existing_sessions)
         
         # Create new session (should invalidate oldest)
         with patch.object(auth_service, '_invalidate_session') as mock_invalidate:
