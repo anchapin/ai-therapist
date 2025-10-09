@@ -124,20 +124,20 @@ class TestVoiceService:
         assert hasattr(session, 'start_time')
         assert hasattr(session, 'metadata')
     
-    async def test_create_voice_session_with_custom_config(self, voice_service):
+    def test_create_voice_session_with_custom_config(self, voice_service):
         """Test creating a voice session with custom configuration."""
         profile = "custom_voice"
         
-        session_id = await voice_service.create_session("user123", voice_profile=profile)
+        session_id = voice_service.create_session("user123", voice_profile=profile)
         
         assert session_id is not None
         assert session_id in voice_service.sessions
         session = voice_service.sessions[session_id]
         assert session.current_voice_profile == profile
     
-    async def test_get_existing_session(self, voice_service):
+    def test_get_existing_session(self, voice_service):
         """Test getting an existing session."""
-        session_id = await voice_service.create_session("user123")
+        session_id = voice_service.create_session("user123")
         session = voice_service.get_session(session_id)
         
         assert session is not None
@@ -145,34 +145,34 @@ class TestVoiceService:
         assert hasattr(session, 'state')
         assert hasattr(session, 'metadata')
     
-    async def test_get_nonexistent_session(self, voice_service):
+    def test_get_nonexistent_session(self, voice_service):
         """Test getting a non-existent session."""
         retrieved = voice_service.get_session("nonexistent")
         assert retrieved is None
     
-    async def test_process_voice_input_success(self, voice_service):
+    def test_process_voice_input_success(self, voice_service):
         """Test successful voice input processing."""
-        session_id = await voice_service.create_session("user123")
+        session_id = voice_service.create_session("user123")
         audio_data = AudioData(b'test_audio', 16000, 1)
         
-        result = await voice_service.process_voice_input(session_id, audio_data)
+        result = voice_service.process_voice_input(session_id, audio_data)
         
         assert result is not None
     
-    async def test_process_voice_input_session_not_found(self, voice_service):
+    def test_process_voice_input_session_not_found(self, voice_service):
         """Test processing voice input with non-existent session."""
         audio_data = AudioData(b'test_audio', 16000, 1)
         
         with pytest.raises(VoiceError, match="Session not found"):
-            await voice_service.process_voice_input("nonexistent", audio_data)
+            voice_service.process_voice_input("nonexistent", audio_data)
     
     async def test_process_voice_input_stt_failure(self, voice_service, mock_stt_service):
         """Test processing voice input when STT fails."""
         mock_stt_service.transcribe_audio = AsyncMock(side_effect=Exception("STT failed"))
-        session = await voice_service.create_session("user123")
+        session = voice_service.create_session("user123")
         audio_data = AudioData(b'test_audio', 16000, 1)
         
-        result = await voice_service.process_voice_input(session.session_id, audio_data)
+        result = voice_service.process_voice_input(session.session_id, audio_data)
         
         assert result is not None
         assert 'error' in result
@@ -180,9 +180,9 @@ class TestVoiceService:
     
     async def test_generate_voice_response_success(self, voice_service):
         """Test successful voice response generation."""
-        session = await voice_service.create_session("user123")
+        session = voice_service.create_session("user123")
         
-        result = await voice_service.generate_voice_response(session.session_id, "Hello world")
+        result = voice_service.generate_voice_response(session.session_id, "Hello world")
         
         assert result is not None
         assert 'audio_data' in result
@@ -193,14 +193,14 @@ class TestVoiceService:
     async def test_generate_voice_response_session_not_found(self, voice_service):
         """Test generating voice response with non-existent session."""
         with pytest.raises(VoiceError, match="Session not found"):
-            await voice_service.generate_voice_response("nonexistent", "Hello")
+            voice_service.generate_voice_response("nonexistent", "Hello")
     
     async def test_generate_voice_response_tts_failure(self, voice_service, mock_tts_service):
         """Test generating voice response when TTS fails."""
         mock_tts_service.synthesize_speech = AsyncMock(side_effect=Exception("TTS failed"))
-        session = await voice_service.create_session("user123")
+        session = voice_service.create_session("user123")
         
-        result = await voice_service.generate_voice_response(session.session_id, "Hello")
+        result = voice_service.generate_voice_response(session.session_id, "Hello")
         
         assert result is not None
         assert 'error' in result
@@ -211,19 +211,19 @@ class TestVoiceService:
         mock_command_processor.detect_command = Mock(return_value=VoiceCommand("emergency", {}))
         mock_command_processor.process_command = AsyncMock(return_value={"action": "emergency_response"})
         
-        session = await voice_service.create_session("user123")
+        session = voice_service.create_session("user123")
         audio_data = AudioData(b'test_audio', 16000, 1)
         
-        result = await voice_service.process_voice_input(session.session_id, audio_data)
+        result = voice_service.process_voice_input(session.session_id, audio_data)
         
         assert 'command' in result
         assert result['command']['action'] == "emergency_response"
     
     async def test_end_voice_session_success(self, voice_service):
         """Test successfully ending a voice session."""
-        session = await voice_service.create_session("user123")
+        session = voice_service.create_session("user123")
         
-        result = await voice_service.end_session(session.session_id)
+        result = voice_service.end_session(session.session_id)
         
         assert result is True
         assert session.session_id not in voice_service.sessions
@@ -231,26 +231,26 @@ class TestVoiceService:
     
     async def test_end_voice_session_not_found(self, voice_service):
         """Test ending a non-existent voice session."""
-        result = await voice_service.end_session("nonexistent")
+        result = voice_service.end_session("nonexistent")
         assert result is False
     
     async def test_cleanup_expired_sessions(self, voice_service):
         """Test cleanup of expired sessions."""
         # Create a session and manually expire it
-        session = await voice_service.create_session("user123")
+        session = voice_service.create_session("user123")
         session.created_at = datetime.now() - timedelta(hours=2)
         session.expires_at = datetime.now() - timedelta(hours=1)
         
-        await voice_service.cleanup_expired_sessions()
+        voice_service.cleanup_expired_sessions()
         
         assert session.session_id not in voice_service.sessions
     
     async def test_get_session_statistics(self, voice_service):
         """Test getting session statistics."""
-        await voice_service.create_session("user123")
-        await voice_service.create_session("user456")
+        voice_service.create_session("user123")
+        voice_service.create_session("user456")
         
-        stats = await voice_service.get_session_statistics()
+        stats = voice_service.get_session_statistics()
         
         assert 'total_sessions' in stats
         assert 'active_sessions' in stats
@@ -263,7 +263,7 @@ class TestVoiceService:
         mock_tts_service.is_healthy = True
         mock_security.is_healthy = True
         
-        health = await voice_service.health_check()
+        health = voice_service.health_check()
         
         assert health['overall'] is True
         assert health['stt_service'] is True
@@ -274,7 +274,7 @@ class TestVoiceService:
         """Test health check when some services are unhealthy."""
         mock_stt_service.is_healthy = False
         
-        health = await voice_service.health_check()
+        health = voice_service.health_check()
         
         assert health['overall'] is False
         assert health['stt_service'] is False
@@ -285,7 +285,7 @@ class TestVoiceService:
         sessions = []
         for i in range(5):  # Assuming limit is lower than 5
             try:
-                session = await voice_service.create_session("user123")
+                session = voice_service.create_session("user123")
                 sessions.append(session)
             except VoiceError:
                 break
@@ -296,7 +296,7 @@ class TestVoiceService:
         
         # Clean up
         for session in sessions:
-            await voice_service.end_session(session.session_id)
+            voice_service.end_session(session.session_id)
 
 
 class TestVoiceSession:

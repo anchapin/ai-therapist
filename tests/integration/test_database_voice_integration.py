@@ -4,6 +4,7 @@ Tests end-to-end functionality between database and voice services.
 """
 
 import pytest
+import pytest_asyncio
 import asyncio
 from unittest.mock import Mock, patch, MagicMock, AsyncMock
 from datetime import datetime, timedelta
@@ -27,33 +28,24 @@ except ImportError as e:
     pytest.skip(f"Integration test dependencies not available: {e}", allow_module_level=True)
 
 
+@pytest.mark.asyncio
 @pytest.mark.integration
 class TestDatabaseVoiceServiceIntegration:
     """Test integration between database and voice service."""
     
     @pytest.fixture
-    async def test_db_manager(self):
+    def test_db_manager(self):
         """Create an in-memory database for testing."""
         # Use SQLite in-memory database for testing
-        db_config = {
-            'database_url': 'sqlite:///:memory:',
-            'pool_size': 5,
-            'max_overflow': 10,
-            'pool_timeout': 30,
-            'pool_recycle': 3600
-        }
+        db_path = ":memory:"
         
-        db_manager = DatabaseManager(db_config)
-        await db_manager.initialize()
-        
-        # Create tables
-        await db_manager.create_tables()
+        db_manager = DatabaseManager(db_path)
         
         yield db_manager
         
-        await db_manager.close()
+        db_manager.close()
     
-    @pytest.fixture
+    @pytest_asyncio.fixture
     async def repositories(self, test_db_manager):
         """Create repository instances."""
         return {
@@ -64,7 +56,7 @@ class TestDatabaseVoiceServiceIntegration:
             'message': MessageRepository(test_db_manager)
         }
     
-    @pytest.fixture
+    @pytest_asyncio.fixture
     def mock_voice_config(self):
         """Create a mock voice configuration."""
         config = Mock(spec=VoiceConfig)
@@ -78,7 +70,7 @@ class TestDatabaseVoiceServiceIntegration:
         config.session_timeout = 300
         return config
     
-    @pytest.fixture
+    @pytest_asyncio.fixture
     async def voice_service_with_db(self, mock_voice_config, test_db_manager):
         """Create a VoiceService integrated with database."""
         with patch('voice.voice_service.DatabaseManager', return_value=test_db_manager), \
@@ -96,7 +88,7 @@ class TestDatabaseVoiceServiceIntegration:
     async def test_voice_session_persistence(self, voice_service_with_db, repositories):
         """Test that voice sessions are properly persisted to database."""
         # Create a voice session
-        session = await voice_service_with_db.create_session("user123")
+        session = voice_service_with_db.create_session("user123")
         
         # Verify session exists in memory
         assert session.session_id in voice_service_with_db.sessions
@@ -120,7 +112,7 @@ class TestDatabaseVoiceServiceIntegration:
         user = await repositories['user'].create(user_data)
         
         # Create voice session for user
-        session = await voice_service_with_db.create_session(str(user.id))
+        session = voice_service_with_db.create_session(str(user.id))
         
         # Simulate voice data storage
         voice_data = {
@@ -165,7 +157,7 @@ class TestDatabaseVoiceServiceIntegration:
         conversation = await repositories['conversation'].create(conv_data)
         
         # Create voice session linked to conversation
-        session = await voice_service_with_db.create_session(str(user.id))
+        session = voice_service_with_db.create_session(str(user.id))
         session.conversation_id = str(conversation.id)
         
         # Store the updated session
@@ -276,7 +268,7 @@ class TestDatabaseVoiceServiceIntegration:
     async def test_voice_session_cleanup(self, voice_service_with_db, repositories):
         """Test cleanup of expired voice sessions."""
         # Create a voice session
-        session = await voice_service_with_db.create_session("cleanup_user")
+        session = voice_service_with_db.create_session("cleanup_user")
         
         # Manually expire it in database
         expired_time = datetime.now() - timedelta(hours=1)
@@ -303,7 +295,7 @@ class TestDatabaseVoiceServiceIntegration:
         sessions = []
         for i in range(3):
             try:
-                session = await voice_service_with_db.create_session(f"{user_id}_{i}")
+                session = voice_service_with_db.create_session(f"{user_id}_{i}")
                 sessions.append(session)
             except Exception as e:
                 # May hit session limit
@@ -334,7 +326,7 @@ class TestDatabaseVoiceServiceIntegration:
         user = await repositories['user'].create(user_data)
         
         # Create voice session
-        session = await voice_service_with_db.create_session(str(user.id))
+        session = voice_service_with_db.create_session(str(user.id))
         
         # Simulate voice data processing with audit log
         audit_data = {
@@ -396,7 +388,7 @@ class TestDatabaseVoiceServiceIntegration:
 class TestSecurityComplianceIntegration:
     """Test integration of security and compliance features."""
     
-    @pytest.fixture
+    @pytest_asyncio.fixture
     async def test_db_manager(self):
         """Create an in-memory database for testing."""
         db_config = {
@@ -410,7 +402,7 @@ class TestSecurityComplianceIntegration:
         await db_manager.create_tables()
         
         yield db_manager
-        await db_manager.close()
+        db_manager.close()
     
     async def test_phi_data_encryption(self, test_db_manager):
         """Test encryption of PHI data in database."""

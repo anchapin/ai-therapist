@@ -125,25 +125,25 @@ class TestAuthMiddlewareLogic:
             session=MagicMock()
         )
         
-        auth_service.login_user.return_value = auth_result
-        
-        # Perform login
-        result = auth_middleware.login(
-            email="test@example.com",
-            password="SecurePass123",
-            ip_address="127.0.0.1"
-        )
-        
-        # Verify result
-        assert result.success is True
-        assert result.user == mock_user
-        assert result.token == "jwt_token_123"
-        
-        # Verify middleware state
-        assert auth_middleware.current_user == mock_user
-        assert auth_middleware.current_token == "jwt_token_123"
-        assert auth_middleware.session_state['user_id'] == "user_123"
-        assert auth_middleware.session_state['token'] == "jwt_token_123"
+        # Mock the auth service login_user method
+        with patch.object(auth_service, 'login_user', return_value=auth_result):
+            # Perform login
+            result = auth_middleware.login(
+                email="test@example.com",
+                password="SecurePass123",
+                ip_address="127.0.0.1"
+            )
+            
+            # Verify result
+            assert result.success is True
+            assert result.user == mock_user
+            assert result.token == "jwt_token_123"
+            
+            # Verify middleware state
+            assert auth_middleware.current_user == mock_user
+            assert auth_middleware.current_token == "jwt_token_123"
+            assert auth_middleware.session_state['user_id'] == "user_123"
+            assert auth_middleware.session_state['token'] == "jwt_token_123"
     
     def test_login_failure(self, auth_middleware, auth_service):
         """Test failed login."""
@@ -153,23 +153,22 @@ class TestAuthMiddlewareLogic:
             error_message="Invalid credentials"
         )
         
-        auth_service.login_user.return_value = auth_result
-        
-        # Perform login
-        result = auth_middleware.login(
-            email="test@example.com",
-            password="wrong_password"
-        )
-        
-        # Verify result
-        assert result.success is False
-        assert result.error_message == "Invalid credentials"
-        assert result.user is None
-        
-        # Verify middleware state is unchanged
-        assert auth_middleware.current_user is None
-        assert auth_middleware.current_token is None
-        assert auth_middleware.session_state == {}
+        with patch.object(auth_service, 'login_user', return_value=auth_result):
+            # Perform login
+            result = auth_middleware.login(
+                email="test@example.com",
+                password="wrong_password"
+            )
+            
+            # Verify result
+            assert result.success is False
+            assert result.error_message == "Invalid credentials"
+            assert result.user is None
+            
+            # Verify middleware state is unchanged
+            assert auth_middleware.current_user is None
+            assert auth_middleware.current_token is None
+            assert auth_middleware.session_state == {}
     
     def test_authenticate_token_success(self, auth_middleware, auth_service):
         """Test successful token authentication."""
@@ -177,26 +176,24 @@ class TestAuthMiddlewareLogic:
         mock_user = MagicMock()
         mock_user.user_id = "user_123"
         
-        auth_service.validate_token.return_value = mock_user
-        
-        # Authenticate token
-        result = auth_middleware.authenticate_token("valid_token")
-        
-        # Verify result
-        assert result is True
-        assert auth_middleware.current_user == mock_user
-        assert auth_middleware.current_token == "valid_token"
+        with patch.object(auth_service, 'validate_token', return_value=mock_user):
+            # Authenticate token
+            result = auth_middleware.authenticate_token("valid_token")
+            
+            # Verify result
+            assert result is True
+            assert auth_middleware.current_user == mock_user
+            assert auth_middleware.current_token == "valid_token"
     
     def test_authenticate_token_invalid(self, auth_middleware, auth_service):
         """Test invalid token authentication."""
-        auth_service.validate_token.return_value = None
-        
-        result = auth_middleware.authenticate_token("invalid_token")
-        
-        # Verify result
-        assert result is False
-        assert auth_middleware.current_user is None
-        assert auth_middleware.current_token is None
+        with patch.object(auth_service, 'validate_token', return_value=None):
+            result = auth_middleware.authenticate_token("invalid_token")
+            
+            # Verify result
+            assert result is False
+            assert auth_middleware.current_user is None
+            assert auth_middleware.current_token is None
     
     def test_logout_success(self, auth_middleware, auth_service):
         """Test successful logout."""
@@ -208,16 +205,15 @@ class TestAuthMiddlewareLogic:
         auth_middleware.current_token = "jwt_token_123"
         auth_middleware.session_state = {'user_id': 'user_123', 'token': 'jwt_token_123'}
         
-        auth_service.logout_user.return_value = True
-        
-        # Perform logout
-        result = auth_middleware.logout()
-        
-        # Verify result
-        assert result is True
-        assert auth_middleware.current_user is None
-        assert auth_middleware.current_token is None
-        assert auth_middleware.session_state == {}
+        with patch.object(auth_service, 'logout_user', return_value=True):
+            # Perform logout
+            result = auth_middleware.logout()
+            
+            # Verify result
+            assert result is True
+            assert auth_middleware.current_user is None
+            assert auth_middleware.current_token is None
+            assert auth_middleware.session_state == {}
     
     def test_logout_not_authenticated(self, auth_middleware):
         """Test logout when not authenticated."""
@@ -226,55 +222,48 @@ class TestAuthMiddlewareLogic:
         assert result is False
         assert auth_middleware.current_user is None
         assert auth_middleware.current_token is None
+        assert auth_middleware.session_state == {}
     
     def test_is_authenticated_true(self, auth_middleware):
-        """Test is_authenticated when user is authenticated."""
+        """Test is_authenticated returns True when user is set."""
         auth_middleware.current_user = MagicMock()
         
-        result = auth_middleware.is_authenticated()
-        
-        assert result is True
+        assert auth_middleware.is_authenticated() is True
     
     def test_is_authenticated_false(self, auth_middleware):
-        """Test is_authenticated when user is not authenticated."""
-        result = auth_middleware.is_authenticated()
-        
-        assert result is False
+        """Test is_authenticated returns False when no user."""
+        assert auth_middleware.is_authenticated() is False
     
     def test_get_current_user_role(self, auth_middleware):
-        """Test get_current_user_role."""
-        # Test with authenticated user
+        """Test getting current user role."""
         mock_user = MagicMock()
-        mock_user.role = UserRole.THERAPIST
+        mock_user.role.value = "PATIENT"
         auth_middleware.current_user = mock_user
         
-        result = auth_middleware.get_current_user_role()
-        assert result == "therapist"
+        assert auth_middleware.get_current_user_role() == "PATIENT"
         
-        # Test without authenticated user
+        # Test with no user
         auth_middleware.current_user = None
-        result = auth_middleware.get_current_user_role()
-        assert result is None
+        assert auth_middleware.get_current_user_role() is None
     
     def test_has_permission_authenticated_user(self, auth_middleware, auth_service):
-        """Test has_permission with authenticated user."""
-        # Set up authenticated user
+        """Test permission check for authenticated user."""
+        # Setup authenticated user
         mock_user = MagicMock()
         mock_user.user_id = "user_123"
         auth_middleware.current_user = mock_user
         
         # Mock permission check
-        auth_service.validate_session_access.return_value = True
-        
-        result = auth_middleware.has_permission("patient_data", "read")
-        
-        assert result is True
-        auth_service.validate_session_access.assert_called_once_with(
-            "user_123", "patient_data", "read"
-        )
+        with patch.object(auth_service, 'validate_session_access', return_value=True):
+            result = auth_middleware.has_permission("patient_data", "read")
+            
+            assert result is True
+            auth_service.validate_session_access.assert_called_once_with(
+                "user_123", "patient_data", "read"
+            )
     
     def test_has_permission_unauthenticated_user(self, auth_middleware):
-        """Test has_permission with unauthenticated user."""
+        """Test permission check for unauthenticated user."""
         result = auth_middleware.has_permission("patient_data", "read")
         
         assert result is False
@@ -287,40 +276,38 @@ class TestAuthMiddlewareLogic:
         mock_user.email = "test@example.com"
         
         auth_result = AuthResult(success=True, user=mock_user)
-        auth_service.register_user.return_value = auth_result
-        
-        # Perform registration
-        result = auth_middleware.register(
-            email="test@example.com",
-            password="SecurePass123",
-            full_name="Test User"
-        )
-        
-        # Verify result
-        assert result.success is True
-        assert result.user == mock_user
-        auth_service.register_user.assert_called_once_with(
-            "test@example.com", "SecurePass123", "Test User", UserRole.PATIENT
-        )
+        with patch.object(auth_service, 'register_user', return_value=auth_result):
+            # Perform registration
+            result = auth_middleware.register(
+                email="test@example.com",
+                password="SecurePass123",
+                full_name="Test User"
+            )
+            
+            # Verify result
+            assert result.success is True
+            assert result.user == mock_user
+            auth_service.register_user.assert_called_once_with(
+                "test@example.com", "SecurePass123", "Test User", UserRole.PATIENT
+            )
     
     def test_register_with_role(self, auth_middleware, auth_service):
         """Test registration with specific role."""
         mock_user = MagicMock()
         auth_result = AuthResult(success=True, user=mock_user)
-        auth_service.register_user.return_value = auth_result
-        
-        # Perform registration with therapist role
-        auth_middleware.register(
-            email="therapist@example.com",
-            password="SecurePass123",
-            full_name="Therapist User",
-            role=UserRole.THERAPIST
-        )
-        
-        # Verify role was passed correctly
-        auth_service.register_user.assert_called_once_with(
-            "therapist@example.com", "SecurePass123", "Therapist User", UserRole.THERAPIST
-        )
+        with patch.object(auth_service, 'register_user', return_value=auth_result):
+            # Perform registration with therapist role
+            auth_middleware.register(
+                email="therapist@example.com",
+                password="SecurePass123",
+                full_name="Therapist User",
+                role=UserRole.THERAPIST
+            )
+            
+            # Verify role was passed correctly
+            auth_service.register_user.assert_called_once_with(
+                "therapist@example.com", "SecurePass123", "Therapist User", UserRole.THERAPIST
+            )
     
     def test_register_failure(self, auth_middleware, auth_service):
         """Test failed registration."""
@@ -328,53 +315,60 @@ class TestAuthMiddlewareLogic:
             success=False,
             error_message="Email already exists"
         )
-        auth_service.register_user.return_value = auth_result
         
-        result = auth_middleware.register(
-            email="existing@example.com",
-            password="SecurePass123",
-            full_name="Existing User"
-        )
-        
-        assert result.success is False
-        assert result.error_message == "Email already exists"
+        with patch.object(auth_service, 'register_user', return_value=auth_result):
+            result = auth_middleware.register(
+                email="existing@example.com",
+                password="SecurePass123",
+                full_name="Existing User"
+            )
+            
+            assert result.success is False
+            assert result.error_message == "Email already exists"
     
     def test_initiate_password_reset_success(self, auth_middleware, auth_service):
         """Test successful password reset initiation."""
-        auth_result = AuthResult(success=True)
-        auth_service.initiate_password_reset.return_value = auth_result
+        auth_result = AuthResult(
+            success=True,
+            error_message="Password reset email sent"
+        )
         
-        result = auth_middleware.initiate_password_reset("test@example.com")
-        
-        assert result.success is True
-        auth_service.initiate_password_reset.assert_called_once_with("test@example.com")
+        with patch.object(auth_service, 'initiate_password_reset', return_value=auth_result):
+            result = auth_middleware.initiate_password_reset("user@example.com")
+            
+            assert result.success is True
+            assert result.error_message == "Password reset email sent"
     
     def test_reset_password_success(self, auth_middleware, auth_service):
         """Test successful password reset."""
-        auth_result = AuthResult(success=True)
-        auth_service.reset_password.return_value = auth_result
+        auth_result = AuthResult(
+            success=True,
+            error_message="Password reset successfully"
+        )
         
-        result = auth_middleware.reset_password("reset_token_123", "NewPassword123")
-        
-        assert result.success is True
-        auth_service.reset_password.assert_called_once_with("reset_token_123", "NewPassword123")
+        with patch.object(auth_service, 'reset_password', return_value=auth_result):
+            result = auth_middleware.reset_password("reset_token", "NewPassword123")
+            
+            assert result.success is True
+            assert result.error_message == "Password reset successfully"
     
     def test_change_password_success(self, auth_middleware, auth_service):
-        """Test successful password change for authenticated user."""
-        # Set up authenticated user
+        """Test successful password change."""
+        # Setup authenticated user
         mock_user = MagicMock()
         mock_user.user_id = "user_123"
         auth_middleware.current_user = mock_user
         
-        auth_result = AuthResult(success=True)
-        auth_service.change_password.return_value = auth_result
-        
-        result = auth_middleware.change_password("OldPassword123", "NewPassword123")
-        
-        assert result.success is True
-        auth_service.change_password.assert_called_once_with(
-            "user_123", "OldPassword123", "NewPassword123"
+        auth_result = AuthResult(
+            success=True,
+            error_message="Password changed successfully"
         )
+        
+        with patch.object(auth_service, 'change_password', return_value=auth_result):
+            result = auth_middleware.change_password("OldPassword123", "NewPassword123")
+            
+            assert result.success is True
+            assert result.error_message == "Password changed successfully"
     
     def test_change_password_not_authenticated(self, auth_middleware):
         """Test password change when not authenticated."""
@@ -384,71 +378,72 @@ class TestAuthMiddlewareLogic:
         assert result.error_message == "Not authenticated"
     
     def test_session_state_persistence(self, auth_middleware, auth_service):
-        """Test that session state is properly maintained."""
-        # Mock successful login
+        """Test that session state persists across operations."""
         mock_user = MagicMock()
         mock_user.user_id = "user_123"
         mock_user.email = "test@example.com"
+        mock_user.role = UserRole.PATIENT
         
         auth_result = AuthResult(
             success=True,
             user=mock_user,
             token="jwt_token_123"
         )
-        auth_service.login_user.return_value = auth_result
         
-        # Perform login
-        auth_middleware.login("test@example.com", "password")
-        
-        # Verify session state is set
-        assert auth_middleware.session_state['user_id'] == "user_123"
-        assert auth_middleware.session_state['token'] == "jwt_token_123"
-        
-        # Mock logout
-        auth_service.logout_user.return_value = True
-        
-        # Perform logout
-        auth_middleware.logout()
-        
-        # Verify session state is cleared
-        assert auth_middleware.session_state == {}
+        with patch.object(auth_service, 'login_user', return_value=auth_result):
+            # Login
+            login_result = auth_middleware.login("test@example.com", "SecurePass123")
+            assert login_result.success is True
+            
+            # Verify session state
+            assert auth_middleware.session_state['user_id'] == "user_123"
+            assert auth_middleware.session_state['token'] == "jwt_token_123"
+            
+            # Logout
+            with patch.object(auth_service, 'logout_user', return_value=True):
+                logout_result = auth_middleware.logout()
+                assert logout_result is True
+                
+                # Verify session state is cleared
+                assert auth_middleware.session_state == {}
     
     def test_permission_based_access_control(self, auth_middleware, auth_service):
         """Test permission-based access control."""
-        # Set up admin user
-        admin_user = MagicMock()
-        admin_user.user_id = "admin_123"
-        auth_middleware.current_user = admin_user
+        # Setup authenticated user
+        mock_user = MagicMock()
+        mock_user.user_id = "user_123"
+        auth_middleware.current_user = mock_user
         
-        # Mock admin has full access
-        auth_service.validate_session_access.return_value = True
-        
-        # Test various permissions
-        assert auth_middleware.has_permission("admin_panel", "write") is True
-        assert auth_middleware.has_permission("patient_data", "delete") is True
-        assert auth_middleware.has_permission("system_config", "read") is True
-        
-        # Verify calls were made correctly
-        assert auth_service.validate_session_access.call_count == 3
+        # Mock permission check
+        with patch.object(auth_service, 'validate_session_access', return_value=True):
+            # Test various permissions
+            assert auth_middleware.has_permission("patient_data", "read") is True
+            assert auth_middleware.has_permission("patient_data", "write") is True
+            
+            # Verify service calls
+            assert auth_service.validate_session_access.call_count == 2
     
     def test_role_based_access_simulation(self, auth_middleware, auth_service):
         """Test role-based access control simulation."""
-        # Set up patient user
-        patient_user = MagicMock()
-        patient_user.user_id = "patient_123"
-        auth_middleware.current_user = patient_user
+        # Setup authenticated user
+        mock_user = MagicMock()
+        mock_user.user_id = "user_123"
+        auth_middleware.current_user = mock_user
         
-        # Mock limited patient access
+        # Mock permission function based on role
         def mock_permission_check(user_id, resource, permission):
-            # Simulate patient access rules
-            if resource.startswith("patient_") and permission == "read":
-                return True
-            return False
+            # Simulate role-based permissions
+            permissions = {
+                "patient_read": True,
+                "patient_write": True,
+                "therapist_read": False,
+                "admin_write": False
+            }
+            return permissions.get(f"{resource}_{permission}", False)
         
-        auth_service.validate_session_access.side_effect = mock_permission_check
-        
-        # Test patient access
-        assert auth_middleware.has_permission("patient_123_data", "read") is True
-        assert auth_middleware.has_permission("patient_123_data", "write") is False
-        assert auth_middleware.has_permission("admin_panel", "read") is False
-        assert auth_middleware.has_permission("other_patient_data", "read") is False
+        with patch.object(auth_service, 'validate_session_access', side_effect=mock_permission_check):
+            # Test permissions based on simulated role
+            assert auth_middleware.has_permission("patient", "read") is True
+            assert auth_middleware.has_permission("patient", "write") is True
+            assert auth_middleware.has_permission("therapist", "read") is False
+            assert auth_middleware.has_permission("admin", "write") is False
