@@ -40,13 +40,14 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - name: Install system dependencies
+    - name: Install system dependencies (audio)
       run: |
         sudo apt-get update
         sudo apt-get install -y \
           portaudio19-dev \
-          ffmpeg \
-          libsndfile1
+          libasound2-dev \
+          libsndfile1 \
+          ffmpeg
 
     - name: Install Python dependencies
       run: |
