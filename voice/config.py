@@ -1260,9 +1260,19 @@ class VoiceConfig:
 
     @property
     def log_file_path(self) -> str:
-        """Get log file path."""
+        """Get log file path with secure temporary file."""
         import tempfile
-        return getattr(self, '_log_file_path', os.path.join(tempfile.gettempdir(), 'voice_app.log'))
+        if not hasattr(self, '_log_file_path'):
+            # Create a secure temporary file with proper permissions
+            temp_file = tempfile.NamedTemporaryFile(
+                mode='w', 
+                suffix='.log', 
+                prefix='voice_app_',
+                delete=False
+            )
+            temp_file.close()  # Close the file handle but keep the path
+            self._log_file_path = temp_file.name
+        return self._log_file_path
 
     @log_file_path.setter
     def log_file_path(self, value: str):

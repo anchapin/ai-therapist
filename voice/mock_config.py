@@ -165,7 +165,15 @@ class MockConfig:
         # Logging settings
         self.log_level = "INFO"
         import tempfile
-        self.log_file_path = os.path.join(tempfile.gettempdir(), "voice_service.log")
+        # Create a secure temporary file with proper permissions
+        temp_file = tempfile.NamedTemporaryFile(
+            mode='w', 
+            suffix='.log', 
+            prefix='voice_service_',
+            delete=False
+        )
+        temp_file.close()  # Close the file handle but keep the path
+        self.log_file_path = temp_file.name
         self.log_rotation_enabled = True
         self.max_log_size_mb = 10
         self.log_retention_days = 7
