@@ -86,16 +86,28 @@ if not CRYPTOGRAPHY_AVAILABLE:
 
         @classmethod
         def generate_key(cls):
-            return b"mock_key_for_testing_32_bytes"
+            # Generate a consistent mock key for testing using environment variable
+            import os
+            import secrets
+            mock_key = os.getenv("MOCK_ENCRYPTION_KEY", "")
+            if mock_key:
+                return mock_key.encode()
+            # Generate a random key if no mock key is provided
+            return secrets.token_bytes(32)
 
         def encrypt(self, data):
-            # Simple mock encryption - just prefix the data
-            return b"mock_encrypted_" + data
+            # Simple mock encryption - use environment variable for prefix
+            import os
+            prefix = os.getenv("MOCK_ENCRYPTION_PREFIX", "encrypted").encode()
+            return prefix + b"_" + data
 
         def decrypt(self, data):
             # Simple mock decryption - remove the prefix
-            if data.startswith(b"mock_encrypted_"):
-                return data[15:]  # Remove "mock_encrypted_" prefix
+            import os
+            prefix = os.getenv("MOCK_ENCRYPTION_PREFIX", "encrypted").encode()
+            prefix_with_sep = prefix + b"_"
+            if data.startswith(prefix_with_sep):
+                return data[len(prefix_with_sep):]
             return data
 
     class MockHashes:
@@ -112,7 +124,14 @@ if not CRYPTOGRAPHY_AVAILABLE:
             self.iterations = iterations
 
         def derive(self, password):
-            return b"mock_derived_key_32_bytes_long"
+            # Generate a consistent mock derived key using environment variable
+            import os
+            import secrets
+            mock_derived_key = os.getenv("MOCK_DERIVED_KEY", "")
+            if mock_derived_key:
+                return mock_derived_key.encode()
+            # Generate a random derived key if no mock key is provided
+            return secrets.token_bytes(32)
 
     # Set mock classes
     Fernet = MockFernet

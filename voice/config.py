@@ -305,10 +305,11 @@ class VoiceConfig:
         if mock_mode or force_mock_services:
             self._stt_provider = "mock"
             self._tts_provider = "mock"
-            self.openai_api_key = "mock_openai_key_for_testing"
-            self.elevenlabs_api_key = "mock_elevenlabs_key_for_testing"
-            self.elevenlabs_voice_id = "mock_voice_id_for_testing"
-            self.google_cloud_project_id = "mock-project-id-for-testing"
+            # Use environment variables for mock keys to avoid hardcoded secrets
+            self.openai_api_key = os.getenv("MOCK_OPENAI_API_KEY", "")
+            self.elevenlabs_api_key = os.getenv("MOCK_ELEVENLABS_API_KEY", "")
+            self.elevenlabs_voice_id = os.getenv("MOCK_ELEVENLABS_VOICE_ID", "mock-voice-id")
+            self.google_cloud_project_id = os.getenv("MOCK_GOOGLE_CLOUD_PROJECT_ID", "mock-project-id")
             return  # Skip loading real API keys in mock mode
 
         # ElevenLabs configuration
@@ -1114,7 +1115,7 @@ class VoiceConfig:
         force_mock_services = os.getenv("VOICE_FORCE_MOCK_SERVICES", "false").lower() == "true"
         
         if mock_mode or force_mock_services:
-            return getattr(self, '_openai_api_key', "mock_openai_key_for_testing")
+            return getattr(self, '_openai_api_key', os.getenv("MOCK_OPENAI_API_KEY", ""))
         
         return os.getenv("OPENAI_API_KEY")
 

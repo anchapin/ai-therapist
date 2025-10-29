@@ -143,13 +143,14 @@ class MockConfig:
         self.max_login_attempts = 3
         self.encryption_key_rotation_days = 90
         
-        # API keys (mock)
-        self.openai_api_key = "mock_openai_key"
-        self.elevenlabs_api_key = "mock_elevenlabs_key"
-        self.elevenlabs_voice_id = "mock_voice_id"
-        self.elevenlabs_model_id = "mock_model_id"
+        # API keys (mock) - use environment variables to avoid hardcoded secrets
+        import os
+        self.openai_api_key = os.getenv("MOCK_OPENAI_API_KEY", "")
+        self.elevenlabs_api_key = os.getenv("MOCK_ELEVENLABS_API_KEY", "")
+        self.elevenlabs_voice_id = os.getenv("MOCK_ELEVENLABS_VOICE_ID", "mock-voice-id")
+        self.elevenlabs_model_id = os.getenv("MOCK_ELEVENLABS_MODEL_ID", "mock-model-id")
         self.elevenlabs_stability = 0.5
-        self.google_api_key = "mock_google_key"
+        self.google_api_key = os.getenv("MOCK_GOOGLE_API_KEY", "")
         
         # Debug settings
         self.debug_mode = True
