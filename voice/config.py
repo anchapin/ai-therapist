@@ -1261,7 +1261,8 @@ class VoiceConfig:
     @property
     def log_file_path(self) -> str:
         """Get log file path."""
-        return getattr(self, '_log_file_path', '/tmp/voice_app.log')
+        import tempfile
+        return getattr(self, '_log_file_path', os.path.join(tempfile.gettempdir(), 'voice_app.log'))
 
     @log_file_path.setter
     def log_file_path(self, value: str):

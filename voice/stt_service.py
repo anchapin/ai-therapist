@@ -743,8 +743,8 @@ class STTService:
             audio_bytes = audio_data.tobytes() if hasattr(audio_data, 'tobytes') else str(audio_data).encode()
             duration = 1.0  # Default duration
 
-        # Create hash based on audio data and duration
-        audio_hash = hashlib.md5(audio_bytes).hexdigest()
+        # Create hash based on audio data and duration (using SHA-256 for security)
+        audio_hash = hashlib.sha256(audio_bytes).hexdigest()
         return f"stt_{audio_hash}_{duration:.2f}"
 
     def _get_from_cache(self, cache_key: str) -> Optional[STTResult]:

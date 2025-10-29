@@ -776,9 +776,9 @@ class VoiceUIComponents:
         # Visualization thread
         def update_visualization():
             while self.ui_state.recording_state == RecordingState.RECORDING:
-                # Simulate audio level for visualization
-                import random
-                self.ui_state.audio_level = random.uniform(0.1, 0.9)
+                # Simulate audio level for visualization (using secrets for better randomness)
+                import secrets
+                self.ui_state.audio_level = secrets.randbelow(9) / 10.0 + 0.1  # 0.1 to 1.0
                 self._update_waveform_data()
                 time.sleep(0.05)
 

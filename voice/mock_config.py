@@ -164,7 +164,8 @@ class MockConfig:
         
         # Logging settings
         self.log_level = "INFO"
-        self.log_file_path = "/tmp/voice_service.log"
+        import tempfile
+        self.log_file_path = os.path.join(tempfile.gettempdir(), "voice_service.log")
         self.log_rotation_enabled = True
         self.max_log_size_mb = 10
         self.log_retention_days = 7

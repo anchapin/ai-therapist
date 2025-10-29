@@ -1226,7 +1226,7 @@ class TTSService:
             key_components.append(emotion.value)
 
         key_string = ":".join(key_components)
-        return hashlib.md5(key_string.encode()).hexdigest()
+        return hashlib.sha256(key_string.encode()).hexdigest()
 
     def _cache_result(self, key: str, result: TTSResult):
         """Cache TTS result with LRU eviction."""
