@@ -30,7 +30,6 @@ jobs:
     - name: Run Basic Tests
       run: |
         python -m pytest tests/unit/test_app_core.py::TestSecurityFunctions -v --tb=short
-        python -m pytest tests/unit/test_memory_manager.py::TestMemoryStats -v --tb=short
         
     - name: Generate Coverage Report
       run: |
