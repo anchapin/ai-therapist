@@ -15,7 +15,7 @@ import asyncio
 import time
 import threading
 import numpy as np
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock, patch, AsyncMock, Mock
 import psutil
 import os
 from typing import Dict, List, Any
@@ -1043,6 +1043,13 @@ class TestVoiceWorkflowsIntegration:
                 emotion = EmotionType.CALM
             else:
                 emotion = EmotionType.SUPPORTIVE
+
+            # Mock TTS result
+            mock_tts_result = Mock()
+            mock_tts_result.text = ai_response
+            mock_tts_result.audio_data = b'mock_audio_data'
+            mock_tts_result.emotion = emotion
+            therapy_voice_service.tts_service.synthesize_speech = AsyncMock(return_value=mock_tts_result)
 
             tts_result = await therapy_voice_service.generate_voice_output(ai_response, session_id)
 

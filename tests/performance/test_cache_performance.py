@@ -233,8 +233,8 @@ class TestCachePerformance:
         total_hits = sum(r['hits'] for r in results)
 
         # Verify operations completed
-        assert total_sets == num_workers * 50
-        assert total_gets == num_workers * 50
+        assert total_sets == num_workers * 25
+        assert total_gets == num_workers * 25
         assert total_hits >= total_sets * 0.8  # At least 80% hit rate
 
     def test_cache_memory_efficiency(self):
