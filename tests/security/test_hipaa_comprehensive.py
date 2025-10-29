@@ -17,11 +17,14 @@ from unittest.mock import Mock, patch, MagicMock, AsyncMock, call
 from typing import Dict, Any, List, Optional, Tuple
 import json
 import time
+import os
 from datetime import datetime, timedelta
 import hashlib
 import re
 from dataclasses import dataclass
 import logging
+from cryptography.fernet import Fernet
+import base64
 
 
 class TestHIPAAComplianceComprehensive:
@@ -493,7 +496,7 @@ class TestHIPAAComplianceComprehensive:
             from cryptography.hazmat.primitives import hashes
             
             passphrase = b"secure_passphrase"
-            salt = b"unique_salt"
+            salt = os.urandom(16)
             
             kdf = PBKDF2HMAC(
                 algorithm=hashes.SHA256(),
@@ -516,7 +519,7 @@ class TestHIPAAComplianceComprehensive:
             assert derived_key == derived_key2, "Same inputs should produce same key"
             
             # Test key is different with different salt
-            different_salt = b"different_salt"
+            different_salt = os.urandom(16)
             kdf3 = PBKDF2HMAC(
                 algorithm=hashes.SHA256(),
                 length=32,
