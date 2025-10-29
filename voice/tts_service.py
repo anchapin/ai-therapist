@@ -19,10 +19,11 @@ Features:
 import asyncio
 import time
 import json
-import hashlib
 import numpy as np
 from typing import Optional, Dict, List, Any, AsyncGenerator, Union
 from dataclasses import dataclass, asdict
+
+from .utils import generate_cache_key
 from pathlib import Path
 import logging
 import tempfile
@@ -1226,7 +1227,7 @@ class TTSService:
             key_components.append(emotion.value)
 
         key_string = ":".join(key_components)
-        return hashlib.md5(key_string.encode()).hexdigest()
+        return generate_cache_key(key_string)
 
     def _cache_result(self, key: str, result: TTSResult):
         """Cache TTS result with LRU eviction."""

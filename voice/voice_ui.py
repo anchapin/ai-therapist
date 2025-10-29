@@ -778,7 +778,7 @@ class VoiceUIComponents:
             while self.ui_state.recording_state == RecordingState.RECORDING:
                 # Simulate audio level for visualization
                 import random
-                self.ui_state.audio_level = random.uniform(0.1, 0.9)
+                self.ui_state.audio_level = random.uniform(0.1, 1.0)  # 0.1 to 1.0
                 self._update_waveform_data()
                 time.sleep(0.05)
 

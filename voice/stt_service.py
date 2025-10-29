@@ -15,9 +15,10 @@ This module handles all speech-to-text operations including:
 import asyncio
 import time
 import json
-import hashlib
 import base64
 from typing import Optional, Dict, List, Any, Callable, AsyncGenerator
+
+from .utils import generate_cache_key
 from dataclasses import dataclass, field
 from pathlib import Path
 import logging
@@ -743,8 +744,8 @@ class STTService:
             audio_bytes = audio_data.tobytes() if hasattr(audio_data, 'tobytes') else str(audio_data).encode()
             duration = 1.0  # Default duration
 
-        # Create hash based on audio data and duration
-        audio_hash = hashlib.md5(audio_bytes).hexdigest()
+        # Create hash based on audio data and duration (using SHA-256 for security)
+        audio_hash = generate_cache_key(audio_bytes.decode('utf-8', errors='ignore'))
         return f"stt_{audio_hash}_{duration:.2f}"
 
     def _get_from_cache(self, cache_key: str) -> Optional[STTResult]:
