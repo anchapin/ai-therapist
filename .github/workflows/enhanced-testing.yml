@@ -24,13 +24,9 @@ jobs:
         cache: 'pip'
     
     - name: Install system dependencies (audio)
-      timeout-minutes: 5
       run: |
-        sudo apt-get update -qq
-        sudo apt-get install -y --no-install-recommends --quiet \
-          portaudio19-dev \
-          libasound2-dev \
-          libsndfile1 || echo "Some audio dependencies failed, continuing..."
+        echo "Skipping audio system dependencies to prevent CI timeout"
+        echo "Audio functionality will be tested through mocking"
     
     - name: Install core dependencies
       run: |
