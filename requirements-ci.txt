@@ -1,0 +1,52 @@
+
+# Core dependencies for CI testing
+pytest>=8.4.0
+pytest-cov>=7.0.0
+pytest-asyncio>=1.2.0
+psutil>=5.9.0
+numpy>=1.21.0
+
+# Authentication and security
+PyJWT>=2.8.0
+bcrypt>=4.1.0
+python-dotenv>=1.0.0
+
+# Core application
+streamlit>=1.50.0
+langchain>=0.1.0
+langchain-community>=0.0.10
+langchain-openai>=0.0.5
+langchain-ollama>=0.1.0
+langchain-text-splitters>=0.0.1
+faiss-cpu>=1.7.4
+pypdf>=3.17.0
+tiktoken>=0.5.0
+requests>=2.28.0
+
+# Basic audio processing (lightweight)
+librosa>=0.10.1
+soundfile>=0.12.1
+scipy>=1.7.0
+
+# Data processing
+pydantic>=2.5.0
+pyyaml>=6.0.1
+jsonschema>=4.20.0
+aiofiles>=23.2.1
+aiohttp>=3.9.0
+python-multipart>=0.0.6
+
+# Optional heavy dependencies (commented out for CI speed)
+# openai-whisper>=20250625  # Very heavy PyTorch dependency
+# piper-tts>=1.2.0         # Heavy ONNX runtime
+# google-cloud-speech>=2.33.0  # Optional cloud service
+# elevenlabs>=2.16.0         # Optional cloud service
+# pyaudio>=0.2.11           # System dependency heavy
+# noisereduce>=2.0.0        # Heavy scipy/matplotlib deps
+# pydub>=0.25.1
+# ffmpeg-python>=0.2.0
+# webrtcvad>=2.0.10
+# silero-vad>=0.3.0
+# phonenumbers>=8.13.0
+# num2words>=0.5.12
+# sounddevice>=0.4.6
