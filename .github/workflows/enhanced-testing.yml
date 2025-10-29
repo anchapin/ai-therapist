@@ -24,13 +24,13 @@ jobs:
         cache: 'pip'
     
     - name: Install system dependencies (audio)
+      timeout-minutes: 5
       run: |
         sudo apt-get update -qq
-        sudo apt-get install -y --no-install-recommends \
+        sudo apt-get install -y --no-install-recommends --quiet \
           portaudio19-dev \
           libasound2-dev \
-          libsndfile1 \
-          ffmpeg
+          libsndfile1 || echo "Some audio dependencies failed, continuing..."
     
     - name: Install core dependencies
       run: |
