@@ -25,8 +25,8 @@ jobs:
     
     - name: Install system dependencies (audio)
       run: |
-        sudo apt-get update
-        sudo apt-get install -y \
+        sudo apt-get update -qq
+        sudo apt-get install -y --no-install-recommends \
           portaudio19-dev \
           libasound2-dev \
           libsndfile1 \
@@ -39,9 +39,9 @@ jobs:
     
     - name: Install voice dependencies (with timeout)
       run: |
-        timeout 300 pip install pyaudio || echo "PyAudio installation failed, continuing..."
-        timeout 300 pip install librosa soundfile noisereduce scipy || echo "Audio processing packages failed, continuing..."
-        timeout 300 pip install google-cloud-speech elevenlabs || echo "Cloud TTS packages failed, continuing..."
+        timeout 180 pip install pyaudio || echo "PyAudio installation failed, continuing..."
+        timeout 180 pip install librosa soundfile noisereduce scipy || echo "Audio processing packages failed, continuing..."
+        timeout 180 pip install google-cloud-speech elevenlabs || echo "Cloud TTS packages failed, continuing..."
     
     - name: Install remaining dependencies
       continue-on-error: true
