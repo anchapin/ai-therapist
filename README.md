@@ -10,7 +10,7 @@ The AI Therapist is a comprehensive conversational AI application designed to pr
 git clone <repository-url>
 cd ai-therapist
 python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements.txt  # Install dependencies
 
 # 2. Configure (edit .env with your OpenAI API key)
 cp template.env .env
