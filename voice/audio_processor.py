@@ -139,13 +139,18 @@ class SimplifiedAudioProcessor:
         self.is_playing = False
         
         # Audio buffers (with memory-safe bounded deque)
-        max_buffer_size = int(getattr(config.audio, "max_buffer_size", 300))  # ~30 seconds at 10ms chunks
+        if config and hasattr(config, 'audio'):
+            max_buffer_size = int(getattr(config.audio, "max_buffer_size", 300))  # ~30 seconds at 10ms chunks
+            max_memory_mb = getattr(config.audio, "max_memory_mb", 100)
+        else:
+            max_buffer_size = 300  # Default ~30 seconds at 10ms chunks
+            max_memory_mb = 100   # Default 100MB
+        
         self.max_buffer_size = max_buffer_size
         self.audio_buffer = deque(maxlen=max_buffer_size)
 
         # Memory monitoring and cleanup
         self._buffer_bytes_estimate = 0
-        max_memory_mb = getattr(config.audio, "max_memory_mb", 100)
         self._max_memory_bytes = max_memory_mb * 1024 * 1024  # Convert MB to bytes
         self.recording_start_time = None
         self.recording_duration = 0.0
@@ -155,10 +160,16 @@ class SimplifiedAudioProcessor:
         self._recording_thread = None
         
         # Audio configuration
-        self.sample_rate = getattr(config.audio, "sample_rate", 16000)
-        self.channels = getattr(config.audio, "channels", 1)
-        self.chunk_size = getattr(config.audio, "chunk_size", 1024)
-        self.format = getattr(config.audio, "format", "wav")
+        if config and hasattr(config, 'audio'):
+            self.sample_rate = getattr(config.audio, "sample_rate", 16000)
+            self.channels = getattr(config.audio, "channels", 1)
+            self.chunk_size = getattr(config.audio, "chunk_size", 1024)
+            self.format = getattr(config.audio, "format", "wav")
+        else:
+            self.sample_rate = 16000
+            self.channels = 1
+            self.chunk_size = 1024
+            self.format = "wav"
         
         # Feature availability
         self.features = {
@@ -205,15 +216,21 @@ class SimplifiedAudioProcessor:
 
         # Streaming audio processing
         self.streaming_enabled = True
-        self.stream_buffer_size = getattr(config.audio, "stream_buffer_size", 10) if config and hasattr(config, 'audio') else 10
-        self.stream_chunk_duration = getattr(config.audio, "stream_chunk_duration", 0.1) if config and hasattr(config, 'audio') else 0.1
+        if config and hasattr(config, 'audio'):
+            self.stream_buffer_size = getattr(config.audio, "stream_buffer_size", 10)
+            self.stream_chunk_duration = getattr(config.audio, "stream_chunk_duration", 0.1)
+            self.compression_enabled = getattr(config.audio, "compression_enabled", True)
+            self.compression_level = getattr(config.audio, "compression_level", 6)
+        else:
+            self.stream_buffer_size = 10
+            self.stream_chunk_duration = 0.1
+            self.compression_enabled = True
+            self.compression_level = 6
         self.streaming_queue = asyncio.Queue(maxsize=self.stream_buffer_size) if asyncio else None
         self.streaming_active = False
         self.streaming_thread = None
 
-        # Audio data compression for storage
-        self.compression_enabled = getattr(config.audio, "compression_enabled", True) if config and hasattr(config, 'audio') else True
-        self.compression_level = getattr(config.audio, "compression_level", 6) if config and hasattr(config, 'audio') else 6
+        # Audio data compression for storage (already set above)
         self.logger.info(f"Audio processor initialized with features: {self.features}")
     
     def _initialize_features(self):

@@ -46,8 +46,18 @@ except ImportError:
 
 from .config import VoiceConfig, VoiceProfile
 from .voice_service import VoiceService, VoiceSessionState
-from .audio_processor import AudioData
+from .audio_processor import AudioData, SimplifiedAudioProcessor
 from .commands import VoiceCommandProcessor
+
+# Create a global audio processor instance for UI components
+audio_processor = SimplifiedAudioProcessor()
+
+# Create default config and security for voice service
+default_config = VoiceConfig()
+default_security = None  # Will be initialized when needed
+
+# Create a global voice service instance for UI components
+voice_service = VoiceService(default_config, default_security)
 
 # Check if required dependencies are available
 if not _STREAMLIT_AVAILABLE:
