@@ -339,7 +339,7 @@ class TTSService:
 
             # Try to run Piper to check availability with validated command
             # Using absolute path and hardcoded --help to prevent injection
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B603 - Input is hardcoded "--help", shell=False prevents injection
                 [piper_path, "--help"],
                 capture_output=True,
                 text=True,
@@ -1011,7 +1011,7 @@ class TTSService:
                     text_path
                 ]
 
-                result = subprocess.run(
+                result = subprocess.run(  # nosec B603 - Input is validated, shell=False prevents injection
                     cmd,
                     capture_output=True,
                     text=True,
