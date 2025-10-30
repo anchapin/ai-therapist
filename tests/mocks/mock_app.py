@@ -85,6 +85,16 @@ def handle_voice_command_executed(session_id: str, command_result: str):
     print(f"Voice command executed: {command_result}")
     return True
 
+def handle_assistant_response(session_id: str, text: str):
+    """Handle assistant response to voice output."""
+    global _mock_session_state
+    
+    if text.strip():
+        # Add assistant response to conversation
+        _mock_session_state['messages'].append({"role": "assistant", "content": text})
+    
+    return True
+
 
 def detect_crisis_content(text):
     """Detect crisis situations requiring immediate intervention."""
