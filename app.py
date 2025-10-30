@@ -286,7 +286,7 @@ class EmbeddingCache:
 
     def get(self, text):
         key = self.get_embedding_key(text)
-        cache_file = os.path.join(self.cache_dir, f"{key}.pkl")
+        cache_file = os.path.join(self.cache_dir, f"{key}.json")
 
         # Try memory cache first
         if key in self.cache:

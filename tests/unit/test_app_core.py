@@ -306,7 +306,7 @@ class TestCachingMechanisms(unittest.TestCase):
             
             # Debug: Check if file was created
             key = cache.get_embedding_key(text)
-            cache_file = os.path.join(temp_cache_dir, f"{key}.pkl")
+            cache_file = os.path.join(temp_cache_dir, f"{key}.json")
             self.assertTrue(os.path.exists(cache_file), f"Cache file not created at {cache_file}")
             
             # Debug: Check file size
