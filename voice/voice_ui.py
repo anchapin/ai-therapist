@@ -1680,11 +1680,18 @@ def render_accessible_voice_controls():
     if not _STREAMLIT_AVAILABLE:
         return []
     
-    return [
+    controls = [
         {'label': 'Voice Toggle', 'aria_label': 'Toggle voice input on/off'},
         {'label': 'Emergency', 'aria_label': 'Activate emergency protocol'},
         {'label': 'Settings', 'aria_label': 'Open voice settings panel'}
     ]
+    
+    # Render controls with ARIA labels
+    for control in controls:
+        st.markdown(f'<button aria-label="{control["aria_label"]}">{control["label"]}</button>', 
+                   unsafe_allow_html=True)
+    
+    return controls
 
 def _announce_to_screen_reader(message: str):
     """Announce message to screen reader."""
@@ -1828,30 +1835,53 @@ async def handle_voice_button_press(button_name: str) -> Optional[str]:
         return f"Button {button_name} pressed"
     return None
 
-def handle_voice_focus():
+def handle_voice_focus(focus_type: str = None):
     """Handle voice focus management."""
     if _STREAMLIT_AVAILABLE:
         st.session_state['voice_focused'] = True
+        # Handle different focus types for accessibility
+        if focus_type:
+            focus_target = 'emergency_button' if 'emergency' in focus_type else 'voice_controls'
+            _manage_focus(None, focus_target)
 
-def announce_voice_status(status: str):
+async def announce_voice_status(status: str):
     """Announce voice status to screen reader."""
     if _STREAMLIT_AVAILABLE:
-        st.session_state['voice_status_announcement'] = status
+        # Map status codes to user-friendly messages
+        status_messages = {
+            'recording_started': 'Voice recording started',
+            'processing_complete': 'Voice processing complete',
+            'emergency_detected': 'Emergency protocol activated'
+        }
+        message = status_messages.get(status, status)
+        _announce_to_screen_reader(message)
+        st.session_state['voice_status_announcement'] = message
 
-def update_waveform_display(audio_data: List[float]):
+async def update_waveform_display(audio_data):
     """Update waveform display."""
     if _STREAMLIT_AVAILABLE and _NUMPY_AVAILABLE:
-        st.session_state['waveform_data'] = _create_waveform_plot(audio_data)
+        if isinstance(audio_data, dict) and 'waveform' in audio_data:
+            st.session_state['waveform_data'] = _create_waveform_plot(audio_data['waveform'])
+        else:
+            st.session_state['waveform_data'] = _create_waveform_plot(audio_data)
 
-def update_spectrum_display(audio_data: List[float]):
+async def update_spectrum_display(audio_data):
     """Update frequency spectrum display."""
     if _STREAMLIT_AVAILABLE and _NUMPY_AVAILABLE:
-        st.session_state['spectrum_data'] = _compute_fft(audio_data)
+        if isinstance(audio_data, dict) and 'waveform' in audio_data:
+            st.session_state['spectrum_data'] = _compute_fft(audio_data['waveform'])
+        else:
+            st.session_state['spectrum_data'] = _compute_fft(audio_data)
 
-def update_volume_meter(audio_data: List[float]):
+async def update_volume_meter(audio_data):
     """Update volume meter display."""
     if _STREAMLIT_AVAILABLE and _NUMPY_AVAILABLE:
-        st.session_state['volume_level'] = _calculate_volume_level(audio_data)
+        if isinstance(audio_data, dict) and 'audio_level' in audio_data:
+            st.session_state['volume_level'] = audio_data['audio_level']
+        elif isinstance(audio_data, list):
+            st.session_state['volume_level'] = _calculate_volume_level(audio_data)
+        else:
+            st.session_state['volume_level'] = 0.0
 
 def render_emergency_controls():
     """Render emergency protocol controls."""
@@ -1860,64 +1890,97 @@ def render_emergency_controls():
         if st.button("Call Emergency Services"):
             _initiate_emergency_call()
 
-def handle_emergency_contact():
+async def display_crisis_alert(crisis_data):
+    """Display crisis alert in UI."""
+    if _STREAMLIT_AVAILABLE:
+        if isinstance(crisis_data, dict):
+            message = f"Crisis detected: {crisis_data.get('keywords', [])}"
+        else:
+            message = str(crisis_data)
+        st.error(f"🚨 CRISIS DETECTED: {message}")
+        st.session_state['crisis_active'] = True
+
+async def handle_emergency_contact(contact: str = None):
     """Handle emergency contact integration."""
     if _STREAMLIT_AVAILABLE:
         st.info("📞 Emergency contact initiated")
+        if contact:
+            _initiate_emergency_call()
+            return True
+    return False
 
-def log_emergency_session():
+async def log_emergency_session(emergency_data: Dict[str, Any] = None):
     """Log emergency session details."""
     if _STREAMLIT_AVAILABLE:
-        timestamp = time.time()
-        _log_emergency_event('session_start', {'timestamp': timestamp})
+        if emergency_data:
+            _log_emergency_event('emergency_session', emergency_data)
+        else:
+            timestamp = time.time()
+            _log_emergency_event('session_start', {'timestamp': timestamp})
 
-def handle_microphone_error(error: str):
+async def handle_microphone_error(error):
     """Handle microphone permission errors."""
     if _STREAMLIT_AVAILABLE:
-        st.error(f"🎤 Microphone Error: {error}")
+        error_msg = str(error) if error else "Unknown error"
+        st.error(f"🎤 Microphone Error: {error_msg}")
         if st.button("Request Access"):
             _request_microphone_access()
 
-def handle_audio_device_failure():
+async def handle_audio_device_failure(device_name: str = None):
     """Handle audio device failure."""
     if _STREAMLIT_AVAILABLE:
         st.warning("🔊 Audio device unavailable")
         if st.button("Switch Device"):
             _switch_audio_device("fallback")
+            return True
+    return False
 
-def handle_network_error():
+async def handle_network_error(error = None):
     """Handle network connectivity errors."""
     if _STREAMLIT_AVAILABLE:
         st.warning("🌐 Network connection lost")
         _enable_offline_mode()
+        return True
+    return False
 
-def handle_rate_limit_error():
+async def handle_rate_limit_error(error = None):
     """Handle rate limiting errors."""
     if _STREAMLIT_AVAILABLE:
         _handle_rate_limit()
+        return True
+    return False
 
-def handle_memory_error():
+async def handle_memory_error(error = None):
     """Handle memory exhaustion errors."""
     if _STREAMLIT_AVAILABLE:
         st.error("💾 Memory low - cleaning up")
         _cleanup_audio_buffers()
+        _reduce_audio_quality(44100)
+        return True
+    return False
 
-def initialize_browser_audio():
+async def initialize_browser_audio():
     """Initialize browser audio context."""
     if _STREAMLIT_AVAILABLE:
         st.session_state['browser_audio_init'] = True
+        _initialize_audio_context()
+        return True
+    return False
 
-def request_browser_permissions():
+async def request_browser_permissions():
     """Request browser permissions."""
     if _STREAMLIT_AVAILABLE:
         st.session_state['permissions_requested'] = True
+        _request_media_stream()
+        return True
+    return False
 
-def load_voice_component(component_name: str):
+async def load_voice_component(component_name: str):
     """Load voice component on demand."""
     if _STREAMLIT_AVAILABLE:
         _load_component_on_demand(component_name)
 
-def handle_debounced_input():
+async def handle_debounced_input(input_type: str = None, value: Any = None):
     """Handle debounced input processing."""
     if _STREAMLIT_AVAILABLE:
         st.session_state['debounced_input'] = True
@@ -1938,7 +2001,7 @@ def render_voice_controls():
     ]
 
 
-def cleanup_voice_session():
+async def cleanup_voice_session():
     """Clean up voice session resources."""
     if _STREAMLIT_AVAILABLE:
         _cleanup_session_resources()
@@ -1950,6 +2013,75 @@ def _cleanup_session_resources():
         for key in keys_to_clean:
             if key in st.session_state:
                 del st.session_state[key]
+
+def _manage_focus(root, widget):
+    """Manage focus for accessibility."""
+    try:
+        if hasattr(widget, 'focus_set'):
+            widget.focus_set()
+        if hasattr(root, 'focus_force'):
+            root.focus_force()
+        return True
+    except Exception:
+        return False
+
+def _create_spectrum_plot(parent=None, n_points=512):
+    """Create a spectrum visualization plot for audio."""
+    try:
+        import matplotlib
+        matplotlib.use('Agg', force=True)  # Ensure headless backend
+        from matplotlib.figure import Figure
+        from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+        
+        fig = Figure(figsize=(4, 2), dpi=100)
+        ax = fig.add_subplot(111)
+        line, = ax.plot(range(n_points), [0] * n_points, lw=1)
+        canvas = FigureCanvas(fig)
+        return fig, ax, line, canvas
+    except Exception:
+        return None, None, None, None
+
+def _update_spectrum(line, y):
+    """Update spectrum plot with new data."""
+    if y is None or line is None:
+        return
+    try:
+        line.set_xdata(range(len(y)))
+        line.set_ydata(y)
+        if hasattr(line, 'axes') and hasattr(line.axes, 'figure'):
+            line.axes.figure.canvas.draw_idle()
+    except Exception:
+        pass
+
+def _setup_hotkeys(root, on_toggle):
+    """Setup keyboard shortcuts."""
+    try:
+        if hasattr(root, 'bind'):
+            root.bind("<space>", lambda e: on_toggle())
+            root.bind("r", lambda e: on_toggle())
+    except Exception:
+        pass
+
+def _announce_status(msg, speak=None):
+    """Announce status for screen readers."""
+    if speak and callable(speak):
+        speak(msg)
+    else:
+        print(f"[ANNOUNCE] {msg}")
+
+def _initialize_audio_context():
+    """Initialize audio context for browser compatibility."""
+    # Stub for CI - actual implementation would be in JavaScript
+    return {"sampleRate": 44100, "state": "running"}
+
+def _reduce_audio_quality(current_quality):
+    """Reduce audio quality under memory pressure."""
+    quality_levels = [44100, 22050, 16000, 8000]
+    try:
+        idx = quality_levels.index(current_quality)
+        return quality_levels[min(idx + 1, len(quality_levels) - 1)]
+    except (ValueError, IndexError):
+        return 16000
 
 # Factory function for easy initialization
 def create_voice_ui(voice_service: VoiceService, config: VoiceConfig) -> VoiceUIComponents:

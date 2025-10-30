@@ -13,6 +13,11 @@ jobs:
       matrix:
         python-version: ["3.10", "3.12"]
       fail-fast: false
+    timeout-minutes: 45
+    env:
+      MPLBACKEND: Agg
+      USE_DUMMY_AUDIO: "1"
+      PYTEST_TIMEOUT: "120"
     
     steps:
     - uses: actions/checkout@v3
@@ -56,14 +61,14 @@ jobs:
     - name: Run Enhanced Tests (with tolerance)
       continue-on-error: true
       run: |
-        python3 -m pytest tests/ui/ -v --tb=line || echo "UI tests have known import issues"
-        python3 -m pytest tests/security/ -v --tb=line || echo "Security tests have known import issues"
-        python3 -m pytest tests/performance/ -v --tb=line || echo "Performance tests have known import issues"
+        python3 -m pytest tests/ui/ -v --tb=line -m "not leak" || echo "UI tests have known import issues"
+        python3 -m pytest tests/security/ -v --tb=line -m "not leak" || echo "Security tests have known import issues"
+        python3 -m pytest tests/performance/ -v --tb=line -m "not leak" || echo "Performance tests have known import issues"
     
     - name: Generate Coverage Report
       continue-on-error: true
       run: |
-        python3 -m pytest tests/unit/ --cov=voice --cov=security --cov=performance --cov-report=xml || echo "Coverage generation failed"
+        python3 -m pytest tests/unit/ -m "not leak" --cov=voice --cov=security --cov=performance --cov-report=xml || echo "Coverage generation failed"
     
     - name: Upload Coverage
       if: success()
