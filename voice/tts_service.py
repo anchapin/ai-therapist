@@ -22,6 +22,7 @@ import json
 import numpy as np
 from typing import Optional, Dict, List, Any, AsyncGenerator, Union
 from dataclasses import dataclass, asdict
+from unittest.mock import MagicMock
 
 from .utils import generate_cache_key
 from pathlib import Path

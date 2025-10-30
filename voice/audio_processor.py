@@ -18,6 +18,7 @@ import time
 import threading
 import numpy as np
 import logging
+from unittest.mock import MagicMock
 from typing import Optional, Dict, List, Any, Tuple, Callable
 from dataclasses import dataclass
 from enum import Enum
