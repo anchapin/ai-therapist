@@ -115,6 +115,9 @@ class TestVoiceUIComprehensive:
                 # Import after mocking
                 from voice.voice_ui import render_voice_controls
                 
+                # Call the function to trigger UI rendering
+                render_voice_controls()
+                
                 # Verify mobile layout is rendered
                 mock_st = mock_voice_ui_components['st']
                 mock_st.columns.assert_called()
