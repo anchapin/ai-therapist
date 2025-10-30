@@ -98,8 +98,9 @@ class TestSTTService:
         assert stt_service.config == mock_config
         assert stt_service.provider == "openai"
         # Set api_key for backward compatibility test
-        stt_service.api_key = "test_key"
-        assert stt_service.api_key == "test_key"
+        test_key = os.getenv("TEST_STT_API_KEY", "test-key-placeholder")
+        stt_service.api_key = test_key
+        assert stt_service.api_key == test_key
         assert stt_service.language == "en-US"
         assert stt_service.model == "whisper-1"
     

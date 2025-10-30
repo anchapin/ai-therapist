@@ -251,7 +251,7 @@ class ResponseCache:
         self.max_size = 100
 
     def get_cache_key(self, question, context_hash):
-        return f"{hashlib.md5(question.encode()).hexdigest()}_{context_hash}"
+        return f"{hashlib.sha256(question.encode()).hexdigest()}_{context_hash}"
 
     def get(self, question, context_hash):
         key = self.get_cache_key(question, context_hash)
@@ -282,7 +282,7 @@ class EmbeddingCache:
         os.makedirs(self.cache_dir, exist_ok=True)
 
     def get_embedding_key(self, text):
-        return hashlib.md5(text.encode()).hexdigest()
+        return hashlib.sha256(text.encode()).hexdigest()
 
     def get(self, text):
         key = self.get_embedding_key(text)

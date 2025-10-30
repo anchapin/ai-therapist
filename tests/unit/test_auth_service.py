@@ -170,7 +170,7 @@ class TestAuthService:
     def test_auth_service_custom_config(self):
         """Test auth service with custom configuration."""
         with patch.dict(os.environ, {
-            'JWT_SECRET_KEY': 'custom-secret',
+            'JWT_SECRET_KEY': os.getenv('TEST_JWT_SECRET_KEY', 'test-secret-placeholder'),
             'JWT_EXPIRATION_HOURS': '12',
             'SESSION_TIMEOUT_MINUTES': '60',
             'MAX_CONCURRENT_SESSIONS': '3'
@@ -179,7 +179,8 @@ class TestAuthService:
                 with patch('auth.auth_service.threading.Thread'):
                     service = AuthService()
                     
-                    assert service.jwt_secret == 'custom-secret'
+                    expected_secret = os.getenv('TEST_JWT_SECRET_KEY', 'test-secret-placeholder')
+                    assert service.jwt_secret == expected_secret
                     assert service.jwt_expiration_hours == 12
                     assert service.session_timeout_minutes == 60
                     assert service.max_concurrent_sessions == 3
