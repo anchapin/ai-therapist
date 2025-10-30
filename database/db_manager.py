@@ -253,6 +253,29 @@ class DatabaseManager:
             self.logger.error(f"Failed to initialize database schema: {e}")
             raise DatabaseError(f"Failed to initialize database schema: {e}")
 
+    def _is_valid_table_name(self, table_name: str) -> bool:
+        """
+        Validate table name to prevent SQL injection.
+        
+        Args:
+            table_name: The table name to validate
+            
+        Returns:
+            True if table name is safe, False otherwise
+        """
+        # Only allow alphanumeric characters and underscores
+        import re
+        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', table_name):
+            return False
+        
+        # Check against known valid tables
+        valid_tables = {
+            'users', 'sessions', 'voice_data', 'audit_logs', 'consent_records',
+            'incidents', 'backups', 'encryption_keys'
+        }
+        
+        return table_name in valid_tables
+
     @contextmanager
     def get_connection(self):
         """Get a database connection from the pool."""
@@ -345,7 +368,19 @@ class DatabaseManager:
 
             for table in tables:
                 try:
-                    result = self.execute_query(f"SELECT COUNT(*) as count FROM {table}", fetch=True)
+                    # Use safe, predefined queries to prevent SQL injection
+                    if table == 'users':
+                        result = self.execute_query("SELECT COUNT(*) as count FROM users", fetch=True)
+                    elif table == 'sessions':
+                        result = self.execute_query("SELECT COUNT(*) as count FROM sessions", fetch=True)
+                    elif table == 'voice_data':
+                        result = self.execute_query("SELECT COUNT(*) as count FROM voice_data", fetch=True)
+                    elif table == 'audit_logs':
+                        result = self.execute_query("SELECT COUNT(*) as count FROM audit_logs", fetch=True)
+                    elif table == 'consent_records':
+                        result = self.execute_query("SELECT COUNT(*) as count FROM consent_records", fetch=True)
+                    else:
+                        raise ValueError(f"Unsupported table: {table}")
                     table_counts[table] = result[0]['count'] if result else 0
                 except Exception as e:
                     self.logger.warning(f"Could not get count for table {table}: {e}")
@@ -405,7 +440,19 @@ class DatabaseManager:
                 for table_row in tables_result:
                     table_name = table_row['name']
                     try:
-                        count_result = conn.execute(f"SELECT COUNT(*) as count FROM {table_name}").fetchone()
+                        # Use safe, predefined queries to prevent SQL injection
+                        if table_name == 'users':
+                            count_result = conn.execute("SELECT COUNT(*) as count FROM users").fetchone()
+                        elif table_name == 'sessions':
+                            count_result = conn.execute("SELECT COUNT(*) as count FROM sessions").fetchone()
+                        elif table_name == 'voice_data':
+                            count_result = conn.execute("SELECT COUNT(*) as count FROM voice_data").fetchone()
+                        elif table_name == 'audit_logs':
+                            count_result = conn.execute("SELECT COUNT(*) as count FROM audit_logs").fetchone()
+                        elif table_name == 'consent_records':
+                            count_result = conn.execute("SELECT COUNT(*) as count FROM consent_records").fetchone()
+                        else:
+                            raise ValueError(f"Unsupported table: {table_name}")
                         stats['table_sizes'][table_name] = count_result['count']
                         stats['total_rows'] += count_result['count']
                     except Exception as e:

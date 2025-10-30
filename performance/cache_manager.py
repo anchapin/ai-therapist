@@ -593,5 +593,7 @@ class CacheManager:
         """Destructor - ensure cleanup."""
         try:
             self.stop()
-        except:
-            pass
+        except Exception as e:
+            # Log error during cleanup but don't raise in destructor
+            import logging
+            logging.getLogger(__name__).debug(f"Error during cache cleanup: {e}")

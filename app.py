@@ -306,8 +306,10 @@ class EmbeddingCache:
                     embedding = embedding_data
                 self.cache[key] = embedding
                 return embedding
-            except Exception:
-                pass
+            except Exception as e:
+                # Log the error for debugging but don't crash the app
+                import logging
+                logging.getLogger(__name__).warning(f"Failed to get embedding: {e}")
 
         return None
 

@@ -561,16 +561,23 @@ class MemoryManager:
                     if items:
                         avg_item_size = sum(sys.getsizeof(item) for item in items) / len(items)
                         size += int(avg_item_size * len(obj))
-                except:
-                    pass
+                except Exception as e:
+                    # Log error during size estimation but continue
+                    import logging
+                    logging.getLogger(__name__).debug(f"Error estimating collection size: {e}")
 
             return size
-        except Exception:
+        except Exception as e:
+            # Log error during size calculation but return 0
+            import logging
+            logging.getLogger(__name__).debug(f"Error calculating object size: {e}")
             return 0
 
     def __del__(self):
         """Destructor - ensure cleanup."""
         try:
             self.stop_monitoring()
-        except:
-            pass
+        except Exception as e:
+            # Log error during cleanup but don't raise in destructor
+            import logging
+            logging.getLogger(__name__).debug(f"Error during memory manager cleanup: {e}")
