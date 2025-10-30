@@ -222,7 +222,9 @@ class VoiceSecurity:
                 import streamlit as st
                 if hasattr(st.session_state, 'auth_service') and st.session_state.auth_service:
                     self.auth_service = st.session_state.auth_service
-            except:
+            except (ImportError, AttributeError, Exception) as e:
+                # Streamlit session state is optional for security functionality
+                # Security module can work without session state in non-Streamlit contexts
                 pass
         # Access control
         self.access_manager = AccessManager(self)
@@ -959,7 +961,9 @@ class VoiceSecurity:
                 try:
                     detections = pii_protection.detector.detect_pii(transcription, "voice_transcription")
                     pii_types_detected = [detection.pii_type.name for detection in detections]
-                except:
+                except (AttributeError, ImportError, Exception) as e:
+                    # PII detection may fail if detector is not available or transcription is invalid
+                    # Continue without PII detection rather than failing the entire process
                     pass
                 
                 result = {

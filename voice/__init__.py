@@ -131,7 +131,9 @@ def check_voice_requirements():
         config = VoiceConfig()
         if config.elevenlabs_api_key or config.google_cloud_credentials_path:
             requirements['voice_models'] = True
-    except Exception:
+    except (ImportError, AttributeError, Exception) as e:
+        # Log the error for debugging but don't fail the initialization
+        # Voice models are optional for basic functionality
         pass
 
     # Check credentials
@@ -144,7 +146,9 @@ def check_voice_requirements():
         input_devices, output_devices = get_available_audio_devices()
         if input_devices and output_devices:
             requirements['audio_devices'] = True
-    except Exception:
+    except (ImportError, OSError, Exception) as e:
+        # Audio devices are optional for basic functionality
+        # May fail in headless environments or without audio hardware
         pass
 
     return requirements

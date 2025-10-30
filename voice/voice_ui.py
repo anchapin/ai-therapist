@@ -777,8 +777,10 @@ class VoiceUIComponents:
         def update_visualization():
             while self.ui_state.recording_state == RecordingState.RECORDING:
                 # Simulate audio level for visualization
+                # Using random module is acceptable here as this is for UI simulation only
+                # Not security-critical random number generation
                 import random
-                self.ui_state.audio_level = random.uniform(0.1, 1.0)  # 0.1 to 1.0
+                self.ui_state.audio_level = random.uniform(0.1, 1.0)  # nosec - B311: UI simulation, not security-critical
                 self._update_waveform_data()
                 time.sleep(0.05)
 

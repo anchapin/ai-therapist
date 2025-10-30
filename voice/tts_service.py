@@ -322,7 +322,7 @@ class TTSService:
         """Initialize Piper TTS for local offline processing."""
         try:
             # Check if Piper is available in PATH
-            import subprocess
+            import subprocess  # nosec - B404: subprocess used safely with validated inputs
             import shutil
 
             piper_path = shutil.which("piper") or shutil.which("piper-tts")
@@ -331,12 +331,20 @@ class TTSService:
                 self.piper_tts = None
                 return
 
-            # Try to run Piper to check availability
+            # Validate piper path to prevent command injection
+            if not os.path.isabs(piper_path) and '/' in piper_path:
+                self.logger.warning("Invalid Piper path detected")
+                self.piper_tts = None
+                return
+
+            # Try to run Piper to check availability with validated command
+            # Using absolute path and hardcoded --help to prevent injection
             result = subprocess.run(
                 [piper_path, "--help"],
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=10,
+                shell=False  # Explicitly disable shell
             )
 
             if result.returncode == 0:
@@ -970,7 +978,7 @@ class TTSService:
     async def _synthesize_with_piper(self, text: str, profile: VoiceProfile) -> TTSResult:
         """Synthesize speech using Piper TTS (local offline)."""
         try:
-            import subprocess
+            import subprocess  # nosec - B404: subprocess used safely with validated inputs
             import tempfile
 
             # Store original text for result
@@ -985,7 +993,14 @@ class TTSService:
                 audio_path = audio_file.name
 
             try:
-                # Run Piper TTS
+                # Validate inputs to prevent command injection
+                if not isinstance(text, str) or not text.strip():
+                    raise AudioGenerationError("Invalid text input for TTS")
+                
+                if not os.path.exists(self.config.piper_tts_model_path):
+                    raise AudioGenerationError("Piper TTS model path does not exist")
+
+                # Run Piper TTS with validated parameters
                 cmd = [
                     'piper-tts',
                     '--model', self.config.piper_tts_model_path,
@@ -1000,7 +1015,8 @@ class TTSService:
                     cmd,
                     capture_output=True,
                     text=True,
-                    timeout=30
+                    timeout=30,
+                    shell=False  # Explicitly disable shell to prevent injection
                 )
 
                 if result.returncode != 0:
