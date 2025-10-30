@@ -71,8 +71,15 @@ class ResponseSanitizer:
         self.stats = {
             'responses_sanitized': 0,
             'pii_instances_masked': 0,
-            'sanitization_errors': 0
+            'sanitization_errors': 0,
+            'total_processed': 0
         }
+        
+        # Add audit_enabled attribute for test compatibility
+        self.audit_enabled = self.config.log_sanitization
+        
+        # Add endpoint_configs attribute for test compatibility
+        self.endpoint_configs = {}
 
     def _load_env_config(self):
         """Load configuration from environment variables."""
@@ -193,6 +200,7 @@ class ResponseSanitizer:
 
             # Update statistics
             self.stats['responses_sanitized'] += 1
+            self.stats['total_processed'] += 1
 
             # Log sanitization if enabled
             if self.config.log_sanitization and sanitized != response_data:
@@ -379,6 +387,68 @@ class ResponseSanitizer:
             "statistics": self.get_sanitization_stats(),
             "pii_protection_status": self.pii_protection.health_check()
         }
+    
+    def sanitize(self, response_data: Any, request_context: Dict[str, Any]) -> Any:
+        """
+        Alias for sanitize_response method for test compatibility.
+        
+        Args:
+            response_data: The response data to sanitize
+            request_context: Context including user_role, endpoint, method, etc.
+            
+        Returns:
+            Sanitized response data
+        """
+        return self.sanitize_response(response_data, request_context)
+    
+    def sanitize_json_response(self, response_data: Any, endpoint: str) -> Any:
+        """
+        Sanitize JSON response data for specific endpoint.
+        
+        Args:
+            response_data: The JSON response data to sanitize
+            endpoint: The API endpoint
+            
+        Returns:
+            Sanitized response data
+        """
+        request_context = {
+            'endpoint': endpoint,
+            'method': 'GET',
+            'user_role': 'user'  # Default role
+        }
+        return self.sanitize_response(response_data, request_context)
+    
+    def configure_endpoint(self, endpoint: str, config: Dict[str, Any]) -> None:
+        """
+        Configure sanitization settings for a specific endpoint.
+        
+        Args:
+            endpoint: The API endpoint to configure
+            config: Configuration settings for the endpoint
+        """
+        # Store endpoint configuration
+        self.endpoint_configs[endpoint] = config
+        
+        # Add custom rule for endpoint
+        if 'level' in config:
+            sensitivity_map = {
+                'high': SensitivityLevel.HIPAA,
+                'medium': SensitivityLevel.SENSITIVE,
+                'low': SensitivityLevel.INTERNAL,
+                'public': SensitivityLevel.PUBLIC
+            }
+            sensitivity = sensitivity_map.get(config['level'], SensitivityLevel.INTERNAL)
+            
+            rule = SanitizationRule(
+                field_pattern=f"{endpoint}.*",
+                sensitivity_level=sensitivity,
+                allowed_roles=config.get('allowed_roles', ['admin']),
+                description=f"Custom rule for {endpoint}"
+            )
+            self.add_custom_rule(rule)
+        
+        self.logger.info(f"Configured endpoint {endpoint} with config: {config}")
 
 
 # Flask middleware integration

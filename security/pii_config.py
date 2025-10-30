@@ -319,15 +319,39 @@ class PIIConfig:
         self.logger = logging.getLogger(__name__)
         self.config_file = config_file or os.getenv("PII_CONFIG_FILE")
         self.detection_rules = PIIDetectionRules()
+        
+        # Add missing attributes for test compatibility
+        self.pii_detection_rules = self.detection_rules
+        self.detection_enabled = os.getenv("PII_DETECTION_ENABLED", "true").lower() == "true"
+        self.masking_enabled = os.getenv("PII_MASKING_ENABLED", "true").lower() == "true"
+        self.audit_enabled = os.getenv("PII_AUDIT_ENABLED", "true").lower() == "true"
+        
+        # Add masking settings
+        self.masking_settings = {
+            "mask_char": "*",
+            "preserve_length": True,
+            "preserve_format": True
+        }
+        
+        # Add audit settings
+        self.audit_settings = {
+            "log_detections": True,
+            "log_masking": True,
+            "retention_days": 30
+        }
 
         # Load from file if specified
         if self.config_file and Path(self.config_file).exists():
             self.load_from_file()
 
-    def load_from_file(self):
+    def load_from_file(self, config_file_path: Optional[str] = None):
         """Load configuration from JSON file."""
+        file_path = config_file_path or self.config_file
+        if not file_path:
+            raise ValueError("No configuration file path specified")
+            
         try:
-            with open(self.config_file, 'r') as f:
+            with open(file_path, 'r') as f:
                 config_data = json.load(f)
 
             # Update detection rules
@@ -342,10 +366,18 @@ class PIIConfig:
                     for pattern_data in config_data["custom_patterns"]
                 ]
 
-            self.logger.info(f"Loaded PII configuration from {self.config_file}")
+            self.logger.info(f"Loaded PII configuration from {file_path}")
+            
+            # Return self for method chaining
+            return self
 
         except (json.JSONDecodeError, IOError) as e:
             self.logger.error(f"Failed to load PII configuration: {e}")
+            return None
+
+    def load_pii_patterns(self):
+        """Load PII patterns from detection rules."""
+        return self.detection_rules.get_enabled_patterns()
 
     def save_to_file(self, file_path: Optional[str] = None):
         """Save configuration to JSON file."""
