@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 from datetime import datetime, timedelta
 import jwt
 import secrets
+import os
 
 from auth.auth_service import AuthService, AuthResult, AuthSession
 from auth.user_model import UserProfile, UserRole, UserStatus

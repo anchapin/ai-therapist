@@ -159,17 +159,27 @@ class VoiceFeatureTestRunner:
                         # Only enable coverage for the first test category to avoid conflicts
                         pytest_args.extend([
                             '--cov=voice',
-                            '--cov-report=term-missing',
+                            '--cov=security',
+                            '--cov=auth',
+                            '--cov=performance',
+                            '--cov=database',
+                            '--cov-report=term-missing:skip-covered',
                             '--cov-report=json',
                             '--cov-report=xml',
+                            '--cov-fail-under=90',
                             '--cov-append'  # Use append mode to accumulate coverage
                         ])
                     else:
                         # For subsequent categories, just use the existing coverage data
                         pytest_args.extend([
                             '--cov=voice',
+                            '--cov=security',
+                            '--cov=auth',
+                            '--cov=performance',
+                            '--cov=database',
                             '--cov-report=json',
                             '--cov-report=xml',
+                            '--cov-fail-under=90',
                             '--cov-append'  # Append to existing coverage
                         ])
 

@@ -59,18 +59,9 @@ default_security = None  # Will be initialized when needed
 # Create a global voice service instance for UI components
 voice_service = VoiceService(default_config, default_security)
 
-# Check if required dependencies are available
-if not _STREAMLIT_AVAILABLE:
-    raise ImportError(
-        "Streamlit is required for voice UI components. "
-        "Please install it with: pip install streamlit"
-    )
-
-if not _NUMPY_AVAILABLE:
-    raise ImportError(
-        "NumPy is required for voice UI components. "
-        "Please install it with: pip install numpy"
-    )
+# Soft fallback when dependencies are unavailable (e.g., headless CI)
+# Functions already check _STREAMLIT_AVAILABLE and _NUMPY_AVAILABLE at runtime
+# This allows the module to be imported for testing/coverage without raising errors
 
 # UI State Enums
 class RecordingState(Enum):
