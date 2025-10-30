@@ -263,9 +263,15 @@ class VoiceSecurity:
                     self.logger.info("Using mock encryption for testing")
                     return
 
-                # Generate master key for the session
-                password = b"ai_therapist_voice_security_key_2024"
-                salt = b"ai_therapist_salt_fixed_value"
+                # Generate master key for the session using environment variables or secure defaults
+                password = os.getenv("VOICE_ENCRYPTION_PASSWORD", "").encode()
+                salt = os.getenv("VOICE_ENCRYPTION_SALT", "").encode()
+                
+                # If no environment variables are set, generate secure random values
+                if not password:
+                    password = secrets.token_bytes(32)
+                if not salt:
+                    salt = secrets.token_bytes(16)
                 kdf = PBKDF2HMAC(
                     algorithm=hashes.SHA256(),
                     length=32,

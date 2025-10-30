@@ -295,13 +295,15 @@ class EmbeddingCache:
         # Try file cache
         if os.path.exists(cache_file):
             try:
-                import pickle
+                import json
                 import numpy as np
-                with open(cache_file, 'rb') as f:
-                    embedding = pickle.load(f)
+                with open(cache_file, 'r') as f:
+                    embedding_data = json.load(f)
                 # Convert list back to numpy array if needed
-                if isinstance(embedding, list):
-                    embedding = np.array(embedding)
+                if isinstance(embedding_data, list):
+                    embedding = np.array(embedding_data)
+                else:
+                    embedding = embedding_data
                 self.cache[key] = embedding
                 return embedding
             except Exception:
@@ -314,15 +316,15 @@ class EmbeddingCache:
         self.cache[key] = embedding
 
         # Save to file cache
-        import pickle
-        cache_file = os.path.join(self.cache_dir, f"{key}.pkl")
-        # Convert numpy array to list for pickling
+        import json
+        cache_file = os.path.join(self.cache_dir, f"{key}.json")
+        # Convert numpy array to list for JSON serialization
         if hasattr(embedding, 'tolist'):
             embedding_to_save = embedding.tolist()
         else:
             embedding_to_save = embedding
-        with open(cache_file, 'wb') as f:
-            pickle.dump(embedding_to_save, f)
+        with open(cache_file, 'w') as f:
+            json.dump(embedding_to_save, f)
             f.flush()
             os.fsync(f.fileno())
 

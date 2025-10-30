@@ -901,11 +901,11 @@ class TestResponseSanitizerIntegration:
         
         data = {
             "user": {
-                "api_key": "sk-1234567890abcdef",
+                "api_key": os.getenv("TEST_OPENAI_API_KEY", "sk-test-key-placeholder"),
                 "name": "Test User"
             },
             "config": {
-                "api_key": "cfg-abcdef1234567890",
+                "api_key": os.getenv("TEST_CONFIG_API_KEY", "cfg-test-key-placeholder"),
                 "version": "1.0.0"
             }
         }
@@ -923,5 +923,7 @@ class TestResponseSanitizerIntegration:
         admin_context = {"endpoint": "config", "user_role": "admin"}
         admin_result = sanitizer.sanitize_response(data, admin_context)
         
-        assert admin_result["user"]["api_key"] == "sk-1234567890abcdef"
-        assert admin_result["config"]["api_key"] == "cfg-abcdef1234567890"
+        expected_key = os.getenv("TEST_OPENAI_API_KEY", "sk-test-key-placeholder")
+        assert admin_result["user"]["api_key"] == expected_key
+        expected_config_key = os.getenv("TEST_CONFIG_API_KEY", "cfg-test-key-placeholder")
+        assert admin_result["config"]["api_key"] == expected_config_key
