@@ -104,3 +104,153 @@ vectorstore/
 # Knowledge directory files (downloaded dynamically)
 knowledge/*.pdf
 knowledge/*.txt
+
+# Log files
+*.log
+
+# Cache directories
+embedding_cache/
+test_env/
+test-env/
+
+# Security validation artifacts
+security_validation_report.json
+demo_security_validation.py
+final_security_validation.py
+run_security_tests.py
+
+# Voice data caches
+voice_data/cache/
+voice_data/temp/
+
+# Temporary test files
+*_temp.*
+test_*_temp.py
+
+# Debug and test files
+debug_*.py
+test_nr_*.py
+test_openai_*.py
+
+# Test API key directory
+test_api_key/
+
+# Additional integration test files
+tests/integration/*_fixed.py
+# Generated files and backups to ignore
+*.backup
+test_results.xml
+test_env_*.py
+=5.9.0
+credentials/
+
+# Temporary and debug files
+*.tmp
+*.temp
+*.log
+
+# Test artifacts
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Sensitive voice data
+voice_data/
+voice_profiles/
+
+# Test reports and validation artifacts
+*_report.json
+*test_report.json
+*validation_report.json
+*test_fixes_report.json
+*final_test_report.json
+comprehensive_*_report.json
+ultimate_*_report.json
+targeted_*_report.json
+test_*_report.json
+
+# Test analysis and diagnostic scripts
+*test_diagnosis.py
+*test_analysis.py
+*security_validation.py
+*validation_*.py
+*test_environment_*.py
+
+# Fix and troubleshooting scripts
+*fixes*.py
+*fix_*.py
+*troubleshoot*.py
+*debug_*.py
+*targeted_fixes.py
+*comprehensive_fix.py
+*final_*_fix.py
+*ultimate_*_fix.py
+*integration_*_fixes.py
+
+# Disabled test files
+*.disabled
+*_disabled.py
+
+# Backup files
+*.backup_pre_*
+*.backup
+*_pre_*.py
+*.backup
+
+# Test validation scripts
+validate_*.py
+test_*_validation.py
+
+# Standalone test scripts
+test_*_direct.py
+test_*_minimal.py
+test_*_standalone.py
+test_*_enhanced.py
+test_*_simple.py
+test_*_working.py
+
+# Coverage and analysis files
+coverage.json
+.coverage.*
+.coverage.*.*
+htmlcov/
+.pytest_cache/
+.nox/
+.tox/
+
+# Temporary session files
+=*.*
+
+# Roo agent configuration directory
+.roo/
+
+# Test fix scripts (debugging files)
+test_fix.py
+
+# Scripts directory (debugging and utility scripts)
+scripts/
+
+# Test environment directory
+test-env/
+
+# Database files (SQLite)
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Comprehensive test reports
+COMPREHENSIVE_*_TEST_REPORT.md
+TEST_VALIDATION_REPORT.md
+FINAL_*_REPORT.md

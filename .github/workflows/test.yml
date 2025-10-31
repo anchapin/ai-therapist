@@ -1,0 +1,17 @@
+name: Legacy Test Suite (Deprecated)
+
+on:
+  pull_request:
+    branches: [ legacy-test ]
+
+# This workflow is deprecated. Use optimized-ci.yml instead.
+# Keeping for backward compatibility until migration is complete.
+
+jobs:
+  legacy-notice:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Notice
+      run: echo "This workflow is deprecated. Please use the optimized CI/CD pipeline."
+
+# Legacy jobs removed - use optimized-ci.yml

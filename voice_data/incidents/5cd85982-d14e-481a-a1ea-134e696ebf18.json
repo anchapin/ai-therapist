@@ -1,0 +1,13 @@
+{
+  "incident_id": "5cd85982-d14e-481a-a1ea-134e696ebf18",
+  "incident_type": "UNAUTHORIZED_ACCESS",
+  "status": "OPEN",
+  "reported_at": "2025-10-01T11:28:10.199293",
+  "details": {
+    "user_id": "malicious_user",
+    "resource": "voice_data",
+    "timestamp": "2025-10-01T11:28:10.199274",
+    "severity": "HIGH"
+  },
+  "actions_taken": []
+}
