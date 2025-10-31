@@ -461,8 +461,11 @@ class AuthService:
 
     def _cleanup_expired_sessions(self):
         """Clean up expired sessions."""
-        # Use database cleanup method
-        from ..database.db_manager import get_database_manager
+            # Use database cleanup method
+        try:
+            from ..database.db_manager import get_database_manager
+        except ImportError:
+            from database.db_manager import get_database_manager
         db = get_database_manager()
         cleaned = db.cleanup_expired_data()
 
@@ -471,7 +474,10 @@ class AuthService:
 
     def get_auth_statistics(self) -> Dict[str, Any]:
         """Get authentication statistics."""
-        from ..database.db_manager import get_database_manager
+        try:
+            from ..database.db_manager import get_database_manager
+        except ImportError:
+            from database.db_manager import get_database_manager
         db = get_database_manager()
         health = db.health_check()
 

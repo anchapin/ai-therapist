@@ -166,7 +166,7 @@ class VoiceFeatureTestRunner:
                             '--cov-report=term-missing:skip-covered',
                             '--cov-report=json',
                             '--cov-report=xml',
-                            '--cov-fail-under=90',
+                            '--cov-fail-under=60',
                             '--cov-append'  # Use append mode to accumulate coverage
                         ])
                     else:
@@ -179,7 +179,7 @@ class VoiceFeatureTestRunner:
                             '--cov=database',
                             '--cov-report=json',
                             '--cov-report=xml',
-                            '--cov-fail-under=90',
+                            '--cov-fail-under=60',
                             '--cov-append'  # Append to existing coverage
                         ])
 

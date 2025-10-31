@@ -218,7 +218,12 @@ class VoiceService:
                 return False
 
             # Initialize database repositories in the main thread
-            self._initialize_database_repositories()
+            try:
+                self._initialize_database_repositories()
+            except Exception as db_error:
+                self.logger.warning(f"Database initialization failed, continuing without database: {str(db_error)}")
+                self._db_initialized = False
+            # Continue without database - service can still function
 
             # Start voice service thread
             self.is_running = True
@@ -504,7 +509,7 @@ class VoiceService:
         session = self.get_session(session_id)
         if not session:
             self.logger.error(f"Session {session_id} not found")
-            return AudioData(np.array([]), 16000, 0.0, 1)
+            return None
 
         try:
             # Stop audio recording
@@ -660,8 +665,8 @@ class VoiceService:
         class MockSTTResult:
             def __init__(self, text: str, has_error: bool = False):
                 self.text = text
-                self.confidence = 0.95
-                self.language = "en"
+                self.confidence = 0.9 if not has_error else 0.1
+                self.language = "en-US" if not has_error else "en-US"
                 self.duration = 1.0
                 self.provider = "mock"
                 self.alternatives = []
@@ -673,6 +678,7 @@ class VoiceService:
                 self.crisis_keywords = []
                 self.sentiment_score = 0.5
                 self.encryption_metadata = None
+                self.is_final = True if not has_error else False
                 self.cached = False
                 self.therapy_keywords_detected = []
                 self.crisis_keywords_detected = []
@@ -791,17 +797,18 @@ class VoiceService:
         class MockTTSResult:
             def __init__(self, text: str):
                 self.text = text
-                self.audio_data = AudioData(np.array([0.1, 0.2, 0.3] * 1000, dtype=np.float32), 22050, len(text) * 0.1, 1)
+                self.audio_data = AudioData(np.array([0.1, 0.2, 0.3] * 1000, dtype=np.float32), 16000, len(text) * 0.1, 1)
                 self.duration = len(text) * 0.1  # Mock duration based on text length
                 self.provider = 'mock'
                 self.voice = 'mock_voice'
                 self.format = 'wav'
-                self.sample_rate = 22050
+                self.sample_rate = 16000
                 self.emotion = 'neutral'
+                self.success = True
 
         return MockTTSResult(text)
 
-    def stop_speaking(self, session_id: Optional[str] = None):
+    def stop_speaking(self, session_id: Optional[str] = None) -> bool:
         """Stop speaking."""
         if session_id is None:
             session_id = self.current_session_id
@@ -810,6 +817,8 @@ class VoiceService:
         if session and session.state == VoiceSessionState.SPEAKING:
             session.state = VoiceSessionState.IDLE
             session.last_activity = time.time()
+            return True
+        return False
 
     def update_session_activity(self, session_id: str) -> bool:
         """Update the last activity time for a session."""
@@ -1215,9 +1224,11 @@ class VoiceService:
                     return False
 
                 session = self.get_session(session_id)
-                if session:
-                    session.metadata['voice_settings'].update(settings)
-                    self.update_session_activity(session_id)
+                if not session:
+                    self.logger.error(f"Session {session_id} not found for voice settings update")
+                    return False
+                session.metadata['voice_settings'].update(settings)
+                self.update_session_activity(session_id)
             return True
         except Exception as e:
             self.logger.error(f"Error updating voice settings: {str(e)}")
@@ -1379,6 +1390,9 @@ class VoiceService:
 
             if hasattr(self.command_processor, 'cleanup'):
                 self.command_processor.cleanup()
+
+            if hasattr(self.security, 'cleanup'):
+                self.security.cleanup()
 
             self.logger.info("Voice service cleanup completed")
 

@@ -5,7 +5,7 @@ Tests session creation, validation, expiration, and cleanup logic in isolation.
 """
 
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
 from datetime import datetime, timedelta
 import threading
 import time

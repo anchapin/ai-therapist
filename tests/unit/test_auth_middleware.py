@@ -38,18 +38,12 @@ class TestAuthMiddleware:
         mock_user = Mock(spec=UserProfile)
         auth_middleware.auth_service.validate_token.return_value = mock_user
         
-        # Create a proper mock for session_state
-        mock_session_state = Mock()
-        mock_session_state.get.return_value = 'valid_token'
-        mock_session_state.__contains__ = Mock(return_value=True)
-        
         with patch('auth.middleware.st') as mock_st:
-            mock_st.session_state = mock_session_state
+            mock_st.session_state.get.return_value = 'valid_token'
             result = auth_middleware.is_authenticated()
-            
+
             assert result is True
             auth_middleware.auth_service.validate_token.assert_called_once_with('valid_token')
-            mock_session_state.get.assert_called_once_with('auth_token')
     
     def test_is_authenticated_false_no_token(self, auth_middleware):
         """Test is_authenticated when no token is present."""

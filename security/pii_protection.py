@@ -613,8 +613,8 @@ class PIIProtection:
         # Therapists can see medical information but contact info should be masked
         if user_role_lower in therapist_roles:
             # Therapists should see medical info but contact info should be masked
-            # Mask email, phone, address, and highly sensitive PII
-            sensitive_pii = {PIIType.SSN, PIIType.EMAIL, PIIType.PHONE, PIIType.ADDRESS}
+            # Only mask highly sensitive PII like SSN - therapists need email/phone for communication
+            sensitive_pii = {PIIType.SSN}
             # Return True if PII should be masked (sensitive info), False if should be visible
             return pii_type in sensitive_pii
             
